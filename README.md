@@ -1,2 +1,2 @@
-# AutoArc-ologist
+# AutoArcaeologist
 A Python Toolchest to dissect historic data media
