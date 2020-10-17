@@ -483,18 +483,33 @@ class ArtifactClass(bytearray):
                 fo.write(i + "\n")
             fo.write("</pre>\n")
 
-        if not self.interpretations:
-            fo.write("<H4>HexDump</H4>\n")
-            fo.write("<pre>\n")
+        if self.interpretations:
+            for _owner, func in self.interpretations:
+                func(fo, self)
+            return
+
+        fo.write("<H4>HexDump</H4>\n")
+        fo.write("<pre>\n")
+
+        if not self.records:
             if len(self) > hexdump_limit:
                 hexdump.hexdump_to_file(self[:hexdump_limit], fo)
                 fo.write("[…]\n")
             else:
                 hexdump.hexdump_to_file(self, fo)
-            fo.write("</pre>\n")
         else:
-            for _owner, func in self.interpretations:
-                func(fo, self)
+            done = 0
+            idx = 0
+            for n, r in enumerate(self.records):
+                fo.write("Record #0x%x\n" % n)
+                hexdump.hexdump_to_file(self[idx:idx+r], fo)
+                fo.write("\n")
+                idx += r
+                done += r
+                if done > hexdump_limit:
+                    break
+              
+        fo.write("</pre>\n")
 
     def html_derivation(self, fo):
         ''' Recursively document how this artifact came to be '''
