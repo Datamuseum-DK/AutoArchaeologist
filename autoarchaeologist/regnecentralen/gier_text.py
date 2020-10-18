@@ -135,6 +135,9 @@ class GIER_Text():
                 bad += 1
                 bads.add(j)
 
+        if not non_zero:
+            return
+
         badness = 100 * bad / non_zero
         parityerrors = 100 * parities[0] / non_zero
 
@@ -274,7 +277,7 @@ class GIER_Text():
                 col = 0
                 line += 1
 
-            if line >= 72:
+            if line >= 80:
                 line = 0
                 page += 1
 

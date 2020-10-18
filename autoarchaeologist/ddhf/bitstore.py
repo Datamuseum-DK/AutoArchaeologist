@@ -5,7 +5,20 @@
 
 import urllib.request
 
+import autoarchaeologist
+
 SERVERNAME = "datamuseum.dk"
+
+BITSTORE_FORMATS = {
+    "PDF": False,
+    "MP4": False,
+    "ASCII": True,
+    "ASCII_EVEN": True,
+    "ASCII_ODD": True,
+    "ASCII_SET": True,
+    "BINARY": True,
+    "GIERTEXT": True,
+}
 
 class FromBitStore():
 
@@ -14,13 +27,13 @@ class FromBitStore():
     def __init__(self, ctx, cache_dir, *args):
         self.ctx = ctx
         self.cache_dir = cache_dir
+        self.loaded = set()
 
         for i in args:
             self.process_arg(i)
 
     def process_arg(self, arg):
         ''' Separate arguments into bitstore idents and bitstore keywords '''
-        print("ARG", arg)
         try:
             nbr = int(arg, 10)
         except ValueError:
@@ -66,23 +79,55 @@ class FromBitStore():
             print(arg, "Length mismatch (%d/%d)" % (expected, len(body)))
         return body
 
+    def find_summary(self, metalines):
+        ''' Find a one line summary of this artifact '''
+        for header in (
+            "Media.Summary:",
+            "Document.Title:",
+        ):
+            try:
+                i = metalines.index(header)
+                return metalines[i + 1]
+            except ValueError:
+                pass
+        return None
+
     def fetch_single(self, arg):
         ''' Fetch and parse the metadata page from the wiki '''
+        if arg in self.loaded:
+            return
         meta = self.fetch_wiki_source('Bits:' + arg)
         meta = meta.split('= METADATA =')[1]
         metalines = [x.strip() for x in meta.split("\n")]
-        i = metalines.index("Media.Summary:")
-        if i < 0:
-            print(arg, "Ignored, no Media.Summary found")
+
+        i = metalines.index("BitStore.Format:")
+        bitstore_format = metalines[i + 1]
+        j = BITSTORE_FORMATS.get(bitstore_format)
+        if j is None:
+            print(arg, "Ignored, unknown format", bitstore_format)
             return
-        media_summary = metalines[i+1]
+        if not j:
+            return
+
+        summary = self.find_summary(metalines)
+        if not summary:
+            print(arg, "Ignored, no Summary found")
+            print(metalines)
+            return
+
         i = metalines.index("BitStore.Size:")
         if i < 0:
             print(arg, "Ignored, no Bitstore.Size found (This is BAD!)")
             return
+
         expected = int(metalines[i+1], 10)
         b = self.fetch_artifact(arg, expected)
-        self.ctx.add_top_artifact(b, arg + " " + media_summary)
+        self.loaded.add(arg)
+        try:
+            self.ctx.add_top_artifact(b, arg + " " + summary)
+        except autoarchaeologist.DuplicateArtifact as why:
+            print(why)
+            return
 
     def fetch_pattern(self, arg):
         ''' Fetch and parse the keyword page from the wiki '''
@@ -100,9 +145,9 @@ class FromBitStore():
                 "PDF": 0,
                 "MP4": 0,
                 "ASCII": 1,
-                "ASCII-EVEN": 1,
-                "ASCII-ODD": 1,
-                "ASCII-SET": 1,
+                "ASCII_EVEN": 1,
+                "ASCII_ODD": 1,
+                "ASCII_SET": 1,
                 "BINARY": 1,
                 "GIERTEXT": 1,
             }.get(line3[1:])
