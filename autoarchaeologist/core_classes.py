@@ -347,6 +347,7 @@ class ArtifactClass(bytearray):
 
     def add_parent(self, parent):
         ''' Attach to parent, and vice-versa '''
+        assert self != parent
         self.parents.append(parent)
         parent.children.append(self)
 
@@ -392,11 +393,13 @@ class ArtifactClass(bytearray):
         yield from [(self, i) for i in self.notes]
         if recursive:
             for child in self.children:
+                assert child != self, (child, self)
                 yield from child.iter_notes(recursive)
 
     def slice(self, offset, size):
         ''' Return a new artifact which is a subset of this one '''
 
+        assert size < len(self), ("OSZ", offset, size)
         this = Artifact(self, self[offset:offset + size])
 
         if this.sliced_from:

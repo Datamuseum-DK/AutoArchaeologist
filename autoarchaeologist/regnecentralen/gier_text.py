@@ -8,6 +8,12 @@
 
 '''
 
+def parity():
+    for x in range(256):
+        yield bin(x).count('1') & 1
+
+PARITY = bytes(parity())
+
 GIER_GLYPH = {
     1:   ('1', '∨',),
     2:   ('2', '\u2a2f',),
@@ -91,10 +97,6 @@ GIER_CONTROL = {
     GIER_CONTROL_TAPE_FEED_CR: "tape_feed_cr",
 }
 
-def parity(x):
-    ''' Calculate the parity of a number '''
-    return bin(x).count('1') & 1
-
 class GIER_Text():
 
     ''' GIER Text artifacts '''
@@ -120,7 +122,7 @@ class GIER_Text():
                 continue
             non_zero += 1
 
-            parities[parity(i)] += 1
+            parities[PARITY[i]] += 1
 
             if was_sum:
                 was_sum = False
@@ -134,6 +136,8 @@ class GIER_Text():
             elif j not in GIER_GLYPH:
                 bad += 1
                 bads.add(j)
+                if bad * 50 > non_zero:
+                    return
 
         if not non_zero:
             return
@@ -142,7 +146,9 @@ class GIER_Text():
         parityerrors = 100 * parities[0] / non_zero
 
         if badness > 1:
-            # print("GIERTEXT", this, "Too many bad:", bad, "%.1f%%" % badness)
+            return
+
+        if parityerrors > 10:
             return
 
         this.add_note("Gier Text")
@@ -300,7 +306,7 @@ class GIER_Text():
             elif j == GIER_CONTROL_SPACE:
                 col += 1
             elif j in GIER_GLYPH:
-                if not parity(i):
+                if not PARITY[i]:
                     color = 3
                 else:
                     color = red
