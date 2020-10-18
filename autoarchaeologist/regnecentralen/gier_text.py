@@ -151,6 +151,19 @@ class GIER_Text():
         if parityerrors > 10:
             return
 
+        self.txt = list(self.render())
+
+        # find page sizes
+        for page, line, col, _red, _glyph in self.txt:
+            if page not in self.page_len:
+                self.page_len[page] = 0
+                self.page_width[page] = 0
+            self.page_len[page] = max(self.page_len[page], line)
+            self.page_width[page] = max(self.page_width[page], col)
+
+        if not self.page_len:
+            return
+
         this.add_note("Gier Text")
 
         if parities[0]:
@@ -168,16 +181,6 @@ class GIER_Text():
                 "%d parity errors (%.1f%%)" % (parities[0], parityerrors)
             )
             this.add_comment("Parity errors are marked in blue.")
-
-        self.txt = list(self.render())
-
-        # find page sizes
-        for page, line, col, _red, _glyph in self.txt:
-            if page not in self.page_len:
-                self.page_len[page] = 0
-                self.page_width[page] = 0
-            self.page_len[page] = max(self.page_len[page], line)
-            self.page_width[page] = max(self.page_width[page], col)
 
         this.add_interpretation(self, self.html_interpretation)
 
