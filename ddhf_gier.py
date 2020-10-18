@@ -6,10 +6,8 @@ import autoarchaeologist
 
 from autoarchaeologist.generic.bigdigits import BigDigits
 from autoarchaeologist.generic.samesame import SameSame
-from autoarchaeologist.generic.tap_file import TAPfile
-from autoarchaeologist.data_general.absbin import AbsBin
-from autoarchaeologist.data_general.papertapechecksum import PaperTapeCheckSum
-from autoarchaeologist.regnecentralen.papertapechecksum import RC_PTR_CheckSum
+from autoarchaeologist.data_general.papertapechecksum import DGC_PaperTapeCheckSum
+from autoarchaeologist.regnecentralen.papertapechecksum import RC_PaperTapeCheckSum
 from autoarchaeologist.regnecentralen.gier_text import GIER_Text
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
@@ -20,12 +18,10 @@ if __name__ == "__main__":
     ctx = autoarchaeologist.Excavation()
 
     ctx.add_examiner(GIER_Text)
-    #ctx.add_examiner(TAPfile)
-    #ctx.add_examiner(BigDigits)
-    #ctx.add_examiner(AbsBin)
-    #ctx.add_examiner(PaperTapeCheckSum)
-    #ctx.add_examiner(RC_PTR_CheckSum)
-    #ctx.add_examiner(SameSame)
+    ctx.add_examiner(BigDigits)
+    ctx.add_examiner(DGC_PaperTapeCheckSum)
+    ctx.add_examiner(RC_PaperTapeCheckSum)
+    ctx.add_examiner(SameSame)
 
     FromBitStore(
         ctx,
