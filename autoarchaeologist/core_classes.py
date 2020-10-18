@@ -32,6 +32,9 @@ import hashlib
 
 import autoarchaeologist.generic.hexdump as hexdump
 
+class DuplicateArtifact(Exception):
+    ''' Top level artifacts should not be identical '''
+
 class Excavation():
 
     '''
@@ -80,6 +83,33 @@ class Excavation():
     def add_examiner(self, ex):
         ''' Add an examiner function '''
         self.examiners.append(ex)
+
+    def add_top_artifact(self, bits, description=None):
+        ''' Add a top-level artifact '''
+
+        if not description:
+            description = "Top-level Artifact"
+
+        digest = hashlib.sha256(bits).hexdigest()
+
+        this = self.hashes.get(digest)
+        if this:
+            t = "Artifact " + description
+            t += "\n\tis identical to\n"
+            t += this.summary(False)
+            raise DuplicateArtifact("\n" + t + "\n")
+
+        this = ArtifactClass(self, digest, bits)
+        this.add_description(description)
+        return this
+
+    def add_file_artifact(self, filename, description=None):
+        ''' Add a file as top-level artifact '''
+
+        if not description:
+            description = filename
+
+        return self.add_top_artifact(open(filename, "rb").read(), description)
 
     def start_examination(self):
         ''' As it says on the tin... '''
@@ -541,33 +571,3 @@ def Artifact(parent, bits):
     else:
         this.add_parent(parent)
     return this
-
-class DuplicateArtifact(Exception):
-    ''' Top level artifacts should not be identical '''
-
-def Top_Artifact(ctx, bits, description=None):
-    ''' Add a top-level artifact '''
-
-    if not description:
-        description = "Top-level Artifact"
-
-    digest = hashlib.sha256(bits).hexdigest()
-
-    this = ctx.hashes.get(digest)
-    if this:
-        t = "Artifact " + description
-        t += "\n\tis identical to\n"
-        t += this.summary(False)
-        raise DuplicateArtifact("\n" + t + "\n")
-
-    this = ArtifactClass(ctx, digest, bits)
-    this.add_description(description)
-    return this
-
-def File_Artifact(ctx, filename, description=None):
-    ''' Add a file as top-level artifact '''
-
-    if not description:
-        description = filename
-
-    return Top_Artifact(ctx, open(filename, "rb").read(), description)

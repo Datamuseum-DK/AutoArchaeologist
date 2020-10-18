@@ -20,7 +20,7 @@ if __name__ == "__main__":
     ctx.add_examiner(RC_PTR_CheckSum)
     ctx.add_examiner(SameSame)
 
-    ff = autoarchaeologist.File_Artifact(ctx, "examples/30001393.bin")
+    ff = ctx.add_file_artifact("examples/30001393.bin")
 
     ctx.start_examination()
 
