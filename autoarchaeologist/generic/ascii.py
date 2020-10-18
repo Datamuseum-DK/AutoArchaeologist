@@ -94,7 +94,7 @@ class Ascii():
         if bodylen < 10 or not lines:
             return
 
-        if 0 not in par:
+        if min(par) > 2:
             if bodylen > 64 and (1 in par or 2 in par):
                 print("ASCII PARITY ERROR ?", this, bodylen, lines, par)
             return
@@ -104,9 +104,9 @@ class Ascii():
             "-SET",
             "-ODD",
             "-EVEN",
-        ][par.index(0)]
+        ][par.index(min(par))]
 
-        print("ASCII_SLICE", pfx, last_idx, len(this))
+        # print("ASCII_SLICE", pfx, last_idx, len(this))
         if pfx or last_idx != len(this):
             this = this.slice(pfx, last_idx - pfx)
         self.this = this
