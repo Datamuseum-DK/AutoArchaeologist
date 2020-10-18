@@ -182,7 +182,7 @@ class Excavation():
 
             fn = self.html_dir + "/" + self.filename_for(this)
             fo = open(fn, "w")
-            self.html_prefix(fo)
+            self.html_prefix(fo, this)
             this.html_page(fo, hexdump_limit)
             self.html_suffix(fo)
 
@@ -190,7 +190,7 @@ class Excavation():
         ''' Top level html page '''
         fn = self.html_dir + "/" + self.filename_for(self)
         fo = open(fn, "w")
-        self.html_prefix(fo)
+        self.html_prefix(fo, self)
 
         index = {}
         index_keys = set()
@@ -231,7 +231,7 @@ class Excavation():
 
         fo.write("<H2>Index</H2>")
         for idxkey in index_keys:
-            fo.write('<H3><A name="IDX_%s">%s</A></H3>\n' % (idxkey, idxkey))
+            fo.write('<H3><A name="IDX_%s">Index: %s</A></H3>\n' % (idxkey, idxkey))
             notes = {x for x in index if x[:1] == idxkey}
             for n in sorted(notes):
                 fo.write('<H4><A name="IDX_%s">%s</A></H4>\n' % (n, n))
@@ -256,12 +256,16 @@ class Excavation():
         t += '</a>'
         return t
 
-    def html_prefix(self, fo):
+    def html_prefix(self, fo, this):
         ''' Top of the HTML pages '''
         fo.write("<!DOCTYPE html>\n")
         fo.write("<html>\n")
         fo.write("<head>\n")
         fo.write('<meta charset="utf-8">\n')
+        if isinstance(this, Excavation):
+            fo.write('<title>AutoArchaeologist</title>\n')
+        else:
+            fo.write('<title>' + this.name() + '</title>\n')
         fo.write("</head>\n")
         fo.write("<pre>" + self.html_link_to(self, "top") + "</pre>\n")
 
@@ -284,6 +288,9 @@ class Slab():
         return self.offset < other.offset
 
     def __str__(self):
+        return "<SL 0x%x %s>" % (self.offset, str(self.this))
+
+    def __repr__(self):
         return "<SL 0x%x %s>" % (self.offset, str(self.this))
 
     def overlaps(self, other):
@@ -392,7 +399,6 @@ class ArtifactClass(bytearray):
 
     def add_type(self, typ):
         ''' Add type designation (also as note) '''
-        self.notes.add(typ)
         self.types.add(typ)
 
     def add_interpretation(self, owner, func):
@@ -430,7 +436,7 @@ class ArtifactClass(bytearray):
         if not offset and size == len(self):
             return self
 
-        assert size < len(self), ("OSZ", offset, size)
+        assert offset + size <= len(self), ("OSZ", offset, size)
         this = Artifact(self, self[offset:offset + size])
 
         if this.myslab:
@@ -481,12 +487,13 @@ class ArtifactClass(bytearray):
             for slab in sorted(slicing):
                 if offset < slab.offset:
                     new_slab = self.slice(offset, slab.offset - offset)
-                    slicing.append(self.slabs[-1])
+                    slicing.append(Slab(self, offset, new_slab))
                     offset += len(new_slab)
                 offset += len(slab.this)
             if offset < len(self):
                 new_slab = self.slice(offset, len(self) - offset)
-                slicing.append(self.slabs[-1])
+                slicing.append(Slab(self, offset, new_slab))
+            assert sum([len(x.this) for x in slicing]) == len(self)
 
     def examined(self):
         ''' Examination of this artifact is complete '''
@@ -504,14 +511,16 @@ class ArtifactClass(bytearray):
 
     def adopt(self, orphan):
         ''' Hoist slabs of one of our own slabs up '''
-        assert self.slicings
+        assert len(self.slicings) > 0
+        assert len(orphan.parents) == 1, orphan.parents
+        assert len(orphan.slicings) == 1, orphan.slicings
         newoff = orphan.myslab.offset
 
         # Hoist the orphan's slabs up
         # .puzzle will have fleshed out orphan.slabs
-        for slab in sorted(orphan.slabs):
+        for slab in sorted(orphan.slicings[0]):
             offset = slab.offset + orphan.myslab.offset
-            assert newoff == offset
+            assert newoff == offset, (self, orphan, newoff, offset, orphan.slabs)
             slab.this.parents.remove(orphan)
             slab.this.parents.append(self)
             orphan.children.remove(slab.this)
@@ -521,8 +530,9 @@ class ArtifactClass(bytearray):
             newoff += len(slab.this)
             # Add to all slicings orphan is in
             for sln in self.slicings:
-                if orphan.myslab in sln:
-                    sln.append(slab.this.myslab)
+                for slac in sln:
+                    if slac.this == orphan:
+                        sln.append(slab.this.myslab)
         assert newoff == orphan.myslab.offset + len(orphan)
 
         # If there is nothing left, kill the orphan
@@ -534,8 +544,10 @@ class ArtifactClass(bytearray):
             del self.top.hashes[orphan.digest]
             # Remove from all slicings
             for sln in self.slicings:
-                if orphan.myslab in sln:
-                    sln.remove(orphan.myslab)
+                for slab in sln:
+                    if slab.this == orphan:
+                        sln.remove(slab)
+                        break
 
     def summary(self, link=True, ident=True, notes=False):
         ''' Produce a one-line summary '''
@@ -552,7 +564,7 @@ class ArtifactClass(bytearray):
             if self.descriptions:
                 txt += sorted(self.descriptions)
             if notes:
-                txt += {y for x, y in self.iter_notes(True) if y not in self.types}
+                txt += sorted({y for x, y in self.iter_notes(True)})
             if not link or not ident:
                 return nam + ", ".join(txt)
             self.index_representation = nam + ", ".join(txt)
@@ -561,18 +573,56 @@ class ArtifactClass(bytearray):
     def html_page(self, fo, hexdump_limit):
         ''' Produce HTML page '''
         fo.write("<H2>" + self.summary(link=False) + "</H2>\n")
+        fo.write("<pre>\n")
+        fo.write("    Length: %d (0x%x)\n" % (len(self), len(self)))
+        for i in self.descriptions:
+            fo.write("    Description: " + i + "\n")
+        if self.types:
+            fo.write("    Types: " + ", ".join(sorted(self.types)) + "\n")
+        if self.notes:
+            fo.write("    Notes: " + ", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
+        fo.write("</pre>\n")
 
         fo.write("<H4>Derivation</H4>\n")
         fo.write("<pre>\n")
         self.html_derivation(fo)
         fo.write("</pre>\n")
 
-        if self.children and not self.slicings:
+        if False and self.children and not self.slicings:
             fo.write("<H4>Children</H4>\n")
             fo.write("<pre>\n")
             for p in sorted(self.children):
                 fo.write("  " + self.top.html_link_to(p) + "\n")
             fo.write("</pre>\n")
+
+        if self.comments:
+            fo.write("<H4>NB: Comments at End</H4>\n")
+
+        if self.interpretations:
+            for _owner, func in self.interpretations:
+                func(fo, self)
+        else:
+
+            fo.write("<H4>HexDump</H4>\n")
+            fo.write("<pre>\n")
+
+            if not self.records:
+                if len(self) > hexdump_limit:
+                    hexdump.hexdump_to_file(self[:hexdump_limit], fo)
+                    fo.write("[…]\n")
+                else:
+                    hexdump.hexdump_to_file(self, fo)
+            else:
+                done = 0
+                idx = 0
+                for n, r in enumerate(self.records):
+                    fo.write("Record #0x%x\n" % n)
+                    hexdump.hexdump_to_file(self[idx:idx+r], fo)
+                    fo.write("\n")
+                    idx += r
+                    done += r
+                    if done > hexdump_limit:
+                        break
 
         if self.comments:
             fo.write("<H4>Comments</H4>\n")
@@ -581,31 +631,6 @@ class ArtifactClass(bytearray):
                 fo.write(i + "\n")
             fo.write("</pre>\n")
 
-        if self.interpretations:
-            for _owner, func in self.interpretations:
-                func(fo, self)
-            return
-
-        fo.write("<H4>HexDump</H4>\n")
-        fo.write("<pre>\n")
-
-        if not self.records:
-            if len(self) > hexdump_limit:
-                hexdump.hexdump_to_file(self[:hexdump_limit], fo)
-                fo.write("[…]\n")
-            else:
-                hexdump.hexdump_to_file(self, fo)
-        else:
-            done = 0
-            idx = 0
-            for n, r in enumerate(self.records):
-                fo.write("Record #0x%x\n" % n)
-                hexdump.hexdump_to_file(self[idx:idx+r], fo)
-                fo.write("\n")
-                idx += r
-                done += r
-                if done > hexdump_limit:
-                    break
 
         fo.write("</pre>\n")
 
@@ -634,6 +659,7 @@ class ArtifactClass(bytearray):
 
 def Artifact(parent, bits):
     ''' Return a new or old artifact for some bits '''
+    assert isinstance(parent, (Excavation, ArtifactClass)), (type(parent), parent)
     digest = hashlib.sha256(bits).hexdigest()
     this = parent.top.hashes.get(digest)
     if not this:
