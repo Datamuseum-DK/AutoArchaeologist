@@ -538,7 +538,7 @@ class ArtifactClass(bytearray):
                 done += r
                 if done > hexdump_limit:
                     break
-              
+
         fo.write("</pre>\n")
 
     def html_derivation(self, fo):

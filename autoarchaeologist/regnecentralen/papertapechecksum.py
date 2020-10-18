@@ -1,5 +1,23 @@
+'''
+   Regnecentralen Papertape checksum
+   -------------------------------
 
-class RC_PTR_CheckSum():
+   At the end of original (and some copies of) Regnecentralen
+   papertapes, an identifier is punched in ASCII with even
+   parity:
+
+       "U*U*U*U*" checksum
+
+   We guess the last two characters is a checksum, but that
+   is only a guess.  The specific checksum calculation has
+   not been investigated/found.
+
+   This scheme seems inherited from Data General, but without
+   punching the product number.
+'''
+
+
+class RC_PaperTapeCheckSum():
     ''' Recognize artifacts with a single byte value '''
 
     def __init__(self, this):

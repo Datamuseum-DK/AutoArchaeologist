@@ -1,5 +1,19 @@
+'''
+   Data General Papertape checksum
+   -------------------------------
 
-class PaperTapeCheckSum():
+   At the end of original (and some copies of) Data General
+   papertapes, an identifier is punched in ASCII with even
+   parity:
+
+       "U*U*U*U*" product-number checksum
+
+   We guess the last two characters is a checksum, but that
+   is only a guess.  The specific checksum calculation has
+   not been investigated/found.
+'''
+
+class DGC_PaperTapeCheckSum():
 
     def __init__(self, this):
         if this.has_note("DG-PaperTapeCheckSum"):

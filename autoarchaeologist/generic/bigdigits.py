@@ -84,6 +84,7 @@ class BigDigits():
             this.add_interpretation(self, self.html_as_interpretation)
 
     def html_as_interpretation(self, fo, _this):
+        ''' A table full of holes '''
         fo.write("<H3>Big Digits</H3>\n")
         fo.write('<table style="table-layout: fixed; border: 1px solid black;">\n')
         for b in range(8):

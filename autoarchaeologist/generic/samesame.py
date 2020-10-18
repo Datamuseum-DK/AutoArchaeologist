@@ -14,6 +14,7 @@ class SameSame():
             this.add_interpretation(self, self.html_as_interpretation)
 
     def html_as_interpretation(self, fo, _this):
+        ''' Pseudo assembler syntax '''
         fo.write("<H3>SameSame</H3>\n")
         fo.write("<pre>\n")
         fo.write("0x%02x[0x%x]" % (self.this[0], len(self.this)))
