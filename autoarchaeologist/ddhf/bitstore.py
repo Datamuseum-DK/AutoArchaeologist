@@ -3,11 +3,13 @@
    -----------------------------------------------------
 '''
 
+import os
 import urllib.request
 
 import autoarchaeologist
 
 SERVERNAME = "datamuseum.dk"
+PROTOCOL = "https"
 
 BITSTORE_FORMATS = {
     "PDF": False,
@@ -28,6 +30,12 @@ class FromBitStore():
         self.ctx = ctx
         self.cache_dir = cache_dir
         self.loaded = set()
+
+        if cache_dir:
+            try:
+                os.mkdir(cache_dir)
+            except FileExistsError:
+                pass
 
         for i in args:
             self.process_arg(i)
@@ -59,7 +67,7 @@ class FromBitStore():
 
     def fetch_wiki_source(self, wikipage):
         ''' Fetch the source of a wiki-page '''
-        url = 'https://' + SERVERNAME
+        url = PROTOCOL + '://' + SERVERNAME
         url += "/w/index.php?title=" + wikipage + "&action=edit"
         body = self.cache_fetch(
             wikipage.replace("/", "_") + ".utf8",
@@ -73,7 +81,7 @@ class FromBitStore():
 
     def fetch_artifact(self, arg, expected):
         ''' Fetch the actual bits from the bitstore '''
-        url = 'https://' + SERVERNAME + "/bits/" + arg
+        url = PROTOCOL + '://' + SERVERNAME + "/bits/" + arg
         body = self.cache_fetch(arg + ".bin", url)
         if len(body) != expected:
             print(arg, "Length mismatch (%d/%d)" % (expected, len(body)))

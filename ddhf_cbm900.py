@@ -23,6 +23,9 @@ def main():
         "30001199",
     )
 
+    # You could instead:
+    # ctx.add_file_artifact("/some/v7pdpdisk.img")
+
     ctx.start_examination()
 
     try:
