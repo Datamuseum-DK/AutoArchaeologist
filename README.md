@@ -12,7 +12,7 @@ apart and present old data media, in a browser-friendly fashion.
 
 Our first historic use of the AutoArchaeologist is now online:
 
-	https://datamuseum.dk/aa/cbm900
+https://datamuseum.dk/aa/cbm900
 
 This is the harddisk from datamuseum.dk's rare and running Commodore CBM-900
 UNIX computer (https://datamuseum.dk/wiki/Commodore/CBM900)
@@ -24,6 +24,6 @@ files in the filesystem.
 The `generic/ascii.py` code spots which files are text files, and thus we can
 see how few fortunes, the CBM-900 came with, back in 1984:
 
-	http://datamuseum.dk/aa/cbm900//5caa.html
+http://datamuseum.dk/aa/cbm900//5caa.html
 
 More examples comming soon...
