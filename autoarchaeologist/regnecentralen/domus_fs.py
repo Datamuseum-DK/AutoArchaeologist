@@ -49,6 +49,7 @@ class IndexBlock():
 
     def __init__(self, this, secno, what = ""):
         self.this = this
+        self.secno = secno
         b = this[secno]
         if len(b) != 512:
             raise Invalid("Wrong length of Index Block")
@@ -318,11 +319,13 @@ class Catalog():
 
     def __init__(self, this, idxblk, parent, catname, complain=True):
         self.this = this
+        self.idxblk = idxblk
         self.parent = parent
         self.name = catname
         self.bytes = bytearray()
         self.entries = []
         self.bytes += idxblk.get_bytes(what=self)
+        self.this.set_what(self.idxblk.secno, 0, self.idxblk)
 
         for i in range(0, len(self.bytes), 32):
             b = self.bytes[i:i+32]
@@ -495,6 +498,7 @@ class Domus_Filesystem_Class():
 
             subcat.get_files(only_perfect=False)
             subcat.commit()
+            self.this.add_note("Orphan_SubCat")
 
             self.subcats.append(subcat)
 
@@ -524,6 +528,8 @@ class Domus_Filesystem_Class():
         fo.write("<H3>Domus Filesystem - Sectors</H3>\n")
         fo.write("<pre>")
         for sector in self.sectors():
+            if sector >= SLICE_OFF and not (sector - SLICE_OFF) % self.kit.slice_size:
+                fo.write("\n")
             used_by = self.what.get(sector)
             p = "    %05d 0x%04x" % (sector, sector) + " %d " % self.map[sector]
             if used_by is None:
