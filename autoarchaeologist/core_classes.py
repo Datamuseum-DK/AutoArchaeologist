@@ -62,6 +62,7 @@ class Excavation():
         self.html_dir = None
         self.digest_prefix = 8
         self.link_prefix = ""
+        self.download_links = False
 
         # Duck-type as ArtifactClass
         self.top = self
@@ -159,6 +160,8 @@ class Excavation():
         html_dir,               # Where to dump the files
         hexdump_limit=8192,     # How much of unrecognized artifacts should be  hexdumped
         link_prefix=None,       # HTML link prefix to reach the files
+        downloads=False,   	# Create downloadable .bin files
+        download_links=False,   # Include links to .bin files
     ):
         ''' Produce default HTML pages '''
 
@@ -171,6 +174,10 @@ class Excavation():
             os.close(dir_fd)
             link_prefix = "file://" + abspath + "/"
 
+        if download_links:
+            downloads = True
+            self.download_links = True
+
         self.link_prefix = link_prefix
         self.html_dir = html_dir
 
@@ -180,6 +187,9 @@ class Excavation():
 
         for this in self.hashes.values():
 
+            if downloads:
+                fb = self.html_dir + "/" + self.filename_for(this, suf=".bin")
+                open(fb, 'wb').write(this)
             fn = self.html_dir + "/" + self.filename_for(this)
             fo = open(fn, "w")
             self.html_prefix(fo, this)
@@ -242,10 +252,10 @@ class Excavation():
 
         self.html_suffix(fo)
 
-    def html_link_to(self, this, link_text=None, anchor=None):
+    def html_link_to(self, this, link_text=None, anchor=None, **kwargs):
         ''' Return a HTML link to an artifact '''
         t = '<A href="'
-        t += self.link_prefix + '/' + self.filename_for(this)
+        t += self.link_prefix + '/' + self.filename_for(this, **kwargs)
         if anchor:
             t += "#" + anchor
         t += '">'
@@ -267,7 +277,11 @@ class Excavation():
         else:
             fo.write('<title>' + this.name() + '</title>\n')
         fo.write("</head>\n")
-        fo.write("<pre>" + self.html_link_to(self, "top") + "</pre>\n")
+        fo.write("<pre>")
+        fo.write(self.html_link_to(self, "top"))
+        if not isinstance(this, Excavation) and self.download_links:
+            fo.write(" - " + self.html_link_to(this, "download", suf=".bin"))
+        fo.write("</pre>\n")
 
     def html_suffix(self, fo):
         ''' Tail of all the HTML pages '''
@@ -372,7 +386,7 @@ class ArtifactClass(bytearray):
     def __lt__(self, other):
         if isinstance(other, Excavation):
             return 1
-        return self.digest < other.digest
+        return self.name() < other.name()
 
     def name(self):
         ''' Get the canonical name of the artifact '''
