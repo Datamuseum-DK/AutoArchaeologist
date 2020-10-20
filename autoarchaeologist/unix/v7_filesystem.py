@@ -116,15 +116,15 @@ class DirEnt():
 
     def commit_file(self):
         if self.inode.di_type == self.fs.S_IFREG and self.inode.di_size:
+            b = bytearray()
+            for i in self.inode:
+                b += i
+            self.artifact = autoarchaeologist.Artifact(self.fs.this, b)
+            self.artifact.add_note("UNIX file")
             try:
-                b = bytearray()
-                for i in self.inode:
-                    b += i
-                self.artifact = autoarchaeologist.Artifact(self.fs.this, b)
-                self.artifact.add_note("UNIX file")
                 self.artifact.set_name(self.path)
             except autoarchaeologist.core_classes.DuplicateName:
-                pass
+                self.artifact.add_note(self.path)
 
 class Directory():
     ''' A directory '''
