@@ -2,6 +2,8 @@
    AR(1) format
 '''
 
+import autoarchaeologist
+
 import struct
 
 class Ar():
@@ -27,5 +29,9 @@ class Ar():
             i = words[-2] << 16
             i |= words[-1]
             a = this.slice(offset, i)
-            a.add_note(name)
+            a.add_note("AR member")
+            try:
+                a.set_name(this.named + ":" + name)
+            except autoarchaeologist.core_classes.DuplicateName:
+                a.add_note(this.named + ":" + name)
             offset += i
