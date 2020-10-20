@@ -373,7 +373,7 @@ class GIER_Text():
                     else:
                         thisline += " "
                 fo.write(thisline.rstrip())
-                if overprint > 1 and o == overprint -1:
+                if overprint > 1 and j == overprint -1:
                     fo.write('</div>')
                 fo.write('\n')
 
