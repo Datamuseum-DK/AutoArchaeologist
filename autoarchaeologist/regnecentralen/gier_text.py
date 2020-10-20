@@ -8,11 +8,7 @@
 
 '''
 
-def parity():
-    for x in range(256):
-        yield bin(x).count('1') & 1
-
-PARITY = bytes(parity())
+PARITY = bytes([bin(x).count('1') & 1 for x in range(256)])
 
 GIER_GLYPH = {
     1:   ('1', '∨',),
@@ -182,7 +178,8 @@ class GIER_Text():
             )
             this.add_comment("Parity errors are marked in blue.")
 
-        this.add_interpretation(self, self.html_interpretation)
+        this.add_interpretation(self, self.html_interpretation_html)
+        this.add_interpretation(self, self.html_interpretation_svg)
 
 
     def open_svg(self):
@@ -313,6 +310,10 @@ class GIER_Text():
                     color = 3
                 else:
                     color = red
+                if GIER_GLYPH[j][case] == "10":
+                    self.this.add_note("Has10")
+                if color:
+                    self.this.add_note("Has_color_%d" % color)
                 yield page, line, col, color, GIER_GLYPH[j][case]
                 if j != 14:
                     col += 1
@@ -329,11 +330,72 @@ class GIER_Text():
                     col += 1
                 col += 1
 
-    def html_interpretation(self, fo, _this):
-        ''' Pull in the SVGs '''
-        self.make_svgs()
-        fo.write("<H3>GIER Text</H3>\n")
+    def html_interpretation_html(self, fo, _this):
+        ''' HTML+CSS output '''
+        fo.write("<H3>GIER Text (HTML)</H3>\n")
+        fo.write("<div>\n")
+        fo.write("<style>\n")
+        fo.write("  .over {\n")
+        fo.write("     line-height: 0;\n")
+        fo.write("     margin-top: 0.5em;\n")
+        fo.write("     margin-bottom: -0.5em;\n")
+        fo.write("  }\n")
+        fo.write("  pre red1 {\n")
+        fo.write("     color: crimson;\n")
+        fo.write("  }\n")
+        fo.write("  pre red2 {\n")
+        fo.write("     color: purple;\n")
+        fo.write("  }\n")
+        fo.write("  pre red3 {\n")
+        fo.write("     color: blue;\n")
+        fo.write("  }\n")
+        fo.write("  pre ten {\n")
+        fo.write("     font-size: 50%;\n")
+        fo.write("  }\n")
+        fo.write("  pre redten {\n")
+        fo.write("     font-size: 50%\n")
+        fo.write("     color: red;\n")
+        fo.write("  }\n")
+        fo.write("</style>\n")
         fo.write("<pre>\n")
+        last = (-1, -1)
+        txt= [list() for i in range(132)]
+
+        def putline():
+            overprint = max([len(x) for x in txt])
+            if overprint > 1:
+                fo.write('<div class="over">')
+            for j in range(overprint):
+                thisline = ""
+                for i in txt:
+                    if len(i) > j:
+                        thisline += i[j]
+                    else:
+                        thisline += " "
+                fo.write(thisline.rstrip())
+                if overprint > 1 and o == overprint -1:
+                    fo.write('</div>')
+                fo.write('\n')
+
+        for page, line, col, red, glyph in sorted(self.txt):
+            if (page, line) != last:
+                putline()
+                txt= [list() for i in range(132)]
+                last = (page, line)
+            if glyph == "<":
+                glyph = "&lt;"
+            if glyph == "10" and red:
+                txt[col].insert(0, "<redten>10</redten>")
+            elif glyph == "10":
+                txt[col].insert(0, "<ten>10</ten>")
+            elif red:
+                txt[col].insert(0, "<red%d>" % red + glyph + "</red%d>" % red)
+            else:
+                txt[col].insert(0, glyph)
+        putline()
+
+    def html_interpretation_svg(self, fo, _this):
+        fo.write("<H3>GIER Text (SVG)</H3>\n")
+        self.make_svgs()
         for i in self.svg_files:
             fo.write('<img src="%s" width="50%%"/>\n' % i)
-        fo.write("</pre>\n")
