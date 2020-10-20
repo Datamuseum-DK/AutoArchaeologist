@@ -453,10 +453,6 @@ class ArtifactClass(bytearray):
         assert offset + size <= len(self), ("OSZ", offset, size)
         this = Artifact(self, self[offset:offset + size])
 
-        if this.myslab:
-            # Matched an existing slice of some artifact
-            return this
-
         # Record where new slice was taken from
         this.myslab = Slab(self, offset, this)
         self.slabs.append(this.myslab)
@@ -515,7 +511,7 @@ class ArtifactClass(bytearray):
         if self.slabs:
             self.puzzle()
 
-        if self.slabs and self.myslab:
+        if self.slabs and self.myslab and len(self.parents) == 1:
             # If this artifact was itself a slice, adopt the slabs away
             self.myslab.parent.adopt(self)
 
