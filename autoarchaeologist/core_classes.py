@@ -63,6 +63,7 @@ class Excavation():
         self.digest_prefix = 8
         self.link_prefix = ""
         self.download_links = False
+        self.hexdump_limit = 8192
 
         # Duck-type as ArtifactClass
         self.top = self
@@ -158,7 +159,7 @@ class Excavation():
     def produce_html(
         self,
         html_dir,               # Where to dump the files
-        hexdump_limit=8192,     # How much of unrecognized artifacts should be  hexdumped
+        hexdump_limit=None,     # How much of unrecognized artifacts should be  hexdumped
         link_prefix=None,       # HTML link prefix to reach the files
         downloads=False,   	# Create downloadable .bin files
         download_links=False,   # Include links to .bin files
@@ -180,6 +181,8 @@ class Excavation():
 
         self.link_prefix = link_prefix
         self.html_dir = html_dir
+        if hexdump_limit:
+            self.hexdump_limit = hexdump_limit
 
         self.polish()
 
@@ -193,7 +196,7 @@ class Excavation():
             fn = self.html_dir + "/" + self.filename_for(this)
             fo = open(fn, "w")
             self.html_prefix(fo, this)
-            this.html_page(fo, hexdump_limit)
+            this.html_page(fo)
             self.html_suffix(fo)
 
     def produce_front_page(self):
@@ -415,6 +418,10 @@ class ArtifactClass(bytearray):
         ''' Add type designation (also as note) '''
         self.types.add(typ)
 
+    def has_type(self, note):
+        ''' Check if not already exists '''
+        return note in self.types
+
     def add_interpretation(self, owner, func):
         ''' Add an interpretation '''
         self.interpretations.append((owner, func))
@@ -439,6 +446,7 @@ class ArtifactClass(bytearray):
     def iter_notes(self, recursive=False):
         ''' Return all notes that apply to this artifact '''
         yield from [(self, i) for i in self.notes]
+        yield from [(self, i) for i in self.types]
         if recursive:
             for child in self.children:
                 assert child != self, (child, self)
@@ -580,7 +588,7 @@ class ArtifactClass(bytearray):
             self.index_representation = nam + ", ".join(txt)
         return self.index_representation
 
-    def html_page(self, fo, hexdump_limit):
+    def html_page(self, fo):
         ''' Produce HTML page '''
         fo.write("<H2>" + self.summary(link=False) + "</H2>\n")
         fo.write("<pre>\n")
@@ -598,12 +606,8 @@ class ArtifactClass(bytearray):
         self.html_derivation(fo)
         fo.write("</pre>\n")
 
-        if False and self.children and not self.slicings:
-            fo.write("<H4>Children</H4>\n")
-            fo.write("<pre>\n")
-            for p in sorted(self.children):
-                fo.write("  " + self.top.html_link_to(p) + "\n")
-            fo.write("</pre>\n")
+        if self.children and not self.slicings:
+            self.html_interpretation_children(fo, self)
 
         if self.comments:
             fo.write("<H4>NB: Comments at End</H4>\n")
@@ -612,27 +616,7 @@ class ArtifactClass(bytearray):
             for _owner, func in self.interpretations:
                 func(fo, self)
         else:
-
-            fo.write("<H4>HexDump</H4>\n")
-            fo.write("<pre>\n")
-
-            if not self.records:
-                if len(self) > hexdump_limit:
-                    hexdump.hexdump_to_file(self[:hexdump_limit], fo)
-                    fo.write("[…]\n")
-                else:
-                    hexdump.hexdump_to_file(self, fo)
-            else:
-                done = 0
-                idx = 0
-                for n, r in enumerate(self.records):
-                    fo.write("Record #0x%x\n" % n)
-                    hexdump.hexdump_to_file(self[idx:idx+r], fo)
-                    fo.write("\n")
-                    idx += r
-                    done += r
-                    if done > hexdump_limit:
-                        break
+            self.html_interpretation_hexdump(fo, self)
 
         if self.comments:
             fo.write("<H4>Comments</H4>\n")
@@ -643,6 +627,38 @@ class ArtifactClass(bytearray):
 
 
         fo.write("</pre>\n")
+
+    def html_interpretation_children(self, fo, _this):
+        ''' Default interpretation list of children'''
+
+        fo.write("<H4>Children</H4>\n")
+        fo.write("<pre>\n")
+        for p in sorted(self.children):
+            fo.write("  " + p.summary() + "\n")
+        fo.write("</pre>\n")
+
+    def html_interpretation_hexdump(self, fo, _this):
+        ''' Default interpretation as hexdump '''
+        fo.write("<H4>HexDump</H4>\n")
+        fo.write("<pre>\n")
+
+        if not self.records:
+            if len(self) > self.top.hexdump_limit:
+                hexdump.hexdump_to_file(self[:self.top.hexdump_limit], fo)
+                fo.write("[…]\n")
+            else:
+                hexdump.hexdump_to_file(self, fo)
+        else:
+            done = 0
+            idx = 0
+            for n, r in enumerate(self.records):
+                fo.write("Record #0x%x\n" % n)
+                hexdump.hexdump_to_file(self[idx:idx+r], fo)
+                fo.write("\n")
+                idx += r
+                done += r
+                if done > self.top.hexdump_limit:
+                    break
 
     def html_derivation(self, fo):
         ''' Recursively document how this artifact came to be '''
