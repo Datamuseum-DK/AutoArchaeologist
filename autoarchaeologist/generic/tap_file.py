@@ -2,116 +2,114 @@
     TAP files
     ---------
 
-    Break SIMH-TAP files (http://simh.trailing-edge.com/docs/simh_magtape.pdf) into
-    tape files, and those tape-files into records.
+    SIMH-TAP files (http://simh.trailing-edge.com/docs/simh_magtape.pdf)
 '''
+
 import struct
 
 import autoarchaeologist
 
-class TAPtapefile():
-    '''
-        A Single tape file
-    '''
+class TapeFile():
+    ''' One data file on the tape '''
+    def __init__(self):
+        self.records = []
+        self.body = bytearray()
+        self.a = None
 
-    def __init__(self, this):
-        self.this = this
-        self.recs = []
-        self.rls = []
+    def __iadd__(self, chunk):
+        self.records.append(len(chunk))
+        self.body += chunk
+        return self
 
-    def iter_recs(self):
-        ''' build payload from record posistions '''
-        this = bytearray()
-        for a, b in self.recs:
-            this += self.this[a:a + b]
-        return this
+    def commit(self, parent):
+        ''' Register the artifact '''
+        self.a = autoarchaeologist.Artifact(parent, self.body)
+        self.a.add_type("TAPE file")
+        self.a.records = self.records
 
-    def commit(self):
-        ''' Slice out our part, and build record-ified sub-artifact '''
-        if not self.recs:
-            return
-        idx0 = self.recs[0][0] - 4
-        idxn = sum(self.recs[-1]) + 4
-        this = self.this.slice(idx0, idxn - idx0)
-        this.add_note("TAP tapefile")
+    def __str__(self):
+        return "<TF " + str(self.records) + ">"
 
-        that = autoarchaeologist.Artifact(this, self.iter_recs())
-        that.records = [y for x, y in self.recs]
-
-        for _i, j in self.recs:
-            if not self.rls or j != self.rls[-1][0]:
-                self.rls.append([j, 0])
-            self.rls[-1][1] += 1
-
-        this.add_interpretation(self, self.html_interpretation)
-
-        txt = "+".join(["%d*%d" % (y,x) for x,y in self.rls])
-        that.add_note("TAP file records (%s)" % txt)
-
-    def html_interpretation(self, fo, _this):
-        ''' Render block-list summary '''
-        fo.write("<H3>TAP file</H3>\n")
-        fo.write("<pre>\n")
-        for i, j in self.rls:
-            fo.write("%d records of %d bytes\n" % (j, i))
-        fo.write("</pre>\n")
+    def html_summary(self):
+        ''' Summary of block-sizes'''
+        summ = [[self.records[0], 0]]
+        for i in self.records:
+            if summ[-1][0] != i:
+                summ.append([i, 1])
+            else:
+                summ[-1][1] += 1
+        summ = " + ".join(["0x%x*0x%x" % (y,x) for x,y in summ])
+        return self.a.summary() + " // [" + summ + "]"
 
 class TAPfile():
     '''
        SIMH TAP format
        ---------------
 
-       Split into tape-files, and split those into tape-records
+       Split into tape-files with record info
     '''
 
     def __init__(self, this):
 
-        if this.has_note("TAP tapefile") or this.has_note("TAP tape"):
+        if this.has_type("TAP tape"):
             return
 
-        self.files = []
+        self.parts = []
 
         i = 0
-        self.files.append(TAPtapefile(this))
         while i + 4 <= len(this):
-            j = i
-
             preword = struct.unpack("<L", this[i:i+4])[0]
             i += 4
 
             if preword == 0xffffffff:
+                self.parts.append(preword)
                 break
 
+            if not preword:
+                self.parts.append(preword)
+                continue
+
             if preword > 128*1024:
-                if j:
+                if self.parts:
                     print(this, "TAP Preposterous blocksize", preword)
                 return
 
-            if not preword:
-                if self.files[-1].recs:
-                    self.files.append(TAPtapefile(this))
-                continue
+            if not self.parts or not isinstance(self.parts[-1], TapeFile):
+                self.parts.append(TapeFile())
+
+            self.parts[-1] += this[i:i + preword]
 
             i += preword + (preword & 1)
 
             if i + 4 > len(this):
-                if j:
-                    print("TAP Ran out of data", j, i, preword, this)
+                if self.parts:
+                    print("TAP Ran out of data", i, preword, this)
                 return
 
             postword = struct.unpack("<L", this[i:i+4])[0]
             i += 4
             if preword != postword:
-                if j:
+                if self.parts:
                     print("TAP pre/post-word mismatch at 0x%x (0x%x/0x%x)" % (i, preword, postword))
                 return
 
-            self.files[-1].recs.append([j + 4, preword])
+        this.add_type("TAP tape")
+        for i in self.parts:
+            if isinstance(i, TapeFile):
+                i.commit(this)
+        this.add_interpretation(self, self.html_tap_index)
 
-        if not self.files[-1].recs:
-            self.files.pop(-1)
-        if not self.files:
-            return
-        for i in self.files:
-            i.commit()
-        this.add_note("TAP tape")
+    def html_tap_index(self, fo, _this):
+        ''' Listing of tape files and marks '''
+        fo.write("<H4>TAP file contents</H4>\n")
+        fo.write("<pre>\n")
+        for i in self.parts:
+            if isinstance(i, TapeFile):
+                fo.write("    " + i.html_summary() + "\n")
+            elif not i:
+                fo.write("    tape-mark\n")
+            elif i == 0xffffffff:
+                fo.write("    end-of-medium\n")
+            else:
+                fo.write("    0x%08x\n" % i)
+        fo.write("<pre>\n")
