@@ -68,7 +68,7 @@ class AbsBin():
     '''
 
     def __init__(self, this):
-        if this.has_note("AbsBin"):
+        if this.has_type("AbsBin"):
             return
 
         idx = 0
@@ -95,7 +95,7 @@ class AbsBin():
             return
 
         this = this.slice(pfx, idx - pfx)
-        if not this.has_note("AbsBin"):
+        if not this.has_type("AbsBin"):
             this.add_type("AbsBin")
             self.this = this
             self.records = records
