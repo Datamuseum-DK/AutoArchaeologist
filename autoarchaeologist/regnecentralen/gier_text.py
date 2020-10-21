@@ -179,7 +179,7 @@ class GIER_Text():
             this.add_comment("Parity errors are marked in blue.")
 
         this.add_interpretation(self, self.html_interpretation_html)
-        this.add_interpretation(self, self.html_interpretation_svg)
+        # this.add_interpretation(self, self.html_interpretation_svg)
 
 
     def open_svg(self):
