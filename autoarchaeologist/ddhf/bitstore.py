@@ -80,7 +80,7 @@ class FromBitStore():
             wikipage.replace("/", "_") + ".utf8",
             url,
         )
-        body = body.decode("UTF-8")
+        body = bytes(body).decode("UTF-8")
         body = body.split('<textarea')[-1]
         body = body.split('>', 1)[-1]
         body = body.split('</textarea>')[0]
