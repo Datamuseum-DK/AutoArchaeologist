@@ -1,25 +1,24 @@
+'''
+	GIER Artifacts from Datamuseum.dk's BitStore
+'''
 
-import glob
 import os
 
-import autoarchaeologist
+from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
 
-from autoarchaeologist.generic.bigdigits import BigDigits
 from autoarchaeologist.generic.samesame import SameSame
-from autoarchaeologist.data_general.papertapechecksum import DGC_PaperTapeCheckSum
 from autoarchaeologist.regnecentralen.papertapechecksum import RC_PaperTapeCheckSum
 from autoarchaeologist.regnecentralen.gier_text import GIER_Text
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
+def GIER_job(html_dir, link_prefix=None):
 
-if __name__ == "__main__":
-
-
-    ctx = autoarchaeologist.Excavation()
+    ctx = DDHF_Excavation(
+        ddhf_topic = "RegneCentralen GIER Computer",
+        ddhf_topic_link = 'https://datamuseum.dk/wiki/GIER'
+    )
 
     ctx.add_examiner(GIER_Text)
-    ctx.add_examiner(BigDigits)
-    ctx.add_examiner(DGC_PaperTapeCheckSum)
     ctx.add_examiner(RC_PaperTapeCheckSum)
     ctx.add_examiner(SameSame)
 
@@ -51,9 +50,16 @@ if __name__ == "__main__":
         pass
 
     ctx.produce_html(
-       html_dir="/tmp/_aa_gier",
+       html_dir=html_dir,
        hexdump_limit=1<<10,
-       # link_prefix="http://phk.freebsd.dk/misc/gier/",
+       link_prefix=link_prefix,
     )
 
-    print("Now point your browser at", ctx.link_prefix + '/' + ctx.filename_for(ctx))
+    return ctx
+
+if __name__ == "__main__":
+
+    i = GIER_job(html_dir="/tmp/_aa_gier")
+
+    print("Now point your browser at:")
+    print("\t", i.link_prefix + '/' + i.filename_for(i))
