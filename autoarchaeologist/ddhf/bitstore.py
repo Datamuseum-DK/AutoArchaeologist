@@ -130,6 +130,9 @@ class FromBitStore():
             print(metalines)
             return
 
+        link_summary = '<A href="http://datamuseum.dk/wiki/Bits:' + arg + '">'
+        link_summary += summary + '</a>'
+
         i = metalines.index("BitStore.Size:")
         if i < 0:
             print(arg, "Ignored, no Bitstore.Size found (This is BAD!)")
@@ -139,7 +142,7 @@ class FromBitStore():
         b = self.fetch_artifact(arg, expected)
         self.loaded.add(arg)
         try:
-            self.ctx.add_top_artifact(b, arg + " " + summary)
+            self.ctx.add_top_artifact(b, arg + " " + link_summary)
         except autoarchaeologist.DuplicateArtifact as why:
             print(why)
             return
