@@ -59,12 +59,11 @@ class FromBitStore():
         if self.cache_dir:
             try:
                 fi = open(self.cache_dir + "/" + key, "rb")
-                mm = mmap.mmap(
+                return mmap.mmap(
                     fi.fileno(),
                     0,
                     access=mmap.ACCESS_READ,
                 )
-                return mm
             except FileNotFoundError:
                 pass
         print("fetching " + url)
