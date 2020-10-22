@@ -15,6 +15,7 @@ PROTOCOL = "https"
 BITSTORE_FORMATS = {
     "PDF": False,
     "MP4": False,
+    "SIMH-TAP": True,
     "ASCII": True,
     "ASCII_EVEN": True,
     "ASCII_ODD": True,

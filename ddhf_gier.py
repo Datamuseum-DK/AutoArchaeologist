@@ -11,7 +11,7 @@ from autoarchaeologist.regnecentralen.papertapechecksum import RC_PaperTapeCheck
 from autoarchaeologist.regnecentralen.gier_text import GIER_Text
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
-def GIER_job(html_dir, link_prefix=None):
+def GIER_job(html_dir, **kwargs):
 
     ctx = DDHF_Excavation(
         ddhf_topic = "RegneCentralen GIER Computer",
@@ -45,14 +45,14 @@ def GIER_job(html_dir, link_prefix=None):
     ctx.start_examination()
 
     try:
-        os.mkdir("/tmp/_aa")
+        os.mkdir(html_dir)
     except FileExistsError:
         pass
 
     ctx.produce_html(
        html_dir=html_dir,
        hexdump_limit=1<<10,
-       link_prefix=link_prefix,
+       **kwargs,
     )
 
     return ctx

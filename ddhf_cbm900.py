@@ -1,7 +1,10 @@
+'''
+	Commordore CBM-900 Artifacts from Datamuseum.dk's BitStore
+'''
 
 import os
 
-from autoarchaeologist import Excavation
+from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
 
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
@@ -11,9 +14,12 @@ from autoarchaeologist.unix.v7_filesystem import V7_Filesystem
 from autoarchaeologist.unix.cbm900_ar import Ar
 from autoarchaeologist.unix.cbm900_l_out import L_Out
 
-def main():
+def CBM900_job(html_dir, **kwargs):
 
-    ctx = Excavation()
+    ctx = DDHF_Excavation(
+        ddhf_topic = "Commodore CBM-900",
+        ddhf_topic_link = 'https://datamuseum.dk/wiki/Commodore/CBM900',
+    )
 
     ctx.add_examiner(V7_Filesystem)
     ctx.add_examiner(Ar)
@@ -27,24 +33,24 @@ def main():
         "30001199",
     )
 
-    # You could instead:
-    # ctx.add_file_artifact("/some/v7pdpdisk.img")
-
     ctx.start_examination()
 
     try:
-        os.mkdir("/tmp/_aa_cbm900")
+        os.mkdir(html_dir)
     except FileExistsError:
         pass
 
     ctx.produce_html(
-       html_dir="/tmp/_aa_cbm900",
+       html_dir=html_dir,
        hexdump_limit=1<<10,
-       # link_prefix="http://phk.freebsd.dk/misc/gier/",
-       download_links=True,
+       **kwargs,
     )
 
-    print("Now point your browser at", ctx.link_prefix + '/' + ctx.filename_for(ctx))
+    return ctx
 
 if __name__ == "__main__":
-    main()
+
+    i = CBM900_job(html_dir="/tmp/_aa_cbm900")
+
+    print("Now point your browser at:")
+    print("\t", i.link_prefix + '/' + i.filename_for(i))
