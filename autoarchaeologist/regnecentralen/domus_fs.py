@@ -249,12 +249,12 @@ class CatEnt():
         try:
             fib = IndexBlock(self.this, self.idxblk)
         except Invalid as error:
-            print("DOMUSFS", self.name + " Bad file allocation " + str(error))
+            #print("DOMUSFS", self.name + " Bad file allocation " + str(error))
             return 0
 
         for n, sector in enumerate(fib):
             if sector in self.this.what:
-                print("DOMUSFS", self.name + " sector %d (0x%x) already allocated" % (n, sector))
+                #print("DOMUSFS", self.name + " sector %d (0x%x) already allocated" % (n, sector))
                 if only_perfect:
                     return 0
 
@@ -335,8 +335,9 @@ class Catalog():
                 self.entries.append(CatEnt(this, self, b))
             except Invalid as error:
                 if complain:
-                    print("DOMUSFS Bad catalog entry in %s offset 0x%x: " % (self.name, i), error)
-                    print("\t", b.hex())
+                    #print("DOMUSFS Bad catalog entry in %s offset 0x%x: " % (self.name, i), error)
+                    #print("\t", b.hex())
+                    pass
 
     def __lt__(self, other):
         return len(self.entries) < len(other.entries)
@@ -363,7 +364,7 @@ class Catalog():
 class Domus_Filesystem_Class():
     ''' One instance of a DOMUS filesystem '''
     def __init__(self, this, offset, length):
-        print("DOMUSFS", this, offset, length)
+        #print("DOMUSFS", this, offset, length)
 
         self.offset = offset
         self.length = length
@@ -479,7 +480,7 @@ class Domus_Filesystem_Class():
             if not idxblk:
                 continue
             subcat = Catalog(self, idxblk, self.sys, "ORPHAN_%d" % sector, False)
-            print("DOMUSFS ORPHAN IB", sector, subcat)
+            #print("DOMUSFS ORPHAN IB", sector, subcat)
             ngood = 0
             for dirent in subcat:
                 if dirent.is_catalog:
@@ -494,7 +495,7 @@ class Domus_Filesystem_Class():
             if ngood:
                 orphan_subcat.append([-ngood, subcat])
         for i, subcat in sorted(orphan_subcat):
-            print("DOMUSFS", -i, subcat)
+            #print("DOMUSFS", -i, subcat)
 
             subcat.get_files(only_perfect=False)
             subcat.commit()
@@ -510,7 +511,7 @@ class Domus_Filesystem_Class():
             idxblk = self.unused_index_block(sector)
             if not idxblk:
                 continue
-            print("DOMUSFS ORPHAN FILE IB", sector)
+            #print("DOMUSFS ORPHAN FILE IB", sector)
 
     def unused_index_block(self, sector):
         ''' Check if this is an index block of unused sectors '''
