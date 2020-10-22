@@ -113,12 +113,12 @@ class Excavation():
             description = filename
 
         fi = open(filename, "rb")
-        mm = mmap.mmap(
+        mapped = mmap.mmap(
             fi.fileno(),
             0,
             access=mmap.ACCESS_READ,
         )
-        return self.add_top_artifact(mm, description)
+        return self.add_top_artifact(mapped, description)
 
     def start_examination(self):
         ''' As it says on the tin... '''
@@ -198,8 +198,8 @@ class Excavation():
         for this in self.hashes.values():
 
             if downloads:
-                fb = self.html_dir + "/" + self.filename_for(this, suf=".bin")
-                open(fb, 'wb').write(this)
+                binfile = self.html_dir + "/" + self.filename_for(this, suf=".bin")
+                open(binfile, 'wb').write(this)
             fn = self.html_dir + "/" + self.filename_for(this)
             fo = open(fn, "w")
             self.html_prefix(fo, this)
@@ -276,17 +276,26 @@ class Excavation():
         t += '</a>'
         return t
 
-    def html_prefix(self, fo, this):
-        ''' Top of the HTML pages '''
-        fo.write("<!DOCTYPE html>\n")
-        fo.write("<html>\n")
-        fo.write("<head>\n")
+    def html_prefix_head(self, fo, this):
+        ''' meta lines inside <head>…</head> '''
         fo.write('<meta charset="utf-8">\n')
         if isinstance(this, Excavation):
             fo.write('<title>AutoArchaeologist</title>\n')
         else:
             fo.write('<title>' + this.name() + '</title>\n')
+
+    def html_prefix_banner(self, _fo, _this):
+        ''' Top of pages banner '''
+        return
+
+    def html_prefix(self, fo, this):
+        ''' Top of the HTML pages '''
+        fo.write("<!DOCTYPE html>\n")
+        fo.write("<html>\n")
+        fo.write("<head>\n")
+        self.html_prefix_head(fo, this)
         fo.write("</head>\n")
+        self.html_prefix_banner(fo, this)
         fo.write("<pre>")
         fo.write(self.html_link_to(self, "top"))
         if not isinstance(this, Excavation) and self.download_links:
@@ -356,8 +365,8 @@ class ArtifactClass(bytes):
 
     '''
 
-    def __new__(self, up, digest, bits):
-        return bytes.__new__(self, bits)
+    def __new__(cls, _up, _digest, bits):
+        return bytes.__new__(cls, bits)
 
     def __init__(self, up, digest, bits):
         assert len(bits) > 0
