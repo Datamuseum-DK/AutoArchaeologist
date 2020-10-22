@@ -297,6 +297,8 @@ class GIER_Text():
                     page += 1
             elif j == 80:
                 col = 0
+            elif j == GIER_CONTROL_RED:
+                red = 1
             elif j == GIER_CONTROL_BLACK:
                 red = 0
             elif j == GIER_CONTROL_LOWER:
