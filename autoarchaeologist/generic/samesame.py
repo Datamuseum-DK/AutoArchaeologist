@@ -1,14 +1,17 @@
+'''
+   Artifacts with only one byte value
+'''
 
 class SameSame():
     ''' Recognize artifacts with only a single byte value '''
     def __init__(self, this):
-        lo_val = min(this)
-        hi_val = max(this)
-        if lo_val != hi_val:
-            return
+        i = this[0]
+        for j in this:
+            if i != j:
+                return
 
         self.this = this
-        note = "Boring" if lo_val else "Blank"
+        note = "Boring" if this[0] else "Blank"
         if not this.has_note(note):
             this.add_type(note)
             this.add_interpretation(self, self.html_as_interpretation)
