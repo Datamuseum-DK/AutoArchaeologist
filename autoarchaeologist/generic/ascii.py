@@ -7,6 +7,8 @@
    several control characters which today are not in common use.
 '''
 
+from .parity import PARITY
+
 # TAB only works if this is a multiple of 8
 INDENT = " " * 8
 
@@ -46,10 +48,6 @@ CHARSET[0x7f][1] = '\u2421'
 #CHARSET[0x7c][1] = 'ø'
 #CHARSET[0x7d][1] = 'å'
 
-def parity(x):
-    ''' Calculate bit parity '''
-    return bin(x).count('1') & 1
-
 class Ascii():
 
     ''' Recognize ASCII texts '''
@@ -76,7 +74,7 @@ class Ascii():
             idx += 1
 
             if c:
-                par[2 + parity(c)] += 1
+                par[2 + PARITY[c]] += 1
                 if c & 0x80:
                     par[0] += 1
                 else:

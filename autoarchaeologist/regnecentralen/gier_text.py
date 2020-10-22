@@ -8,7 +8,7 @@
 
 '''
 
-PARITY = bytes([bin(x).count('1') & 1 for x in range(256)])
+from ..generic.parity import PARITY
 
 GIER_GLYPH = {
     1:   ('1', '∨',),
