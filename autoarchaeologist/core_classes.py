@@ -28,6 +28,7 @@
 '''
 
 import os
+import mmap
 import hashlib
 
 import autoarchaeologist.generic.hexdump as hexdump
@@ -111,7 +112,13 @@ class Excavation():
         if not description:
             description = filename
 
-        return self.add_top_artifact(open(filename, "rb").read(), description)
+        fi = open(filename, "rb")
+        mm = mmap.mmap(
+            fi.fileno(),
+            0,
+            access=mmap.ACCESS_READ,
+        )
+        return self.add_top_artifact(mm, description)
 
     def start_examination(self):
         ''' As it says on the tin... '''
@@ -135,7 +142,7 @@ class Excavation():
         ''' Polish things up before HTML production '''
 
         # Find the shortest unique digest length
-        self.digest_prefix = 4
+        self.digest_prefix = 8
         while True:
             if len({x[:self.digest_prefix] for x in self.hashes}) == len(self.hashes):
                 break
@@ -328,7 +335,7 @@ class Slab():
 class DuplicateName(Exception):
     ''' Set names must be unique '''
 
-class ArtifactClass(bytearray):
+class ArtifactClass(bytes):
 
     '''
         Artifact[Class]
@@ -349,9 +356,12 @@ class ArtifactClass(bytearray):
 
     '''
 
+    def __new__(self, up, digest, bits):
+        return bytes.__new__(self, bits)
+
     def __init__(self, up, digest, bits):
         assert len(bits) > 0
-        super().__init__(bits)
+        bytes.__init__(bits)
 
         self.digest = digest
         self.records = []		# For TAP files etc.

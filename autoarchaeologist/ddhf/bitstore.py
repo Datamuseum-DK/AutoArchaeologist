@@ -4,6 +4,7 @@
 '''
 
 import os
+import mmap
 import urllib.request
 
 import autoarchaeologist
@@ -57,7 +58,13 @@ class FromBitStore():
         ''' Fetch something if not cached '''
         if self.cache_dir:
             try:
-                return open(self.cache_dir + "/" + key, "rb").read()
+                fi = open(self.cache_dir + "/" + key, "rb")
+                mm = mmap.mmap(
+                    fi.fileno(),
+                    0,
+                    access=mmap.ACCESS_READ,
+                )
+                return mm
             except FileNotFoundError:
                 pass
         print("fetching " + url)
