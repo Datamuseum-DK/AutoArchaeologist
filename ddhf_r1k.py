@@ -41,6 +41,9 @@ def R1K_job(html_dir, **kwargs):
         "-30000744",
         "-30000407",
         "-30000743",
+        "-30000746",	# Defects tape
+        "-30000533",	# ASIS(AIX)
+        "-30000544",	# PAM arrival backup, different format.
         "RATIONAL_1000/TAPE",
         #"30000535", 
     )

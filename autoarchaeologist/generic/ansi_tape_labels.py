@@ -20,6 +20,8 @@ ANSI_HEADERS = {
     "EOF1": True,
     "EOF2": True,
     "EOF3": True,
+    "UHL\x01": True,    # Pretty sure this is a mistake
+                        # on 30000544::58cd75c1
     "UVL1": True,
     "UVL2": True,
 }
@@ -32,7 +34,7 @@ class Ansi_Tape_labels():
         for i in this.records:
             if i != 80:
                 return
-        print("?ANSI", this)
+        # print("?ANSI", this)
         for tour in range(2):
             if tour:
                 this.add_type("ANSI Tape Label")
