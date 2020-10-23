@@ -12,7 +12,8 @@ from autoarchaeologist.generic.ascii import Ascii
 from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import Ansi_Tape_labels
 
-from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks, R1K_Tape_hack
+from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
+from autoarchaeologist.rational.index_data import R1K_Index_Data
 
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
@@ -26,15 +27,22 @@ def R1K_job(html_dir, **kwargs):
     ctx.add_examiner(TAPfile)
     ctx.add_examiner(Ansi_Tape_labels)
     ctx.add_examiner(R1K_Tape_blocks)
-    ctx.add_examiner(R1K_Tape_hack)
+    ctx.add_examiner(R1K_Index_Data)
     ctx.add_examiner(Ascii)
     ctx.add_examiner(SameSame)
 
     FromBitStore(
         ctx,
         "_ddhf_bitstore_cache",
-        #"RATIONAL_1000/TAPE",
-        "30000534",
+        "-30000530",	# == 30000409
+        "-30000537",	# == 30000405
+        "-30000750",
+        "-30000528",
+        "-30000744",
+        "-30000407",
+        "-30000743",
+        "RATIONAL_1000/TAPE",
+        #"30000535", 
     )
 
     ctx.start_examination()
@@ -54,7 +62,7 @@ def R1K_job(html_dir, **kwargs):
 
 if __name__ == "__main__":
         
-    i = R1K_job("/tmp/_aa_r1k")
+    i = R1K_job("/critter/aa_r1k", downloads=True)
         
     print("Now point your browser at:")
     print("\t", i.link_prefix + '/' + i.filename_for(i))

@@ -113,7 +113,6 @@ class FromBitStore():
 
     def fetch_single(self, arg):
         ''' Fetch and parse the metadata page from the wiki '''
-        print("A", arg, arg in self.blacklist, self.blacklist)
         if arg in self.loaded or arg in self.blacklist:
             return
         meta = self.fetch_wiki_source('Bits:' + arg)

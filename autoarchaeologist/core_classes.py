@@ -514,6 +514,7 @@ class ArtifactClass(bytes):
             sln = self.slabs[i]
             for j in range(i+1, len(self.slabs)):
                 if sln.overlaps(self.slabs[j]):
+                    print("OVERLAP", self, sln, self.slabs[j])
                     overlaps.add(i)
                     overlaps.add(j)
 
@@ -623,7 +624,10 @@ class ArtifactClass(bytes):
             if self.descriptions:
                 txt += sorted(self.descriptions)
             if notes:
-                txt += sorted({y for _x, y in self.iter_notes(True)})
+                nn = sorted({y for _x, y in self.iter_notes(True)})
+                txt += nn[:35]
+                if len(nn) > 35:
+                    txt.append("…")
             if not link or not ident:
                 return nam + ", ".join(txt)
             self.index_representation = nam + ", ".join(txt)
@@ -647,7 +651,7 @@ class ArtifactClass(bytes):
         self.html_derivation(fo)
         fo.write("</pre>\n")
 
-        if self.children and not self.slicings and not self.interpretations:
+        if self.children and not self.slabs and not self.interpretations:
             self.html_interpretation_children(fo, self)
 
         if self.comments:
