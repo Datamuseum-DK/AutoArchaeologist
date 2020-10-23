@@ -62,7 +62,7 @@ def R1K_job(html_dir, **kwargs):
 
 if __name__ == "__main__":
         
-    i = R1K_job("/critter/aa_r1k", downloads=True)
+    i = R1K_job("/tmp/_aa_r1k", downloads=True)
         
     print("Now point your browser at:")
     print("\t", i.link_prefix + '/' + i.filename_for(i))
