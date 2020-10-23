@@ -142,10 +142,11 @@ class FromBitStore():
         b = self.fetch_artifact(arg, expected)
         self.loaded.add(arg)
         try:
-            self.ctx.add_top_artifact(b, arg + " " + link_summary)
+            this = self.ctx.add_top_artifact(b, link_summary)
         except autoarchaeologist.DuplicateArtifact as why:
             print(why)
             return
+        this.set_name(arg)
 
     def fetch_pattern(self, arg):
         ''' Fetch and parse the keyword page from the wiki '''

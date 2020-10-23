@@ -170,8 +170,8 @@ class File():
     def commit(self):
         ''' Create an artifact for this file '''
         self.a = autoarchaeologist.Artifact(self.this.this, self.bytes)
+        self.a.add_type("DOMUS File")
         self.a.add_note(self.catent.name)
-        self.a.add_note("DOMUS File")
 
     def html_details(self):
         ''' Render for per-sector interpretation '''
@@ -248,13 +248,13 @@ class CatEnt():
 
         try:
             fib = IndexBlock(self.this, self.idxblk)
-        except Invalid as error:
-            #print("DOMUSFS", self.name + " Bad file allocation " + str(error))
+        except Invalid as _error:
+            # print("DOMUSFS", self.name, "Bad file allocation", _error)
             return 0
 
-        for n, sector in enumerate(fib):
+        for _n, sector in enumerate(fib):
             if sector in self.this.what:
-                #print("DOMUSFS", self.name + " sector %d (0x%x) already allocated" % (n, sector))
+                #print("DOMUSFS", self.name, "sector %d (0x%x) already allocated" % (_n, sector))
                 if only_perfect:
                     return 0
 
@@ -333,9 +333,9 @@ class Catalog():
                 continue
             try:
                 self.entries.append(CatEnt(this, self, b))
-            except Invalid as error:
+            except Invalid as _error:
                 if complain:
-                    #print("DOMUSFS Bad catalog entry in %s offset 0x%x: " % (self.name, i), error)
+                    #print("DOMUSFS Bad catalog entry in %s offset 0x%x: " % (self.name, i), _error)
                     #print("\t", b.hex())
                     pass
 
@@ -494,8 +494,8 @@ class Domus_Filesystem_Class():
                     ngood += 1
             if ngood:
                 orphan_subcat.append([-ngood, subcat])
-        for i, subcat in sorted(orphan_subcat):
-            #print("DOMUSFS", -i, subcat)
+        for _i, subcat in sorted(orphan_subcat):
+            #print("DOMUSFS", -_i, subcat)
 
             subcat.get_files(only_perfect=False)
             subcat.commit()

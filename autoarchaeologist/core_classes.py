@@ -59,6 +59,8 @@ class Excavation():
         self.examiners = []
         self.names = set()
 
+        self.index = {}
+
         # Helper field for the HTML production
         self.html_dir = None
         self.digest_prefix = 8
@@ -119,6 +121,12 @@ class Excavation():
             access=mmap.ACCESS_READ,
         )
         return self.add_top_artifact(mapped, description)
+
+    def add_to_index(self, key, this):
+        ''' Add things to the index '''
+        i = self.index.setdefault(key[0], dict())
+        j = i.setdefault(key, set())
+        j.add(this)
 
     def start_examination(self):
         ''' As it says on the tin... '''
@@ -212,21 +220,10 @@ class Excavation():
         fo = open(fn, "w")
         self.html_prefix(fo, self)
 
-        index = {}
-        index_keys = set()
-        for x, y in self.iter_notes():
-            index_keys.add(y[:1])
-            t = index.get(y)
-            if not t:
-                index[y] = set([x])
-            else:
-                t.add(x)
-
-        index_keys = sorted(list(index_keys))
-
         fo.write("<H2>Links to index</H2>")
         fo.write("<table>\n")
-        cols = 8
+        cols = 48
+        index_keys = sorted(self.index)
         for row in [index_keys[i:i + cols] for i in range(0, len(index_keys), cols)]:
             fo.write("<tr>\n")
             for cell in row:
@@ -243,22 +240,26 @@ class Excavation():
             fo.write("</tr>\n")
             fo.write("<tr>\n")
             fo.write("<td></td>")
-            fo.write("<td><pre>")
+            fo.write('<td style="font-size: 70%;">')
             fo.write(", ".join(sorted({y for x, y in this.iter_notes(True)})))
-            fo.write("</pre></td>\n")
+            fo.write("</td>\n")
             fo.write("</tr>\n")
         fo.write("</table>\n")
 
         fo.write("<H2>Index</H2>")
         for idxkey in index_keys:
             fo.write('<H3><A name="IDX_%s">Index: %s</A></H3>\n' % (idxkey, idxkey))
-            notes = {x for x in index if x[:1] == idxkey}
-            for n in sorted(notes):
-                fo.write('<H4><A name="IDX_%s">%s</A></H4>\n' % (n, n))
-                fo.write('<pre>\n')
-                for x in sorted(index[n]):
-                    fo.write("   " + x.summary(notes=True) + "\n")
-                fo.write('</pre>\n')
+            fo.write("<table>\n")
+            for i, j in sorted(self.index[idxkey].items()):
+                fo.write('<tr>\n')
+                fo.write('<td style="font-size: 80%; vertical-align: top;">\n')
+                fo.write('<A name="IDX_%s">%s</A>' % (i, i))
+                fo.write('</td>\n')
+                fo.write('<td style="font-size: 80%;">')
+                for x in sorted(j):
+                    fo.write("   " + x.summary(notes=True) + "<br>\n")
+                fo.write('</td>\n')
+            fo.write("</table>\n")
 
         self.html_suffix(fo)
 
@@ -422,20 +423,30 @@ class ArtifactClass(bytes):
         self.parents.append(parent)
         parent.children.append(self)
 
-    def set_name(self, name):
+    def set_name(self, name, fallback=True):
         ''' Set a unique name '''
         if self.named == name:
             return
         if self.named is not None:
+            if fallback:
+                self.add_note(name)
+                self.top.add_to_index(name, self)
+                return
             raise DuplicateName("Name clash '%s' vs '%s'" % (self.named, name))
         if name in self.top.names:
+            if fallback:
+                self.add_note(name)
+                self.top.add_to_index(name, self)
+                return
             raise DuplicateName("Name already used '%s'" % name)
         self.top.names.add(name)
         self.named = name
+        self.top.add_to_index(name, self)
 
     def add_type(self, typ):
         ''' Add type designation (also as note) '''
         self.types.add(typ)
+        self.top.add_to_index(typ, self)
 
     def has_type(self, note):
         ''' Check if not already exists '''
@@ -457,15 +468,23 @@ class ArtifactClass(bytes):
     def add_note(self, note):
         ''' Add a note '''
         self.notes.add(note)
+        self.top.add_to_index(note, self)
 
     def has_note(self, note):
         ''' Check if not already exists '''
         return note in self.notes
 
+    def iter_types(self, recursive=False):
+        ''' Return all notes that apply to this artifact '''
+        yield from self.types
+        if recursive:
+            for child in self.children:
+                assert child != self, (child, self)
+                yield from child.iter_types(recursive)
+
     def iter_notes(self, recursive=False):
         ''' Return all notes that apply to this artifact '''
         yield from [(self, i) for i in self.notes]
-        yield from [(self, i) for i in self.types]
         if recursive:
             for child in self.children:
                 assert child != self, (child, self)
@@ -596,12 +615,15 @@ class ArtifactClass(bytes):
                     nam = self.top.html_link_to(self) + " "
                 else:
                     nam = self.name() + " "
-            if self.types:
-                txt += sorted(self.types)
+            j = set()
+            for i in self.iter_types(True):
+                if i not in j:
+                    txt.append(i)
+                    j.add(i)
             if self.descriptions:
                 txt += sorted(self.descriptions)
             if notes:
-                txt += sorted({y for x, y in self.iter_notes(True)})
+                txt += sorted({y for _x, y in self.iter_notes(True)})
             if not link or not ident:
                 return nam + ", ".join(txt)
             self.index_representation = nam + ", ".join(txt)
@@ -625,7 +647,7 @@ class ArtifactClass(bytes):
         self.html_derivation(fo)
         fo.write("</pre>\n")
 
-        if self.children and not self.slicings:
+        if self.children and not self.slicings and not self.interpretations:
             self.html_interpretation_children(fo, self)
 
         if self.comments:
@@ -643,9 +665,6 @@ class ArtifactClass(bytes):
             for i in self.comments:
                 fo.write(i + "\n")
             fo.write("</pre>\n")
-
-
-        fo.write("</pre>\n")
 
     def html_interpretation_children(self, fo, _this):
         ''' Default interpretation list of children'''

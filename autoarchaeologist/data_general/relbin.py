@@ -1,9 +1,14 @@
+'''
+   Data General Relocatable Binary objects and libraries
+   -----------------------------------------------------
+'''
+
 import struct
 
 import autoarchaeologist
 
 class Invalid(Exception):
-    pass
+    ''' Something's not right '''
 
 VALID_FIRST = set([2, 6, 7, 9,])
 VALID_LAST = set([6,])
@@ -50,6 +55,7 @@ def b40(x):
 
 
 class RelBinRec():
+    ''' A single RelBin record '''
     def __init__(self, this, i):
         self.padlen = 0
         while i < len(this) and not this[i]:
@@ -57,58 +63,65 @@ class RelBinRec():
             i += 1
         if len(this[i:]) < 12:
             raise Invalid("Too Short")
-        w = struct.unpack("<Hh", this[i:i+4])
-        if w[0] not in REC_MAX_LEN:
-            raise Invalid("RELBIN Bad Recno (0x%x) w1=%d" % (w[0],w[1]))
-        if w[1] > -1:
-            raise Invalid("RELBIN Invalid Length w0=0x%x (%d)" % (w[0], w[1]))
-        if REC_MAX_LEN[w[0]] > w[1]:
-            raise Invalid("RELBIN Bad Length w0=0x%x (%d)" % (w[0], w[1]))
-        nw = 6 + -w[1]
-        if len(this[i:]) < nw * 2:
+        words = struct.unpack("<Hh", this[i:i+4])
+        if words[0] not in REC_MAX_LEN:
+            raise Invalid("RELBIN Bad Recno (0x%x) w1=%d" % (words[0],words[1]))
+        if words[1] > -1:
+            raise Invalid("RELBIN Invalid Length w0=0x%x (%d)" % (words[0], words[1]))
+        if REC_MAX_LEN[words[0]] > words[1]:
+            raise Invalid("RELBIN Bad Length w0=0x%x (%d)" % (words[0], words[1]))
+        nwords = 6 + -words[1]
+        if len(this[i:]) < nwords * 2:
             raise Invalid("Too Short")
-        self.w = struct.unpack("<%dH" % nw, this[i:i+nw*2])
-        self.cs = sum(self.w) & 0xffff
-        if False and self.cs:
-            print("RELBIN bad CS " + " ".join(["%04x" % i for i in self.w]))
-            raise Invalid("RELBIN Bad checksum (0x%04x)" % self.cs)
-        if self.w[0] == 7:
-            _i, j = b40(self.w[6:8])
-            self.nm = j + " "
+        self.words = struct.unpack("<%dH" % nwords, this[i:i+nwords*2])
+        self.chksum = sum(self.words) & 0xffff
+        if False and self.chksum:
+            print("RELBIN bad CS " + " ".join(["%04x" % i for i in self.words]))
+            raise Invalid("RELBIN Bad checksum (0x%04x)" % self.chksum)
+        if self.words[0] == 7:
+            _i, j = b40(self.words[6:8])
+            self.name = j + " "
         else:
-            self.nm = ""
+            self.name = ""
 
     def length(self):
-        return self.padlen + 2 * len(self.w)
+        ''' length in bytes of this record '''
+        return self.padlen + 2 * len(self.words)
 
     def __repr__(self):
         return "<RBR " + self.render() + ">"
 
     def render(self):
+        ''' render as hexdumped words '''
         if self.padlen:
             t = "(%d)" % self.padlen
         else:
             t = "   "
-        t += " %2d" % self.w[0]
-        t += " %3d" % (self.w[1] - 65536)
-        t += " " + " ".join("%06o" % (x >> 1) for x in self.w[2:5])
-        t += " " + " ".join(["%04x" % x for x in self.w[5:]])
-        if self.cs:
-            t += "  CS=0x%04x" % self.cs
+        t += " %2d" % self.words[0]
+        t += " %3d" % (self.words[1] - 65536)
+        t += " " + " ".join("%06o" % (x >> 1) for x in self.words[2:5])
+        t += " " + " ".join(["%04x" % x for x in self.words[5:]])
+        if self.chksum:
+            t += "  CS=0x%04x" % self.chksum
         return t
 
     def symbols(self):
-        if self.w[0] in (7,3,4,5):
-            for x in range(6, len(self.w) - 1, 4):
-                y = b40(self.w[x:x+2])
-                yield y[0].strip() + "=" + y[1].strip()
+        ''' Iterate all symbols '''
+        if self.words[0] in (7,3,4,5):
+            for x in range(6, len(self.words) - 1, 4):
+                y = b40(self.words[x:x+2])
+                yield y[0].strip(), y[1].strip()
 
     def html_as_interpretation(self, fo):
+        ''' Render as hexdump, list symbols '''
         fo.write(self.render() + "\n")
-        for i in self.symbols():
-            fo.write(" " * 10 + i + "\n")
+        for i, j in self.symbols():
+            fo.write(" " * 10 + i + " " + j + "\n")
 
 class RelBin():
+    '''
+       Data General Relocatable Binary object or library
+    '''
     def __init__(self, this):
         if this.has_type("RelBin") or this.has_type("RelBinLib"):
             return
@@ -120,33 +133,33 @@ class RelBin():
         pfx = idx
 
         self.this = this
-        l = []
+        objs = []
 
         i = pfx
         while True:
             x = self.find_next(i)
             if not x[1]:
                 break
-            l.append(x)
+            objs.append(x)
             i += x[0] + x[1]
 
-        if not l:
+        if not objs:
             return
 
         #print("??RELBIN", this, i, len(l), l[0][0])
-        if len(l) > 1:
+        if len(objs) > 1:
             this.add_type("RelBinLib")
-            o = 0
-            for a, b, _r in l:
-                this.slice(o + a, b)
-                o += a + b
+            offset = 0
+            for a, b, _r in objs:
+                this.slice(offset + a, b)
+                offset += a + b
             return
 
-        # Only a single RelBin with no padding
+        # Only a single RelBin
 
-        r = l[0][2]
+        r = objs[0][2]
 
-        if r[0].w[0] not in VALID_FIRST:
+        if r[0].words[0] not in VALID_FIRST:
             return
 
         this = this.slice(pfx, i - pfx)
@@ -159,16 +172,17 @@ class RelBin():
         self.r = r
         self.this.add_interpretation(self, self.html_as_interpretation)
         for i in r:
-            for j in sorted(i.symbols()):
-                this.add_note(j)
-        if self.r[0].nm:
+            for j, k in sorted(i.symbols()):
+                if j in (".ENT",):
+                    this.add_note(k)
+        if self.r[0].name:
             try:
-                this.set_name(self.r[0].nm.strip())
+                this.set_name(self.r[0].name.strip())
             except autoarchaeologist.core_classes.DuplicateName:
                 pass
 
     def html_as_interpretation(self, fo, _this):
-
+        ''' List all the records '''
         fo.write("\n")
         fo.write("<H3>RelBin</H3>\n")
         fo.write("<pre>\n")
@@ -178,24 +192,24 @@ class RelBin():
 
 
     def find_next(self, i):
-
+        ''' Find boundaries of next relbin obj '''
         pfxlen = 0
         while i < len(self.this) and not self.this[i]:
             i += 1
             pfxlen += 1
 
-        i0 = i
+        start = i
         r = []
         while i < len(self.this):
             try:
                 j = RelBinRec(self.this, i)
-            except Invalid as e:
+            except Invalid as error:
                 if r:
-                    print("RELBIN", self.this, e)
+                    print("RELBIN", self.this, error)
                 return 0, 0, None
             # print("RELBIN", self.this, j)
             r.append(j)
             i += j.length()
-            if j.w[0] in VALID_LAST:
+            if j.words[0] in VALID_LAST:
                 break
-        return pfxlen, i - i0, r
+        return pfxlen, i - start, r
