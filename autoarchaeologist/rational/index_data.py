@@ -7,8 +7,14 @@ BLACKLIST = {
     "THIS_IS_THE_ROOT_OF_A_SUBSYSTEM",
     "LAST_RELEASE_NAME",
     "SUBPATH_NAME",
-    "048d6221", 	# EXPORTS = "?'spec"
-    "31f20053",		# TEST'SPEC = "procedure Test;"
+    "ACCESS_CONTROL",
+    "EXPORTS",
+    "SUBCLASS",
+    "IMPORTS_IMAGE",
+    "Nonterminal",
+    "048d6221", 	# .EXPORTS = "?'spec"
+    "31f20053",		# .TEST'SPEC = "procedure Test;"
+    "08ef374a",		# .SUBCLASS = "LOAD_VIEW"
 }
 
 class R1K_Index_Stanza():
@@ -52,9 +58,19 @@ class R1K_Index_Stanza():
 class R1K_Index_Data_Class():
 
     def __init__(self, indexfile, datafile):
+        print("R1KID", indexfile, datafile)
+        if indexfile.has_type("R1K_INDEX_FILE"):
+            return
+        indexfile.add_type("R1K_INDEX_FILE")
+
+        if datafile.has_type("R1K_DATA_FILE"):
+            return
+        datafile.add_type("R1K_DATA_FILE")
+
         self.indexfile = indexfile
         self.datafile = datafile
         self.slices = []
+        self.files = {}
 
         try:
             b = self.indexfile.split(b'\n', 1)[0].decode("ASCII").split()
@@ -89,11 +105,21 @@ class R1K_Index_Data_Class():
                 fn = z.lines[0].split('.')
                 if fn[-1] not in BLACKLIST and a.digest[:8] not in BLACKLIST:
                     a.add_note(html.escape(z.lines[0]))
+                self.files[z.lines[0]] = a
                 self.sl2.append((x, y, z, a))
             else:
                 print("Empty", offset, x)
                 print("\t", x, y, z.lines[0])
         self.datafile.add_interpretation(self, self.html_slice)
+
+        for i in self.files:
+            if i[-6:] != ".INDEX":
+                continue
+            j = i[:-6] + ".DATA"
+            if j not in self.files:
+                print("INDEX WITHOUT DATA", i, j, self.files[i])
+            else:
+                R1K_Index_Data_Class(self.files[i], self.files[j])
 
     def html_slice(self, fo, _this):
         fo.write("<H3>DATA as INDEXED</H3>\n")
