@@ -32,6 +32,7 @@ class FromBitStore():
         self.ctx = ctx
         self.cache_dir = cache_dir
         self.loaded = set()
+        self.blacklist = set()
 
         if cache_dir:
             try:
@@ -48,6 +49,9 @@ class FromBitStore():
             nbr = int(arg, 10)
         except ValueError:
             nbr = None
+        if nbr and -30000000 >= nbr >= -39999999:
+            self.blacklist.add("%d" % -nbr)
+            return
         if nbr and not 30000000 <= nbr <= 39999999:
             nbr = None
         if nbr is not None:
@@ -109,7 +113,8 @@ class FromBitStore():
 
     def fetch_single(self, arg):
         ''' Fetch and parse the metadata page from the wiki '''
-        if arg in self.loaded:
+        print("A", arg, arg in self.blacklist, self.blacklist)
+        if arg in self.loaded or arg in self.blacklist:
             return
         meta = self.fetch_wiki_source('Bits:' + arg)
         meta = meta.split('= METADATA =')[1]
@@ -160,16 +165,7 @@ class FromBitStore():
             line3 = lines.pop(0)
             _line4 = lines.pop(0)
             line5 = lines.pop(0)
-            j = {
-                "PDF": 0,
-                "MP4": 0,
-                "ASCII": 1,
-                "ASCII_EVEN": 1,
-                "ASCII_ODD": 1,
-                "ASCII_SET": 1,
-                "BINARY": 1,
-                "GIERTEXT": 1,
-            }.get(line3[1:])
+            j = BITSTORE_FORMATS.get(line3[1:])
             if j is None:
                 print("FORMAT? --", line3, line5)
                 continue
