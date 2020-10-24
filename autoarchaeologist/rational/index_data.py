@@ -37,13 +37,18 @@ class R1K_Index_Stanza():
             return
         try:
             self.offset = int(self.flds[0], 10)
+        except ValueError:
+            if len(self.flds[0]):
+                return
+            self.offset = 0
+        try:
             self.length = int(self.flds[1], 10)
         except ValueError:
             return
         if self.offset >= 0 and self.length < 0 and self.offset - self.length <= len(self.up.datafile):
             self.up.slices.append((self.offset, -self.length, self))
             return
-        print(self.lines[0], len(self.lines), self.cmd, self.flds)
+        print(self.cmd, self.flds, self.lines[0], len(self.lines), self.up.datafile)
         for i in self.lines[2:]:
             if not i:
                 continue
@@ -96,12 +101,15 @@ class R1K_Index_Data_Class():
                 print("\t", last[0], last[1], last[2].lines[0])
             if offset < x:
                 a = autoarchaeologist.Artifact(self.datafile, self.datafile[offset:x])
-                a.add_note("Gap")
+                a.add_note("Gap_0x%x" % (x - offset))
                 self.sl2.append((offset, x - offset, None, a))
             offset = x + y
             last = (x,y,z)
             if y > 0:
-                a = autoarchaeologist.Artifact(self.datafile, self.datafile[x:x+y])
+                if x or y < len(self.datafile):
+                    a = autoarchaeologist.Artifact(self.datafile, self.datafile[x:x+y])
+                else:
+                    a = self.datafile
                 fn = z.lines[0].split('.')
                 if fn[-1] not in BLACKLIST and a.digest[:8] not in BLACKLIST:
                     a.add_note(html.escape(z.lines[0]))

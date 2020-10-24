@@ -54,6 +54,10 @@ class TAPfile():
         if this.has_type("TAP tape"):
             return
 
+        # We only allow TAP on top-level artifacts for now
+        if not this.top in this.parents:
+            return
+
         self.parts = []
 
         i = 0
