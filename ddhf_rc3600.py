@@ -18,6 +18,7 @@ from autoarchaeologist.regnecentralen.papertapechecksum import RC_PaperTapeCheck
 from autoarchaeologist.regnecentralen.gier_text import GIER_Text
 from autoarchaeologist.regnecentralen.domus_fs import Domus_Filesystem
 from autoarchaeologist.regnecentralen.rcsl import RCSL
+from autoarchaeologist.regnecentralen.rc3600_fdtape import RC3600_FD_Tape
 
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
@@ -29,6 +30,7 @@ def RC3600_job(html_dir, **kwargs):
     )
 
     ctx.add_examiner(Domus_Filesystem)
+    ctx.add_examiner(RC3600_FD_Tape)
     ctx.add_examiner(AbsBin)
     ctx.add_examiner(RelBin)
     ctx.add_examiner(GIER_Text)
