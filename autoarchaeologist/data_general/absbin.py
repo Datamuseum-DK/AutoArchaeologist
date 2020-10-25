@@ -48,14 +48,40 @@ class AbsBinRec():
         ''' Source length of record incl padding '''
         return self.padlen + 2 * len(self.words)
 
+    def ascii(self, endian, pfx):
+        t = ""
+        t += pfx * (20 - len(self.words))
+        t += "|"
+        for i in self.words[3:]:
+            for j in endian(i):
+                if j == 0x26:
+                     t += "&amp;"
+                elif j == 0x3c:
+                     t += "&lt;"
+                elif 32 < j < 126:
+                     t += "%c" % j
+                else:
+                     t += " "
+        t += "|"
+        return t
+
     def html_as_interpretation(self, fo):
         ''' Render as hex words '''
         t = "    "
         if self.padlen:
-            t += "(%d) " % self.padlen
+            t += "(%3d) " % self.padlen
         else:
-            t += "    "
+            t += "      "
         t += " ".join(["%04x" % j for j in self.words])
+        def big_endian(i):
+            yield i >> 8
+            yield i & 0xff
+        def little_endian(i):
+            yield i & 0xff
+            yield i >> 8
+        t += self.ascii(big_endian, "     ")
+        t += self.ascii(little_endian, "  ")
+       
         fo.write(t + '\n')
 
 class AbsBin():

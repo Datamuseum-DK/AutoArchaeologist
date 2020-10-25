@@ -114,7 +114,33 @@ class RelBinRec():
 
     def html_as_interpretation(self, fo):
         ''' Render as hexdump, list symbols '''
-        fo.write(self.render() + "\n")
+        fo.write(self.render())
+        if self.words[0] in (2,):
+            reloc = "%05o" % (self.words[2] >> 1)
+            reloc += "%05o" % (self.words[3] >> 1)
+            reloc += "%05o" % (self.words[4] >> 1)
+            bstring = []
+            rptr = 1
+            for i in self.words[7:]:
+                if reloc[rptr] != '1':
+                    i = 0
+                rptr += 1
+                bstring.append(i >> 8)
+                bstring.append(i & 0xff)
+            fo.write("     " * (22 - len(self.words)))
+            fo.write("|")
+            for i in bstring:
+                if i == 0x26:
+                    fo.write('&amp;')
+                elif i == 0x3c:
+                    fo.write('&lt;')
+                elif 32 <= i <= 126:
+                    fo.write("%c" % i)
+                else:
+                    fo.write(" ")
+            fo.write("|")
+ 
+        fo.write("\n")
         for i, j in self.symbols():
             fo.write(" " * 10 + i + " " + j + "\n")
 
@@ -173,7 +199,7 @@ class RelBin():
         self.this.add_interpretation(self, self.html_as_interpretation)
         for i in r:
             for j, k in sorted(i.symbols()):
-                if j in (".ENT",):
+                if j in (".ENT",) and k:
                     this.add_note(k)
         if self.r[0].name:
             try:
