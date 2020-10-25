@@ -26,4 +26,27 @@ see how few fortunes, the CBM-900 came with, back in 1984:
 
 http://datamuseum.dk/aa/cbm900//5caa.html
 
-More examples comming soon...
+# Second Example: RegneCentralen GIER computer
+
+The paper-tapes from this computer, like many other of 1950-1960 vintage, are not in ASCII
+but in a per-machine, in some cases, per-installation character set.  The one on GIER isnt
+too bad (https://datamuseum.dk/wiki/GIER/Flexowriter) but did cause a bit of headache before
+we got a good HTML representation of overprinting underlines and the "10" glyph.
+
+GIER is of course the computer Peter Naur of Backus-Naur-Notatation fame worked on, and his
+demonstration program is a good example of the output:
+
+http://datamuseum.dk/aa/gier/9cb418c9.html
+
+# Third Example: Regnecentralen RC3600/RC7000
+
+RC7000 was a Data General Nova with a "RC7000" stocker, RC3600 was Regnecentralens own reimplementation,
+and they were as a sort of swiss army-knife computer doing everything from industrial control and monitoring,
+to teaching programming in high-schools.
+
+We have a rich software archive for these computers, and making sense of them requires a number of "examiners"
+and we have a couple more in testing which are not yet deployed.
+
+Here is a COMAL (https://datamuseum.dk/wiki/COMAL) program which can play the card-game "half-twelve", written by a high-school student in 1981:
+
+http://datamuseum.dk/aa/rc3600/1aaf6271.html
