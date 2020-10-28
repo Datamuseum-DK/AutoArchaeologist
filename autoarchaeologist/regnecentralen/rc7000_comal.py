@@ -8,7 +8,7 @@ import struct
 class ComalSyntax(Exception):
     ''' COMAL syntax error '''
 
-TOPVAR = 218
+TOPVAR = 0xdd
 
 COMAL_TOKEN = {
     0x0025: (0, "DIGITS", ),
@@ -84,10 +84,10 @@ COMAL_TOKEN = {
     0x006e: (1, "CHR", ),
     0x0079: (1, "LEN", ),
     0x007a: (0, "TRN", ),
-    0x007b: (4, "INV", ),
-    0x007c: (4, "ZER", ),
-    0x007d: (4, "CON", ),
-    0x007e: (4, "IDN", ),
+    0x007b: (5, "INV", ),
+    0x007c: (5, "ZER", ),
+    0x007d: (5, "CON", ),
+    0x007e: (5, "IDN", ),
     # 0x007f: (0, "CONL", ),
     # 0x0080: (0, "RUN", ),
     # 0x0081: (0, "LIST", ),
@@ -136,6 +136,10 @@ COMAL_TOKEN = {
     0x00fe: (2, "DIV", ),
     0x00ff: (2, "NOT", ),
 }
+
+def isvar(n):
+    ''' Does byte-string value represent a variable ? '''
+    return 0x80 <= n <= TOPVAR
 
 def get_token(n, flag=0):
     ''' Convert byte value to token, masked by flag '''
@@ -228,6 +232,28 @@ class ComalStatement():
             t += "%c" % stream.pop(0)
         yield t
 
+    def expect_lineno(self, stream):
+        ''' lineno '''
+        if len(stream) & 1:
+            stream.pop(0)
+        lno = stream.pop(0) << 8
+        lno |= stream.pop(0)
+        yield "%04d" % lno
+
+    def expect_string_expr(self, stream):
+        ''' string_expr '''
+
+        while stream and stream[0] != 0xe2:
+            if stream[0] == 0xe9:
+                yield string(stream)
+                continue
+
+            if isvar(stream[0]):
+                yield from self.expect_var(stream)
+                continue
+
+            break
+
     def expect_expr(self, stream):
         ''' expr '''
         is_string = False
@@ -244,7 +270,7 @@ class ComalStatement():
                 yield from self.expect_number(stream)
                 continue
 
-            if 0x80 <= stream[0] <= TOPVAR:
+            if isvar(stream[0]):
                 i = list(self.expect_var(stream))
                 for j in i:
                     if '$' in j:
@@ -278,6 +304,10 @@ class ComalStatement():
                 yield ","
                 continue
 
+            if 0x41 <= stream[0] <= 0x5d:
+                yield "FN%c" % stream.pop(0)
+                continue
+
             break
 
     def expect_file(self, stream):
@@ -304,29 +334,33 @@ class ComalStatement():
         else:
             assert False, "expect_number: " + bytes(stream).hex()
 
-    def expect_stringlit(self, stream):
-        ''' string '''
-        yield string(stream)
-
     def expect_var(self, stream):
         ''' var '''
         var = stream.pop(0)
-        assert 0x80 <= var <= TOPVAR, "Bad Var 0x%02x" % var
+        assert isvar(var), "Bad Var 0x%02x" % var
         assert var & 0x80, "VAR 0x%02x" % var
         if var == 0x80:
             yield self.lvar
-        yield self.up.udas.variables[var & 0x7f].name
+        vno = var & 0x7f
+        if vno < len(self.up.udas.variables):
+            yield self.up.udas.variables[vno].name
+        else:
+            yield "VAR_0x%02x" % var
         if get_token(stream[0]) == "(":
             yield from self.expect(stream, "(")
             yield from self.expect_expr(stream)
-            if get_token(stream[0]) == ",":
+            while get_token(stream[0]) == ",":
                 yield from self.expect(stream, ",")
                 yield from self.expect_expr(stream)
             yield from self.expect(stream, ")")
 
+    def render_bye(self, _stream):
+        ''' BYE '''
+        yield ""
+
     def render_call(self, stream):
         ''' CALL expr [ , expr ] ... '''
-        yield from self.expect_stringlit(stream)
+        yield from self.expect_string_expr(stream)
         while self.peek(stream, ','):
             yield ","
             yield from self.expect_expr(stream)
@@ -337,16 +371,57 @@ class ComalStatement():
         yield from self.expect_expr(stream)
         yield from self.expect(stream, "OF")
 
+    def render_chain(self, stream):
+        ''' CHAIN string_expr [ THEN GOTO lineno ] '''
+        yield from self.expect_string_expr(stream)
+        if stream and stream[0] != 0xe2:
+            yield from self.expect(stream, 'THEN')
+            yield from self.expect(stream, 'GOTO')
+            yield from self.expect_lineno(stream)
+
+    def render_connect(self, stream):
+        ''' CONNECT string [ , expr ] '''
+        yield from self.expect_string_expr(stream)
+        if stream and stream[0] != 0xe2:
+            yield from self.expect(stream, ',')
+            yield from self.expect_expr(stream)
+
     def render_close(self, stream):
         ''' CLOSE [ file ] '''
-        if stream[0] != 0xe2:
+        if stream and stream[0] != 0xe2:
             yield from self.expect_file(stream)
+
+    def render_create(self, stream):
+        ''' CREATE string , expr [ , expr ] '''
+        yield from self.expect_string_expr(stream)
+        yield from self.expect(stream, ',')
+        yield from self.expect_expr(stream)
+        if stream and stream[0] != 0xe2:
+            yield from self.expect(stream, ',')
+            yield from self.expect_expr(stream)
 
     def render_data(self, stream):
         ''' DATA expr [ , expr ] ... '''
         yield from self.expect_expr(stream)
         while self.peek(stream, ','):
             yield from self.expect_expr(stream)
+
+    def render_def(self, stream):
+        ''' DEF fn var = expr '''
+        yield "FN%c" % stream.pop(0)
+        yield '('
+        yield "VAR%02x" % stream.pop(0)
+        yield ')'
+        yield from self.expect(stream, '=')
+        yield from self.expect_expr(stream)
+
+    def render_delay(self, stream):
+        ''' DELAY expr '''
+        yield from self.expect_expr(stream)
+
+    def render_delete(self, stream):
+        ''' DELETE string_expr '''
+        yield from self.expect_string_expr(stream)
 
     def render_dim(self, stream):
         ''' DIM var [ , var ] ... '''
@@ -356,17 +431,30 @@ class ComalStatement():
                 break
             yield ","
 
+    def render_enter(self, stream):
+        ''' ENTER string_expr '''
+        yield from self.expect_string_expr(stream)
+
     def render_else(self, stream):
         ''' ELSE [ comment ] '''
         self.indent += 1
         self.outdent += 1
         stream.pop(0)
         stream.pop(0)
+        if stream:
+            yield from self.expect_comment(stream)
         yield ""
 
-    def render_endcase(self, _stream):
+    def render_end(self, stream):
+        ''' END [ comment ]'''
+        if stream:
+            yield from self.expect_comment(stream)
+
+    def render_endcase(self, stream):
         ''' ENDCASE [ comment ] '''
         self.outdent += 1
+        if stream:
+            yield from self.expect_comment(stream)
         yield ""
 
     def render_endif(self, stream):
@@ -374,6 +462,8 @@ class ComalStatement():
         self.outdent += 1
         stream.pop(0)
         stream.pop(0)
+        if stream:
+            yield from self.expect_comment(stream)
         yield ""
 
     def render_endproc(self, stream):
@@ -381,14 +471,19 @@ class ComalStatement():
         self.outdent += 1
         stream.pop(0)
         stream.pop(0)
-        yield ""
+        if stream:
+            yield from self.expect_comment(stream)
 
     def render_endwhile(self, stream):
         ''' ENDWHILE '''
         self.outdent += 1
-        stream.pop(0)
-        stream.pop(0)
-        yield ""
+        # XXX: Not obvious what the correct criteria is here
+        # XXX: Could be original bug
+        if len(stream) > 2:
+            yield from self.expect_comment(stream)
+        else:
+            stream.pop(0)
+            stream.pop(0)
 
     def render_exec(self, stream):
         ''' EXEC name '''
@@ -406,11 +501,13 @@ class ComalStatement():
             yield from self.expect(stream, "STEP")
             yield from self.expect_expr(stream)
 
+    def render_gosub(self, stream):
+        ''' GOSUB lineno '''
+        yield from self.expect_lineno(stream)
+
     def render_goto(self, stream):
         ''' GOTO lineno '''
-        lno = stream.pop(0) << 8
-        lno |= stream.pop(0)
-        yield "%04d" % lno
+        yield from self.expect_lineno(stream)
 
     def render_if(self, stream):
         ''' if expr THEN [ statement ] '''
@@ -419,7 +516,7 @@ class ComalStatement():
         if stream[0] == 0xe2:
             self.indent += 1
             return
-        yield from self.statement(stream)
+        yield from self.render_statement(stream)
 
     def render_input(self, stream):
         ''' INPUT string , var [ , string , var ] ... '''
@@ -427,7 +524,7 @@ class ComalStatement():
             yield from self.expect_file(stream)
         while stream and stream[0] != 0xe2:
             if stream[0] == 0xe9:
-                yield from self.expect_stringlit(stream)
+                yield from self.expect_string_expr(stream)
                 yield from self.expect(stream, ",")
             yield from self.expect_var(stream)
             if not stream or stream[0] == 0xe2:
@@ -444,6 +541,42 @@ class ComalStatement():
                 break
             yield from self.expect(stream, (";", ",",))
 
+    def render_mat(self, stream):
+        '''
+           MAT PRINT var [ {,|;} var ] ... [ {,|;} ]
+           MAT READ var [ , var ] ...
+           MAT var = expr
+        '''
+        if self.peek(stream, "PRINT"):
+            yield "PRINT"
+            yield from self.expect_var(stream)
+            while stream and stream[0] != 0xe2:
+                yield from self.expect(stream, (",", ";",))
+                if not stream or stream[0] == 0xe2:
+                    break
+            return
+
+
+        if self.peek(stream, "READ"):
+            yield "READ"
+            if get_token(stream[0]) == "FILE":
+                yield from self.expect_file(stream)
+            yield from self.expect_var(stream)
+            while self.peek(stream, ','):
+                yield ','
+                yield from self.expect_var(stream)
+            return
+
+        if isvar(stream[0]):
+            yield from self.expect_var(stream)
+            yield from self.expect(stream, "=")
+            yield from self.expect_expr(stream)
+            return
+
+    def render_new(self, _stream):
+        ''' NEW '''
+        yield ""
+
     def render_next(self, stream):
         ''' NEXT var '''
         self.outdent += 1
@@ -451,9 +584,35 @@ class ComalStatement():
         stream.pop(0)
         yield ""
 
+    def render_on(self, stream):
+        '''
+           ON ( {ESC|ERR} THEN statement )
+           ON expr
+        '''
+        if not stream[0]:
+            stream.pop(0)
+            yield from self.expect(stream, ("ESC", "ERR",))
+            yield from self.expect(stream, "THEN")
+            yield from self.render_statement(stream)
+        else:
+            n = stream.pop(0)
+            yield from self.expect_expr(stream)
+            yield from self.expect(stream, "THEN")
+            yield from self.expect(stream, ("GOTO", "GOSUB"))
+            for i in range(n):
+                if i:
+                    yield ","
+                yield from self.expect_lineno(stream)
+
+
     def render_open(self, stream):
         ''' OPEN file_mode [ , ] expr '''
         yield from self.expect_file(stream)
+        yield from self.expect_expr(stream)
+
+    def render_page(self, stream):
+        ''' PAGE '''
+        yield from self.expect(stream, "=")
         yield from self.expect_expr(stream)
 
     def render_proc(self, stream):
@@ -461,12 +620,17 @@ class ComalStatement():
         self.indent += 1
         yield from self.expect_var(stream)
 
+    def render_protect(self, stream):
+        ''' PROTECT = expr '''
+        yield from self.expect(stream, '=')
+        yield from self.expect_expr(stream)
+
     def render_print(self, stream):
-        ''' PRINT [ file ] [ USING string . ] [expr] [ {,|;} expr ] ... [{,|;}]'''
+        ''' PRINT [ file ] [ USING string_expr . ] [expr] [ {,|;} expr ] ... [{,|;}]'''
         if get_token(stream[0]) == "FILE":
             yield from self.expect_file(stream)
         if self.peek(stream, "USING"):
-            yield from self.expect_expr(stream)
+            yield from self.expect_string_expr(stream)
             yield from self.expect(stream, (",", ";",))
         while stream and stream[0] != 0xe2:
             yield from self.expect_expr(stream)
@@ -475,8 +639,12 @@ class ComalStatement():
             else:
                 break
 
+    def render_randomize(self, _stream):
+        ''' RANDOMIZE '''
+        yield ""
+
     def render_read(self, stream):
-        ''' READ var [ , var ] ... '''
+        ''' READ [ file ] [ , ] var [ , var ] ... '''
         if get_token(stream[0]) == "FILE":
             yield from self.expect_file(stream)
         yield from self.expect_var(stream)
@@ -484,27 +652,51 @@ class ComalStatement():
             yield ","
             yield from self.expect_var(stream)
 
+    def render_release(self, _stream):
+        ''' RELEASE '''
+        yield ""
+
     def render_rem(self, stream):
         ''' REM comment '''
         yield from self.expect_comment(stream)
+
+    def render_rename(self, stream):
+        ''' RENAME string_expr , string_expr'''
+        yield from self.expect_string_expr(stream)
+        yield from self.expect(stream, ',')
+        yield from self.expect_string_expr(stream)
 
     def render_repeat(self, stream):
         ''' REPEAT [ comment ]'''
         self.indent = 1
         stream.pop(0)
         stream.pop(0)
+        if stream:
+            yield from self.expect_comment(stream)
         yield ""
 
-    def render_reset(self, _stream):
+    def render_reset(self, stream):
         ''' RESET { ESC | ERR } '''
-        yield ""
+        yield from self.expect(stream, ("ESC", "ERR",))
 
     def render_restore(self, stream):
         ''' RESET lineno '''
-        lno = stream.pop(0) << 8
-        lno |= stream.pop(0)
-        if lno:
-            yield "%04d" % lno
+        yield from self.expect_lineno(stream)
+
+    def render_return(self, stream):
+        ''' RETURN [ comment ]'''
+        if stream:
+            yield from self.expect_comment(stream)
+
+    def render_save(self, stream):
+        ''' SAVE [ string_expr ] '''
+        yield from self.expect_string_expr(stream)
+
+    def render_stop(self, stream):
+        ''' STOP [ comment ] '''
+        if stream:
+            yield from self.expect_comment(stream)
+        yield ""
 
     def render_tab(self, stream):
         ''' TAB expr '''
@@ -525,38 +717,54 @@ class ComalStatement():
             yield from self.expect_expr(stream)
 
     def render_while(self, stream):
-        ''' WHILE expr DO '''
+        ''' WHILE expr [THEN] DO '''
         self.indent = 1
         yield from self.expect_expr(stream)
-        stream.pop(0)
-        stream.pop(0)
+        yield from self.expect(stream, "DO")
 
-    def statement(self, stream):
+    def render_write(self, stream):
+        ''' WRITE [ file ] [ , ] expr [ , expr ] ... '''
+        if get_token(stream[0]) == "FILE":
+            yield from self.expect_file(stream)
+        yield from self.expect_expr(stream)
+        while self.peek(stream, ","):
+            yield ","
+            yield from self.expect_expr(stream)
+
+    def render_statement(self, stream):
+        ''' render a (sub-)statement '''
         token = get_token(stream[0])
         if not token:
             return
         try:
             rfunc = getattr(self, "render_" + token.lower())
         except AttributeError:
-            print("NO RENDER", token)
+            yield "[NO RENDER FUNC %s %s]" % (token, bytes(stream).hex())
+            print("NO RENDER", token, self.up.this, bytes(stream).hex())
             return
         yield from self.expect(stream, token)
         yield from rfunc(stream)
 
     def render(self):
+        ''' render as statement '''
         stream = list(self.this[3:])
-        tokens = list(self.statement(stream))
+        tokens = list(self.render_statement(stream))
         txt = " ".join(tokens)
         if not stream or stream[0] == 0xe2:
             return txt
+        print(self.up.this, self.lineno, "DRIBBLES", txt + "[" + bytes(stream).hex() + "]")
         return txt + "[" + bytes(stream).hex() + "]"
 
     def html_render(self):
-        r = self.render()
-        if r:
-            yield r
-        else:
-            yield "[" + self.this[:3].hex() + " " + self.this[3:].hex() + "]"
+        ''' render as statement '''
+        try:
+            r = self.render()
+            if r:
+                yield r
+                return
+        except UnicodeDecodeError as error:
+            print(self.up.this, error, self.this.hex())
+        yield "[" + self.this[:3].hex() + " " + self.this[3:].hex() + "]"
 
 
 class ComalUPAS():
@@ -564,7 +772,6 @@ class ComalUPAS():
     def __init__(self, up, this):
         self.up = up
         self.this = this
-        this.add_type("RC7000_COMAL_SAVE.UPAS")
         self.statements = []
         offset = 66 * 2
         while offset < len(self.this):
@@ -583,6 +790,7 @@ class ComalUPAS():
             self.filename = None
 
     def html_detailed(self, fo, _this):
+        ''' Render program segment as listing '''
         fo.write("<h3>UPAS Segment</h3>\n")
         fo.write("<pre>\n")
 
@@ -631,6 +839,7 @@ class ComalVariable():
         # print("VAR", self.name, self.bits, self.ptr, this.hex())
 
     def html_render(self):
+        ''' Render '''
         return "0x%04x 0x%02x %s" % (self.ptr, self.bits, self.name)
 
 class ComalUDAS():
@@ -638,13 +847,13 @@ class ComalUDAS():
     def __init__(self, up, this):
         self.up = up
         self.this = this
-        this.add_type("RC7000_COMAL_SAVE.UDAS")
 
         self.variables = []
         for offset in range(104*2, self.up.u_dvs * 2, 10):
             self.variables.append(ComalVariable(self.up, self.this[offset:offset + 10]))
 
     def html_detailed(self, fo, _this):
+        ''' dump variables '''
         fo.write("<h3>UDAS Segment</h3>\n")
         fo.write("<pre>\n")
         words = list(struct.unpack(">104H", self.this[:104*2]))
@@ -675,8 +884,8 @@ class ComalUDAS():
         stack7("IF-ELSE")
         assert not words
         fo.write("Variables:\n")
-        for i in self.variables:
-            fo.write("    %s\n" % i.html_render())
+        for n, i in enumerate(self.variables):
+            fo.write("    0x%02x %s\n" % (n + 0x80, i.html_render()))
         # XXX values
         fo.write("</pre>\n")
 
@@ -686,7 +895,7 @@ class ComalSaveFile():
     def __init__(self, this):
         if len(this) < 64 or this[:2] not in (b'SV', b'N2', b'RO'):
             return
-        if this.has_type("RC7000_COMAL_SAVE"):
+        if this.has_type("COMAL_SAVE"):
             return
 
         self.head = struct.unpack(">BBHH", this[0:6])
@@ -708,6 +917,8 @@ class ComalSaveFile():
         )
 
         for b, _c in self.uvars:
+            if offset + 2 > len(this):
+                return
             i = struct.unpack(">H", this[offset:offset + 2])
             setattr(self, "u_" + b, i[0])
             offset += 2
@@ -717,7 +928,7 @@ class ComalSaveFile():
 
         this = this.slice(0, offset)
         self.this = this
-        this.add_type("RC7000_COMAL_SAVE")
+        this.add_type("COMAL_SAVE")
 
         offset = 6
         length = self.head[2] * 2
@@ -732,6 +943,7 @@ class ComalSaveFile():
         this.add_interpretation(self, self.html_detailed)
 
     def html_detailed(self, fo, _this):
+        ''' The status words '''
         fo.write("<h3>Wrapper</h3>\n")
         fo.write("<pre>\n")
 
