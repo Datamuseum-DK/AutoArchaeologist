@@ -207,7 +207,7 @@ class Excavation():
 
             if downloads:
                 binfile = self.html_dir + "/" + self.filename_for(this, suf=".bin")
-                open(binfile, 'wb').write(this)
+                open(binfile, 'wb').write(this.body)
             fn = self.html_dir + "/" + self.filename_for(this)
             fo = open(fn, "w")
             self.html_prefix(fo, this)
@@ -345,7 +345,7 @@ class Slab():
 class DuplicateName(Exception):
     ''' Set names must be unique '''
 
-class ArtifactClass(bytes):
+class ArtifactClass():
 
     '''
         Artifact[Class]
@@ -366,12 +366,9 @@ class ArtifactClass(bytes):
 
     '''
 
-    def __new__(cls, _up, _digest, bits):
-        return bytes.__new__(cls, bits)
-
     def __init__(self, up, digest, bits):
         assert len(bits) > 0
-        bytes.__init__(bits)
+        self.body = bytes(bits)
 
         self.digest = digest
         self.records = []		# For TAP files etc.
@@ -403,13 +400,34 @@ class ArtifactClass(bytes):
     def __repr__(self):
         return str(self)
 
+    def __len__(self):
+        return len(self.body)
+
     def __hash__(self):
         return int(self.digest[:8], 16)
+
+    def __getitem__(self, idx):
+        return self.body[idx]
 
     def __lt__(self, other):
         if isinstance(other, Excavation):
             return 1
         return self.name() < other.name()
+
+    def find(self, *args, **kwargs):
+        return self.body.find(*args, **kwargs)
+
+    def rfind(self, *args, **kwargs):
+        return self.body.rfind(*args, **kwargs)
+
+    def rstrip(self, *args, **kwargs):
+        return self.body.rstrip(*args, **kwargs)
+
+    def split(self, *args, **kwargs):
+        return self.body.split(*args, **kwargs)
+
+    def decode(self, *args, **kwargs):
+        return self.body.decode(*args, **kwargs)
 
     def name(self):
         ''' Get the canonical name of the artifact '''
