@@ -40,13 +40,15 @@ CHARSET[0x26][1] = '&amp;'
 CHARSET[0x3c][1] = '&lt;'
 CHARSET[0x7f][1] = '\u2421'
 
-#CHARSET[0x5b][1] = 'Æ'
-#CHARSET[0x5c][1] = 'Ø'
-#CHARSET[0x5d][1] = 'Å'
 
-#CHARSET[0x7b][1] = 'æ'
-#CHARSET[0x7c][1] = 'ø'
-#CHARSET[0x7d][1] = 'å'
+def DK_Tegn():
+
+    CHARSET[0x5b][1] = 'Æ'
+    CHARSET[0x5c][1] = 'Ø'
+    CHARSET[0x5d][1] = 'Å'
+    CHARSET[0x7b][1] = 'æ'
+    CHARSET[0x7c][1] = 'ø'
+    CHARSET[0x7d][1] = 'å'
 
 class Ascii():
 
