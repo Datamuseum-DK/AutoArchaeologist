@@ -40,7 +40,7 @@ class Dinode(Struct):
         yet = self.di_size
         while yet:
             b = self.fs.inode_get_block(self, block_no)
-            assert len(b) > 0
+            assert len(b) > 0, (str(self))
             if yet < self.fs.SECTOR_SIZE:
                 b = b[:yet]
             yield b
@@ -103,18 +103,26 @@ class Dinode(Struct):
 
 class DirEnt():
     ''' A directory entry '''
-    def __init__(self, fs, path, name, inode):
+    def __init__(self, fs, path, name, inum):
         self.fs = fs
         self.path = path
         self.name = name
-        self.inode = inode
+        self.inum = inum
         self.subdir = None
         self.artifact = None
+        if self.fs.valid_inum(inum):
+            self.fs.inode_is[inum] = self
+            self.inode = self.fs.read_inode(inum)
+        else:
+            self.inode = None
 
     def __lt__(self, other):
         return self.name < other.name
 
     def commit_file(self):
+        ''' Create artifact, if possible '''
+        if not self.inode:
+            return
         if self.inode.di_type == self.fs.S_IFREG and self.inode.di_size:
             b = bytearray()
             for i in self.inode:
@@ -136,16 +144,18 @@ class Directory():
 
         for i in self.inode:
             for j in range(0, len(i), 16):
-                words = struct.unpack(self.fs.ENDIAN + "H14s", i[j:j+16])
-                n = words[1].split(b'\x00')[0].decode("ASCII")
-                if words[0]:
-                    dirent = DirEnt(
-                        self.fs,
-                        self.path + n,
-                        n,
-                        self.fs.read_inode(words[0])
-                    )
-                    self.dirents.append(dirent)
+                de_bytes = i[j:j+16]
+                if not max(de_bytes):
+                    continue
+                words = struct.unpack(self.fs.ENDIAN + "H14s", de_bytes)
+                name = words[1].split(b'\x00')[0].decode("ASCII")
+                dirent = DirEnt(
+                    self.fs,
+                    self.path + name,
+                    name,
+                    words[0],
+                )
+                self.dirents.append(dirent)
 
     def commit_files(self):
         ''' Tell the autoarchaeologist about the files we found '''
@@ -155,6 +165,8 @@ class Directory():
     def subdirs(self):
         ''' Process subdirectories '''
         for dirent in sorted(self.dirents):
+            if not dirent.inode:
+                continue
             if dirent.name in ('.', '..',):
                 continue
             if dirent.inode.di_type == self.fs.S_IFDIR:
@@ -168,7 +180,13 @@ class Directory():
     def html_as_lsl(self, fo, pfx=""):
         ''' Recursively render as ls -l output '''
         for dirent in sorted(self.dirents):
-            fo.write(str(dirent.inode) + " " + pfx + dirent.name)
+            if dirent.inode:
+                lead = str(dirent.inode)
+            elif dirent.inum:
+                lead = "BAD INODE# 0x%04x" % dirent.inum
+            else:
+                lead = "DELETED"
+            fo.write(lead.ljust(64) + pfx + dirent.name)
             if dirent.artifact:
                 fo.write("     // " + dirent.artifact.summary())
             fo.write("\n")
@@ -181,6 +199,9 @@ class Unix_Filesystem():
         self.this = this
         self.sblock = None
         self.rootdir = None
+        self.orphan_dirs = []
+        self.orphan_files = []
+        self.inode_is = {}
 
         # i_mode bits
         self.S_ISFMT = 0o170000
@@ -243,10 +264,15 @@ class Unix_Filesystem():
         if len(self.this) < 10240:
             return
         self.sblock = self.read_superblock()
+        if not self.sblock.s_isize or not self.sblock.s_fsize:
+            return
+        if self.sblock.s_isize > self.sblock.s_fsize:
+            return
 
         if self.sblock.s_fsize * self.SECTOR_SIZE > len(self.this):
             return
 
+        self.dblock0 = self.sblock.s_isize * self.SECTOR_SIZE
         iroot = self.read_inode(2)
         if iroot.di_type != self.S_IFDIR:
             return
@@ -260,6 +286,7 @@ class Unix_Filesystem():
                 return
             break
 
+        self.inode_is[2] = iroot
         self.rootdir = Directory(self, "/", iroot)
         self.rootdir.commit_files()
         dlist = list(self.rootdir.subdirs())
@@ -267,8 +294,52 @@ class Unix_Filesystem():
             d = dlist.pop(0)
             dlist += d.subdirs()
             d.commit_files()
-
+        self.this.add_type("V7 Filesystem")
         self.this.add_interpretation(self, self.html_as_lsl)
+        while self.hunt_orphan_directories():
+            dlist = self.orphan_dirs[-1:]
+            while dlist:
+                d = dlist.pop(0)
+                dlist += d.subdirs()
+                d.commit_files()
+        self.hunt_orphan_files()
+
+    def hunt_orphan_directories(self):
+        ''' Find the first unclaimed inode which looks like a directory '''
+        for inum in self.iter_inodes():
+            if not self.valid_inum(inum):
+                break
+            if inum in self.inode_is:
+                continue
+            inode = self.read_inode(inum)
+            if not inode.di_mode and not inode.di_size:
+                continue
+            if inode.di_type == self.S_IFDIR:
+                self.orphan_dirs.append(
+                    Directory(self, "/ORPHANS/%d/" % inum, inode)
+                )
+                return True
+        return False
+
+    def hunt_orphan_files(self):
+        ''' Find all unclaimed inodes which looks like files '''
+        for inum in self.iter_inodes():
+            if not self.valid_inum(inum):
+                break
+            if inum in self.inode_is:
+                continue
+            inode = self.read_inode(inum)
+            if not inode.di_size:
+                continue
+            if inode.di_type != self.S_IFREG:
+                continue
+            b = bytearray()
+            for i in inode:
+                b += i
+            j = autoarchaeologist.Artifact(self.this, b)
+            j.add_note("UNIX file")
+            j.add_note("Orphan File")
+            self.orphan_files.append((inode, j))
 
     def read_struct(self, layout, where):
         '''
@@ -306,6 +377,19 @@ class Unix_Filesystem():
                 self.DISK_OFFSET + self.SECTOR_SIZE
             )
         )
+
+    def iter_inodes(self):
+        ''' Iterate over all inode numbers '''
+        yield from range(
+            2,
+            (1 + self.sblock.s_isize) * self.SECTOR_SIZE // self.INODE_SIZE
+        )
+
+    def valid_inum(self, inum):
+        ''' Return true if inode number is valid '''
+        inoa = 2 * self.SECTOR_SIZE
+        inoa += (inum - 1) * self.INODE_SIZE
+        return inoa < self.dblock0
 
     def read_inode(self, inum):
         ''' Read an inode '''
@@ -358,10 +442,21 @@ class Unix_Filesystem():
         fo.write("<H3>ls -l</H3>\n")
         fo.write("<pre>\n")
         self.rootdir.html_as_lsl(fo)
+        if self.orphan_dirs:
+            fo.write("<H3>Orphan directory inodes</H3>\n")
+            for orphan in self.orphan_dirs:
+                fo.write("\n")
+                orphan.html_as_lsl(fo)
+        if self.orphan_files:
+            fo.write("<H3>Orphan files</H3>\n")
+            for inode, j in self.orphan_files:
+                fo.write("\n")
+                lead = str(inode)
+                fo.write(lead.ljust(64) + "// " + j.summary())
         fo.write("</pre>\n")
 
 class V7_Filesystem(Unix_Filesystem):
-    ''' The default paramters match V7/PDP '''
+    ''' The default parameters match V7/PDP '''
     def __init__(self, this):
         super().__init__(this)
         self.discover()
