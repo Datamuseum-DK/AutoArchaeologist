@@ -124,7 +124,7 @@ class DirEnt():
         if not self.inode:
             return
         if self.inode.di_type == self.fs.S_IFREG and self.inode.di_size:
-            b = bytearray()
+            b = bytes()
             for i in self.inode:
                 b += i
             self.artifact = autoarchaeologist.Artifact(self.fs.this, b)
@@ -148,7 +148,7 @@ class Directory():
                 if not max(de_bytes):
                     continue
                 words = struct.unpack(self.fs.ENDIAN + "H14s", de_bytes)
-                name = words[1].split(b'\x00')[0].decode("ASCII")
+                name = words[1].split(b'\x00')[0].decode(self.fs.CHARSET)
                 dirent = DirEnt(
                     self.fs,
                     self.path + name,
@@ -165,7 +165,7 @@ class Directory():
     def subdirs(self):
         ''' Process subdirectories '''
         for dirent in sorted(self.dirents):
-            if not dirent.inode:
+            if not dirent.inode or not dirent.inum:
                 continue
             if dirent.name in ('.', '..',):
                 continue
@@ -186,7 +186,7 @@ class Directory():
                 lead = "BAD INODE# 0x%04x" % dirent.inum
             else:
                 lead = "DELETED"
-            fo.write(lead.ljust(64) + pfx + dirent.name)
+            fo.write(lead.ljust(64) + " " + pfx + dirent.name)
             if dirent.artifact:
                 fo.write("     // " + dirent.artifact.summary())
             fo.write("\n")
@@ -196,12 +196,14 @@ class Directory():
 class Unix_Filesystem():
     ''' What it says on the tin '''
     def __init__(self, this):
+        self.fs_type = "UNIX UFS Filesystem"
         self.this = this
         self.sblock = None
         self.rootdir = None
         self.orphan_dirs = []
         self.orphan_files = []
         self.inode_is = {}
+        self.CHARSET = "ASCII"
 
         # i_mode bits
         self.S_ISFMT = 0o170000
@@ -231,6 +233,7 @@ class Unix_Filesystem():
         self.NINDEX = 15
         self.DISK_OFFSET = 0x0
         self.SECTOR_SIZE = 0x200
+        self.SUPERBLOCK_OFFSET = self.SECTOR_SIZE
         self.INODE_SIZE = 0x40
         self.NINDIR = self.SECTOR_SIZE // 4
 
@@ -276,6 +279,8 @@ class Unix_Filesystem():
         iroot = self.read_inode(2)
         if iroot.di_type != self.S_IFDIR:
             return
+        self.this.add_type(self.fs_type)
+        self.this.add_interpretation(self, self.html_as_lsl)
         for d in iroot:
             for i in (0, 1, 16, 17):
                 if d[i] not in (0, 2):
@@ -294,8 +299,7 @@ class Unix_Filesystem():
             d = dlist.pop(0)
             dlist += d.subdirs()
             d.commit_files()
-        self.this.add_type("V7 Filesystem")
-        self.this.add_interpretation(self, self.html_as_lsl)
+        return
         while self.hunt_orphan_directories():
             dlist = self.orphan_dirs[-1:]
             while dlist:
@@ -374,7 +378,7 @@ class Unix_Filesystem():
         return Struct(
             **self.read_struct(
                 self.sblock_layout,
-                self.DISK_OFFSET + self.SECTOR_SIZE
+                self.DISK_OFFSET + self.SUPERBLOCK_OFFSET
             )
         )
 
@@ -389,7 +393,7 @@ class Unix_Filesystem():
         ''' Return true if inode number is valid '''
         inoa = 2 * self.SECTOR_SIZE
         inoa += (inum - 1) * self.INODE_SIZE
-        return inoa < self.dblock0
+        return inum >= 2 and inoa < self.dblock0
 
     def read_inode(self, inum):
         ''' Read an inode '''
@@ -452,11 +456,12 @@ class Unix_Filesystem():
             for inode, j in self.orphan_files:
                 fo.write("\n")
                 lead = str(inode)
-                fo.write(lead.ljust(64) + "// " + j.summary())
+                fo.write(lead.ljust(64) + " // " + j.summary())
         fo.write("</pre>\n")
 
 class V7_Filesystem(Unix_Filesystem):
     ''' The default parameters match V7/PDP '''
     def __init__(self, this):
         super().__init__(this)
+        self.fs_type = "UNIX V7 Filesystem"
         self.discover()
