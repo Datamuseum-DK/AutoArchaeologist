@@ -11,6 +11,7 @@ from autoarchaeologist.ddhf.bitstore import FromBitStore
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.generic.ascii import Ascii
 from autoarchaeologist.unix.v7_filesystem import V7_Filesystem
+from autoarchaeologist.unix.cbm900_partition import CBM900_Partition
 from autoarchaeologist.unix.cbm900_ar import Ar
 from autoarchaeologist.unix.cbm900_l_out import L_Out
 
@@ -21,6 +22,7 @@ def CBM900_job(html_dir, **kwargs):
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Commodore/CBM900',
     )
 
+    ctx.add_examiner(CBM900_Partition)
     ctx.add_examiner(V7_Filesystem)
     ctx.add_examiner(Ar)
     ctx.add_examiner(L_Out)
