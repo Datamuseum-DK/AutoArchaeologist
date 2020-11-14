@@ -5,15 +5,16 @@
 
 import autoarchaeologist
 
+SLICE = 0x50c000
+NSLICE = 4
+
 class CBM900_Partition():
     ''' The sizes are hardcoded in the device driver source code '''
 
     def __init__(self, this):
-        if this[0x50c3e4:0x50c3f0] != b'nonamenopack':
+        if len(this) < NSLICE * SLICE:
             return
 
         this.taken = self
-        autoarchaeologist.Artifact(this, this[:0x50c000])
-        autoarchaeologist.Artifact(this, this[0x50c000:0xa18000])
-        autoarchaeologist.Artifact(this, this[0xa18000:0xf24000])
-        autoarchaeologist.Artifact(this, this[0xf24000:])
+        for i in range(NSLICE):
+            autoarchaeologist.Artifact(this, this[i * SLICE:(i+1) * SLICE])
