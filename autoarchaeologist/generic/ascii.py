@@ -40,9 +40,8 @@ CHARSET[0x26][1] = '&amp;'
 CHARSET[0x3c][1] = '&lt;'
 CHARSET[0x7f][1] = '\u2421'
 
-
 def DK_Tegn():
-
+    ''' The canonical mapping of Danish vowels into ASCII '''
     CHARSET[0x5b][1] = 'Æ'
     CHARSET[0x5c][1] = 'Ø'
     CHARSET[0x5d][1] = 'Å'
@@ -51,47 +50,38 @@ def DK_Tegn():
     CHARSET[0x7d][1] = 'å'
 
 class Ascii():
-
     ''' Recognize ASCII texts '''
-
     def __init__(self, this):
 
         if this.has_note("ASCII"):
             return
 
-        idx = 0
-        while idx < len(this) and not this[idx]:
-            idx += 1
-        if idx == len(this):
-            return
-        pfx = idx
-
         par = [0, 0, 0, 0]
-
+        pfx = None
         bodylen = 0
         lines = 0
-        last_idx = idx
-        while idx < len(this):
-            c = this[idx]
-            idx += 1
-
+        last_idx = None
+        for idx, c in enumerate(this):
             if c:
+                if pfx is None:
+                    pfx = idx
                 par[2 + PARITY[c]] += 1
-                if c & 0x80:
-                    par[0] += 1
-                else:
-                    par[1] += 1
+                par[c >> 7] += 1
+            elif pfx is None:
+                continue
 
             j = CHARSET[c & 0x7f][0]
-            if not j or j & 4:
-                break
+            if not j:
+                return
             if not j & 16:
                 last_idx = idx
                 bodylen += 1
+            if j & 4:
+                break
             if j & 1:
                 lines += 1
 
-        if bodylen < 10 or not lines:
+        if last_idx is None or bodylen < 10 or not lines:
             return
 
         if min(par) > 2:
@@ -99,27 +89,20 @@ class Ascii():
                 print("ASCII PARITY ERROR ?", this, bodylen, lines, par)
             return
 
-        self.parsfx = [
-            "",
-            "-SET",
-            "-ODD",
-            "-EVEN",
-        ][par.index(min(par))]
+        self.parsfx = ["-SET", "", "-ODD", "-EVEN"][par.index(min(par))]
 
-        # print("ASCII_SLICE", pfx, last_idx, len(this))
         if pfx or last_idx != len(this):
-            this = this.slice(pfx, last_idx - pfx)
-        self.this = this
-        if self.this.has_note("ASCII"):
-            return
+            self.this = this.slice(pfx, last_idx - pfx)
+            if self.this.has_note("ASCII"):
+                return
 
-        self.this.add_note("ASCII" + self.parsfx)
+        self.this.add_note("ASCII")
+        if self.parsfx:
+            self.this.add_note("ASCII" + self.parsfx)
         self.this.add_interpretation(self, self.html_as_interpretation)
 
     def html_as_interpretation(self, fo, _this):
-
         ''' Render as HTML '''
-
         fo.write("<H3>ASCII%s file</H3>\n" % self.parsfx)
         fo.write("<pre>\n")
         t = []
