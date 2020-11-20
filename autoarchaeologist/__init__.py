@@ -1,2 +1,3 @@
 
-from .core_classes import Excavation, Artifact, DuplicateArtifact
+from .excavation import Excavation, DuplicateArtifact
+from .artifact import DuplicateName
