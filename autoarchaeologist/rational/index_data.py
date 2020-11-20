@@ -105,10 +105,7 @@ class R1K_Index_Data_Class():
             offset = x + y
             last = (x,y,z)
             if y > 0:
-                if x or y < len(self.datafile):
-                    a = self.datafile.create(start=x, stop=x+y)
-                else:
-                    a = self.datafile
+                a = self.datafile.create(start=x, stop=x+y)
                 fn = z.lines[0].split('.')
                 if fn[-1] not in BLACKLIST and a.digest[:8] not in BLACKLIST:
                     a.add_note(html.escape(z.lines[0]))
@@ -161,9 +158,9 @@ def hunt_down(some, want_type):
 class R1K_Index_Data():
 
     def __init__(self, this):
-        if not this.has_type("R1K_tapefile"):
+        if not this.has_type("R1K_LOGICAL_TAPE"):
             return
-        # print("?R1ID", this)
+        print("?R1ID", this)
 
         mytapefile = list(hunt_up(this, "TAPE file"))
         assert len(mytapefile) == 1
@@ -173,6 +170,7 @@ class R1K_Index_Data():
         mytape = list(hunt_up(mytapefile, "TAP tape"))
         assert len(mytape) == 1
         tape = mytape[0]
+        print("Tape is", tape)
 
         vol=None
         filename=None
@@ -184,10 +182,9 @@ class R1K_Index_Data():
                     filename=j[5:]
                 if j[:7] == "Volume=":
                     vol=j[7:]
-            j = list(hunt_down(i, "R1K_tapefile"))
+            j = list(hunt_down(i, "R1K_LOGICAL_TAPE"))
             if len(j):
                 assert len(j) == 1
-                #print("  j", j)
                 files[vol + "." + filename] = (i, j[0])
 
         for i, j in sorted(files.items()):

@@ -29,19 +29,14 @@ ANSI_HEADERS = {
 class Ansi_Tape_labels():
     ''' ANSI Tape Labels '''
     def __init__(self, this):
-        if not this.records:
-            return
-        for i in this.records:
-            if i != 80:
-                return
         # print("?ANSI", this)
         for tour in range(2):
             if tour:
                 this.add_type("ANSI Tape Label")
-            offset = 0
-            for length in this.records:
-                label = this[offset:offset+length].tobytes().decode("ASCII")
-                offset += length
+            for label in this.iterrecords():
+                if len(label) != 80:
+                    return
+                label=label.tobytes().decode("ASCII")
                 t = ANSI_HEADERS.get(label[:4])
                 if not t:
                     print("ANSITAPELABEL", this, "Unknown label", label[:4])
@@ -58,10 +53,8 @@ class Ansi_Tape_labels():
         fo.write("".join(["%01d" % (x // 10) for x in range(1,81)]) + "\n")
         fo.write("".join(["%01d" % (x % 10) for x in range(1,81)]) + "\n")
         fo.write("-" * 80 + "\n")
-        offset = 0
-        for length in self.this.records:
-            label = self.this[offset:offset+length].tobytes().decode("ASCII")
+        for label in self.this.iterrecords():
+            label=label.tobytes().decode("ASCII")
             fo.write(label + "\n")
-            offset += length
         fo.write("-" * 80 + "\n")
         fo.write("</pre>\n")

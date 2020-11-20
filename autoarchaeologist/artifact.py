@@ -58,7 +58,6 @@ class ArtifactClass():
         self.comments = []
         self.taken = False
         self.layout = []
-        self.records = []
 
         self.add_parent(up)
         self.top = up.top
@@ -311,21 +310,23 @@ class ArtifactClass():
         fo.write("<H4>HexDump</H4>\n")
         fo.write("<pre>\n")
 
-        if not self.records:
+        if not isinstance(self.bdx, scattergather.ScatterGather):
             if len(self) > self.top.hexdump_limit:
-                hexdump.hexdump_to_file(self[:self.top.hexdump_limit], fo)
+                hexdump.hexdump_to_file(
+                    self[:self.top.hexdump_limit].tobytes(),
+                    fo
+                )
                 fo.write("[…]\n")
             else:
-                hexdump.hexdump_to_file(self, fo)
+                hexdump.hexdump_to_file(self.tobytes(), fo)
         else:
             done = 0
             idx = 0
-            for n, r in enumerate(self.records):
+            for n, r in enumerate(self.iterrecords()):
                 fo.write("Record #0x%x\n" % n)
-                hexdump.hexdump_to_file(self[idx:idx+r], fo)
+                hexdump.hexdump_to_file(r.tobytes(), fo)
                 fo.write("\n")
-                idx += r
-                done += r
+                done += len(r)
                 if done > self.top.hexdump_limit:
                     break
 

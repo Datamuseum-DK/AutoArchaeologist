@@ -1,35 +1,40 @@
 
+import autoarchaeologist
+import autoarchaeologist.scattergather as scattergather
+
 class R1K_Tape_blocks():
 
     def __init__(self, this):
-        if not this.records:
+        if not this.has_type("TAPE file"):
             return
-
-        try:
-            head = this[:5].tobytes().decode('ASCII')
-            i = int(head, 10)
-        except UnicodeDecodeError:
-            return
-        except ValueError:
-            return
-
-        print("?R1KTB", this, this[0], this[:5])
-        offset = 0
-        b = bytearray()
-        while offset < len(this):
-            head = this[offset:offset + 5].tobytes().decode('ASCII')
-            length = int(head[1:], 10)
-            b += this[offset + 5: offset + length]
-            offset += length
-        self.this = this
-        self.that = this.create(bits=b)
-        self.that.add_type("R1K_tapefile")
-        this.add_interpretation(self, self.html_redirect)
-        this.taken = self
-
-    def html_redirect(self, fo, _this):
-        fo.write('<H3>Rational 1000 Tape blocking</H3>\n')
-        fo.write('<pre>\n')
-        fo.write('This artifact strips the Rational 1000 tape blocking\n')
-        fo.write('The result is here: ' + self.that.summary() + "\n")
-        fo.write('</pre>\n')
+        print("?R1KT", this)
+        l = []
+        b = []
+        for n, r in enumerate(this.iterrecords()):
+            if not 0x30 <= r[0] <= 0x33:
+                return
+            p = 0
+            while p < len(r):
+                head = r[p:p+5].tobytes().decode('ASCII')
+                i = int(head, 10)
+                j = i // 10000
+                assert 0 <= j <= 3
+                k = i % 10000
+                #print("  %05d %d %04d %s" % (p, j, k, str(r[p + 5:p + 5 + min(k - 5, 40)].tobytes())))
+                if j < 2:
+                    l.append([r[p+5:p+k]])
+                else:
+                    l[-1].append(r[p+5:p+k])
+                p += k
+        #print("L", l)
+        ll = []
+        for i in l:
+            if len(i) == 1:
+                ll += i
+            else:
+                #print("SG", i)
+                ll.append(scattergather.ScatterGather(i))
+        #print("LL", ll)
+        y = this.create(start=0, stop=len(this), records=ll)
+        this.add_type("R1K_PHYSICAL_TAPE")
+        y.add_type("R1K_LOGICAL_TAPE")

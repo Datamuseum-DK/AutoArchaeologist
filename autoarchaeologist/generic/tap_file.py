@@ -8,30 +8,34 @@
 import struct
 
 class TapeFile():
-    ''' One data file on the tape '''
-    def __init__(self):
-        self.records = []
-        self.body = bytearray()
-        self.a = None
 
-    def __iadd__(self, chunk):
-        self.records.append(len(chunk))
-        self.body += chunk
-        return self
+    ''' One data file on the tape '''
+
+    def __init__(self, this):
+        self.this = this
+        self.records = []
+        self.sizes = []
+
+    def add_record(self, start, stop):
+        self.sizes.append(stop-start)
+        self.records.append(self.this[start:stop])
 
     def commit(self, parent):
         ''' Register the artifact '''
-        self.a = parent.create(bits=self.body)
+        self.a = parent.create(
+            start=self.records[0][0] - 4,
+            stop=self.records[-1][1] + 4,
+            records=self.records
+        )
         self.a.add_type("TAPE file")
-        self.a.records = self.records
 
     def __str__(self):
         return "<TF " + str(self.records) + ">"
 
     def html_summary(self):
         ''' Summary of block-sizes'''
-        summ = [[self.records[0], 0]]
-        for i in self.records:
+        summ = [[self.sizes[0], 0]]
+        for i in self.sizes:
             if summ[-1][0] != i:
                 summ.append([i, 1])
             else:
@@ -52,7 +56,7 @@ class TAPfile():
         if this.has_type("TAP tape"):
             return
 
-        # We only allow TAP on top-level artifacts for now
+        # We only allow TAP on top-level artifacts
         if not this.top in this.parents:
             return
 
@@ -77,9 +81,9 @@ class TAPfile():
                 return
 
             if not self.parts or not isinstance(self.parts[-1], TapeFile):
-                self.parts.append(TapeFile())
+                self.parts.append(TapeFile(this))
 
-            self.parts[-1] += this[i:i + preword]
+            self.parts[-1].add_record(i, i + preword)
 
             i += preword + (preword & 1)
 
