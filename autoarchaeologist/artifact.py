@@ -12,6 +12,7 @@ import hashlib
 
 import autoarchaeologist.excavation as excavation
 import autoarchaeologist.generic.hexdump as hexdump
+import autoarchaeologist.scattergather as scattergather
 
 class DuplicateName(Exception):
     ''' Set names must be unique '''
@@ -39,10 +40,12 @@ class ArtifactClass():
 
     def __init__(self, up, digest, bits):
         assert len(bits) > 0
-        self.bdx = memoryview(bits)
+        if isinstance(bits, (memoryview, scattergather.ScatterGather)):
+            self.bdx = bits
+        else:
+            self.bdx = memoryview(bits)
 
         self.digest = digest
-        self.records = []		# For TAP files etc.
 
         self.parents = []
         self.children = []
@@ -55,6 +58,7 @@ class ArtifactClass():
         self.comments = []
         self.taken = False
         self.layout = []
+        self.records = []
 
         self.add_parent(up)
         self.top = up.top
@@ -83,11 +87,23 @@ class ArtifactClass():
             return 1
         return self.name() < other.name()
 
+    def __iter__(self):
+        yield from self.bdx
+
+    def iterrecords(self):
+        if isinstance(self.bdx, scattergather.ScatterGather):
+            yield from self.bdx.iterrecords()
+        else:
+            yield self.bdx
+
     def tobytes(self):
         return self.bdx.tobytes()
 
     def writetofile(self, fd):
-        fd.write(self.bdx)
+        if isinstance(self.bdx, scattergather.ScatterGather):
+            self.bdx.writetofile(fd)
+        else:
+            fd.write(self.bdx)
 
     def name(self):
         ''' Get the canonical name of the artifact '''
@@ -175,10 +191,9 @@ class ArtifactClass():
     def create(self, bits=None, start=None, stop=None, records=None):
         ''' Return a new or old artifact for some bits '''
         if records:
-            assert False
             assert bits is None
             assert len(records) > 0
-            #bits = scattergather.ScatterGather(records)
+            bits = scattergather.ScatterGather(records)
             digest = bits.sha256()
         elif isinstance(bits, memoryview):
             digest = hashlib.sha256(bits.tobytes()).hexdigest()
@@ -336,14 +351,3 @@ class ArtifactClass():
                 fo.write(slab.this.summary(notes=True) + "\n")
             fo.write("\n")
         fo.write("</pre>\n")
-
-def Artifact(parent, bits):
-    ''' Return a new or old artifact for some bits '''
-    assert isinstance(parent, (excavation.Excavation, ArtifactClass)), (type(parent), parent)
-    digest = hashlib.sha256(bits).hexdigest()
-    this = parent.top.hashes.get(digest)
-    if not this:
-        this = ArtifactClass(parent, digest, bits)
-    else:
-        this.add_parent(parent)
-    return this

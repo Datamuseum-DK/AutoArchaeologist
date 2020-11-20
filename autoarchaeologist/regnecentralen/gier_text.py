@@ -184,7 +184,7 @@ class GIER_Text():
 
     def open_svg(self):
         ''' Open next SVG file, write header '''
-        fn = self.this.filename_for(self.this, suf=".%d.svg" % self.nsvg)
+        fn = self.this.filename_for(suf=".%d.svg" % self.nsvg)
         self.svg_files.append(fn.link)
         self.svgf = open(fn.filename, "w")
         self.nsvg += 1
