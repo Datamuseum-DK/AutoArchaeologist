@@ -91,10 +91,9 @@ class Ascii():
 
         self.parsfx = ["-SET", "", "-ODD", "-EVEN"][par.index(min(par))]
 
-        if pfx or last_idx != len(this):
-            self.this = this.create(start=pfx, stop=last_idx)
-            if self.this.has_note("ASCII"):
-                return
+        self.this = this.create(start=pfx, stop=last_idx+1)
+        if self.this.has_note("ASCII"):
+            return
 
         self.this.add_note("ASCII")
         if self.parsfx:
