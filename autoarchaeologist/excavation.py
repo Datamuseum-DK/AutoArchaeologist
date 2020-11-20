@@ -207,7 +207,7 @@ class Excavation():
 
             if downloads:
                 binfile = self.filename_for(this, suf=".bin")
-                open(binfile.filename, 'wb').write(this.body)
+                this.writetofile(open(binfile.filename, 'wb'))
             fn = self.filename_for(this)
             fo = open(fn.filename, "w")
             self.html_prefix(fo, this)

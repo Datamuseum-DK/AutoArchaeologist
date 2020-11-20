@@ -128,6 +128,9 @@ class ArtifactClass():
     def split(self, *args, **kwargs):
         return self.body.split(*args, **kwargs)
 
+    def writetofile(self, fd):
+        fd.write(self.body)
+
     def decode(self, *args, **kwargs):
         return self.body.decode(*args, **kwargs)
 
