@@ -51,8 +51,5 @@ def CBM900_job(html_dir, **kwargs):
     return ctx
 
 if __name__ == "__main__":
-
-    i = CBM900_job(html_dir="/tmp/_aa_cbm900")
-
-    print("Now point your browser at:")
-    print("\t", i.link_prefix + '/' + i.filename_for(i))
+    import subr_main
+    subr_main.main(CBM900_job, "cbm900")

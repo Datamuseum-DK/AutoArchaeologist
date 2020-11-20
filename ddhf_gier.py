@@ -58,8 +58,5 @@ def GIER_job(html_dir, **kwargs):
     return ctx
 
 if __name__ == "__main__":
-
-    i = GIER_job(html_dir="/tmp/_aa_gier")
-
-    print("Now point your browser at:")
-    print("\t", i.link_prefix + '/' + i.filename_for(i))
+    import subr_main
+    subr_main.main(GIER_job, "gier")

@@ -184,10 +184,9 @@ class GIER_Text():
 
     def open_svg(self):
         ''' Open next SVG file, write header '''
-        fn = self.this.top.filename_for(self.this, suf=".%d.svg" % self.nsvg)
-        self.svg_files.append(fn)
-        fn = self.this.top.html_dir + "/" + fn
-        self.svgf = open(fn, "w")
+        fn = self.this.filename_for(self.this, suf=".%d.svg" % self.nsvg)
+        self.svg_files.append(fn.link)
+        self.svgf = open(fn.filename, "w")
         self.nsvg += 1
         self.svgf.write('<svg viewBox="0 0')
         #self.svgf.write(' %d' % (self.page_width[self.nsvg] + 1))

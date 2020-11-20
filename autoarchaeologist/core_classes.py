@@ -36,6 +36,13 @@ import autoarchaeologist.generic.hexdump as hexdump
 class DuplicateArtifact(Exception):
     ''' Top level artifacts should not be identical '''
 
+class OutputFile():
+    ''' Output files have a physical filename and a html reference '''
+
+    def __init__(self, filename, link):
+        self.filename = filename
+        self.link = link
+
 class Excavation():
 
     '''
@@ -168,8 +175,18 @@ class Excavation():
     def filename_for(self, this, suf=".html"):
         ''' Come up with a suitable filename related to an artifact '''
         if this == self:
-            return "index" + suf
-        return this.digest[:self.digest_prefix] + suf
+            base = "index" + suf
+        else:
+            basedir = this.digest[:2]
+            try:
+                os.mkdir(self.html_dir + "/" + basedir)
+            except FileExistsError:
+                pass
+            base = basedir + "/" + this.digest[2:self.digest_prefix] + suf
+        return OutputFile(
+            self.html_dir + "/" + base,
+            self.link_prefix + "/" + base,
+        )
 
     def produce_html(
         self,
@@ -206,18 +223,18 @@ class Excavation():
         for this in self.hashes.values():
 
             if downloads:
-                binfile = self.html_dir + "/" + self.filename_for(this, suf=".bin")
-                open(binfile, 'wb').write(this.body)
-            fn = self.html_dir + "/" + self.filename_for(this)
-            fo = open(fn, "w")
+                binfile = self.filename_for(this, suf=".bin")
+                open(binfile.filename, 'wb').write(this.body)
+            fn = self.filename_for(this)
+            fo = open(fn.filename, "w")
             self.html_prefix(fo, this)
             this.html_page(fo)
             self.html_suffix(fo)
 
     def produce_front_page(self):
         ''' Top level html page '''
-        fn = self.html_dir + "/" + self.filename_for(self)
-        fo = open(fn, "w")
+        fn = self.filename_for(self)
+        fo = open(fn.filename, "w")
         self.html_prefix(fo, self)
 
         fo.write("<H2>Links to index</H2>")
@@ -266,7 +283,7 @@ class Excavation():
     def html_link_to(self, this, link_text=None, anchor=None, **kwargs):
         ''' Return a HTML link to an artifact '''
         t = '<A href="'
-        t += self.link_prefix + '/' + self.filename_for(this, **kwargs)
+        t += self.filename_for(this, **kwargs).link
         if anchor:
             t += "#" + anchor
         t += '">'
@@ -507,6 +524,10 @@ class ArtifactClass():
             for child in self.children:
                 assert child != self, (child, self)
                 yield from child.iter_notes(recursive)
+
+    def filename_for(self, *args, **kwargs):
+        ''' ask excavation '''
+        return self.top.filename_for(self, *args, **kwargs)
 
     def slice(self, offset, size):
         ''' Return a new artifact which is a subset of this one '''

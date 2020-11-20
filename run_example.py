@@ -31,4 +31,4 @@ if __name__ == "__main__":
 
     ctx.produce_html(html_dir="/tmp/_autoarchaologist")
 
-    print("Now point your browser at", ctx.link_prefix + '/' + ctx.filename_for(ctx))
+    print("Now point your browser at", ctx.filename_for(ctx).link)

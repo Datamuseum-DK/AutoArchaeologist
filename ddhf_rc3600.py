@@ -75,8 +75,5 @@ def RC3600_job(html_dir, **kwargs):
     return ctx
 
 if __name__ == "__main__":
-
-    i = RC3600_job("/tmp/_aa_rc3600")
-
-    print("Now point your browser at:")
-    print("\t", i.link_prefix + '/' + i.filename_for(i))
+    import subr_main
+    subr_main.main(RC3600_job, "rc3600", download_links=True)

@@ -64,9 +64,5 @@ def R1K_job(html_dir, **kwargs):
     return ctx
 
 if __name__ == "__main__":
-        
-    i = R1K_job("/tmp/_aa_r1k", downloads=True)
-        
-    print("Now point your browser at:")
-    print("\t", i.link_prefix + '/' + i.filename_for(i))
-
+    import subr_main
+    subr_main.main(R1K_job, "r1k")
