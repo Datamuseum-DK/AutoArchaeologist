@@ -1,5 +1,4 @@
 
-import autoarchaeologist
 import html
 
 BLACKLIST = {
@@ -100,14 +99,14 @@ class R1K_Index_Data_Class():
                 print("\t", x, y, z.lines[0])
                 print("\t", last[0], last[1], last[2].lines[0])
             if offset < x:
-                a = autoarchaeologist.Artifact(self.datafile, self.datafile[offset:x])
+                a = self.datafile.create(start=offset, stop=x)
                 a.add_note("Gap_0x%x" % (x - offset))
                 self.sl2.append((offset, x - offset, None, a))
             offset = x + y
             last = (x,y,z)
             if y > 0:
                 if x or y < len(self.datafile):
-                    a = autoarchaeologist.Artifact(self.datafile, self.datafile[x:x+y])
+                    a = self.datafile.create(start=x, stop=x+y)
                 else:
                     a = self.datafile
                 fn = z.lines[0].split('.')
@@ -138,7 +137,7 @@ class R1K_Index_Data_Class():
             fo.write("0x%06x-0x%06x " % (x, x + y))
             fo.write(a.summary())
             if z:
-                 fo.write("  // " + z.render())
+                fo.write("  // " + z.render())
             fo.write("\n")
             offset = x + y
         if offset < len(self.datafile):
@@ -148,14 +147,14 @@ class R1K_Index_Data_Class():
 def hunt_up(some, want_type):
     for i in some.parents:
         if i.has_type(want_type):
-             yield i
-             return
+            yield i
+            return
         yield from hunt_up(i, want_type)
 
 def hunt_down(some, want_type):
     for i in some.children:
         if i.has_type(want_type):
-             yield i
+            yield i
         yield from hunt_down(i, want_type)
 
 

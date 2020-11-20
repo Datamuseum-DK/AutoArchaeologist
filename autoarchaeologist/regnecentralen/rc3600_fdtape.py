@@ -10,8 +10,6 @@
 
 import struct
 
-import autoarchaeologist
-
 SIGNATURE_RAW = bytes.fromhex('''
     54 49 4d 45 20 4f 55 54 20 44 49 53 43 00
     42 0e 0c 02
@@ -67,7 +65,7 @@ class RC3600_FD_Tape():
 
                 if not tour:
                     continue
-                label = autoarchaeologist.Artifact(this, self[i])
+                label = this.create(bits=self[i])
                 label.add_type("Namelabel")
                 name = None
                 b = label.tobytes().rstrip(b'\x00')
@@ -81,7 +79,7 @@ class RC3600_FD_Tape():
                 body = bytes()
                 for j in range(i + 1, words[word_idx + 1]):
                     body = body + self[j]
-                body = autoarchaeologist.Artifact(this, body)
+                body = this.create(bits=body)
                 body.add_type("VirtualTapeFile")
                 if name:
                     body.add_note(name)

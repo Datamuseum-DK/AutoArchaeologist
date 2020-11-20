@@ -55,13 +55,13 @@ class AbsBinRec():
         for i in self.words[3:]:
             for j in endian(i):
                 if j == 0x26:
-                     t += "&amp;"
+                    t += "&amp;"
                 elif j == 0x3c:
-                     t += "&lt;"
+                    t += "&lt;"
                 elif 32 < j < 126:
-                     t += "%c" % j
+                    t += "%c" % j
                 else:
-                     t += " "
+                    t += " "
         t += "|"
         return t
 
@@ -81,7 +81,7 @@ class AbsBinRec():
             yield i >> 8
         t += self.ascii(big_endian, "     ")
         t += self.ascii(little_endian, "  ")
-       
+
         fo.write(t + '\n')
 
 class AbsBin():
@@ -120,7 +120,7 @@ class AbsBin():
         if len(records) < 2:
             return
 
-        this = this.slice(pfx, idx - pfx)
+        this = this.create(start=pfx, stop=idx)
         if not this.has_type("AbsBin"):
             this.add_type("AbsBin")
             self.this = this

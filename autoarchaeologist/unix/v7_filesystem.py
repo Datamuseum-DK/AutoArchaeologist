@@ -9,8 +9,6 @@
 import struct
 import time
 
-import autoarchaeologist
-
 def swap_words(x):
     ''' swap two halves of a 32 bit word '''
     return (x >> 16) | ((x & 0xffff) << 16)
@@ -127,7 +125,7 @@ class DirEnt():
             b = bytes()
             for i in self.inode:
                 b += i
-            self.artifact = autoarchaeologist.Artifact(self.fs.this, b)
+            self.artifact = self.fs.this.create(bits=b)
             self.artifact.add_note("UNIX file")
             try:
                 self.artifact.set_name(self.path)
@@ -340,7 +338,7 @@ class Unix_Filesystem():
             b = bytearray()
             for i in inode:
                 b += i
-            j = autoarchaeologist.Artifact(self.this, b)
+            j = self.this.create(bits=b)
             j.add_note("UNIX file")
             j.add_note("Orphan File")
             self.orphan_files.append((inode, j))

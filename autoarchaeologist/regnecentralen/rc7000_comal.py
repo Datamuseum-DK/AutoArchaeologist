@@ -926,17 +926,17 @@ class ComalSaveFile():
         if self.u_las != 0xffff:
             return
 
-        this = this.slice(0, offset)
+        this = this.create(start=0, stop=offset)
         self.this = this
         this.add_type("COMAL_SAVE")
 
         offset = 6
         length = self.head[2] * 2
-        self.upas = ComalUPAS(self, this.slice(offset, length))
+        self.upas = ComalUPAS(self, this.create(start=offset, stop=offset+length))
 
         offset += length
         length = self.head[3] * 2
-        self.udas = ComalUDAS(self, this.slice(offset, length))
+        self.udas = ComalUDAS(self, this.create(start=offset, stop=offset+length))
 
         this.add_interpretation(self, self.upas.html_detailed)
         this.add_interpretation(self, self.udas.html_detailed)

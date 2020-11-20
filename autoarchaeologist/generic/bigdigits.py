@@ -76,7 +76,7 @@ class BigDigits():
         if not j:
             return
 
-        this = this.slice(pfxlen, last_idx - pfxlen)
+        this = this.create(start=pfxlen, stop=last_idx)
         if not this.has_note("BigDigits"):
             self.this = this
             this.add_type("BigDigits")

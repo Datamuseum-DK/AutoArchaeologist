@@ -7,8 +7,6 @@
 
 import struct
 
-import autoarchaeologist
-
 class TapeFile():
     ''' One data file on the tape '''
     def __init__(self):
@@ -23,7 +21,7 @@ class TapeFile():
 
     def commit(self, parent):
         ''' Register the artifact '''
-        self.a = autoarchaeologist.Artifact(parent, self.body)
+        self.a = parent.create(bits=self.body)
         self.a.add_type("TAPE file")
         self.a.records = self.records
 

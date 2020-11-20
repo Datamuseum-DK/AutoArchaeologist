@@ -40,7 +40,7 @@ class DGC_PaperTapeCheckSum():
         txt = txt.strip()
 
         if start or stop < len(this):
-            this = this.slice(start, stop - start)
+            this = this.create(start=start, stop=stop)
         if not this.has_note("DGC-PaperTapeCheckSum"):
             this.add_type("DGC-PaperTapeCheckSum")
             this.add_note(txt)

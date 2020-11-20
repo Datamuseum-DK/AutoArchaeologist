@@ -1,6 +1,4 @@
 
-import autoarchaeologist
-
 class R1K_Tape_blocks():
 
     def __init__(self, this):
@@ -24,7 +22,7 @@ class R1K_Tape_blocks():
             b += this[offset + 5: offset + length]
             offset += length
         self.this = this
-        self.that = autoarchaeologist.Artifact(this, b)
+        self.that = this.create(bits=b)
         self.that.add_type("R1K_tapefile")
         this.add_interpretation(self, self.html_redirect)
         this.taken = self

@@ -2,8 +2,6 @@
    AR(1) format
 '''
 
-import autoarchaeologist
-
 import struct
 
 class Ar():
@@ -18,17 +16,17 @@ class Ar():
         this.type = "Ar_file"
         this.add_note("Ar_file")
         offset = 2
-        a = this.slice(0,2)
+        a = this.create(start=0,stop=2)
         a.type = "AR magic"
         while offset < len(this):
             words = struct.unpack("<14sLHHHHH", this[offset:offset+28])
             name = words[0].rstrip(b'\x00').decode("ASCII")
-            a = this.slice(offset, 28)
+            a = this.create(start=offset, stop=offset+28)
             a.type = "AR header"
             offset += 28
             i = words[-2] << 16
             i |= words[-1]
-            a = this.slice(offset, i)
+            a = this.create(start=offset, stop=offset+i)
             a.add_note("AR member")
             try:
                 a.set_name(this.named + ":" + name)

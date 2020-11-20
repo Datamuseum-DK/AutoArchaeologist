@@ -5,8 +5,6 @@
 
 import struct
 
-import autoarchaeologist
-
 class Invalid(Exception):
     ''' Something's not right '''
 
@@ -139,7 +137,7 @@ class RelBinRec():
                 else:
                     fo.write(" ")
             fo.write("|")
- 
+
         fo.write("\n")
         for i, j in self.symbols():
             fo.write(" " * 10 + i + " " + j + "\n")
@@ -177,7 +175,7 @@ class RelBin():
             this.add_type("RelBinLib")
             offset = 0
             for a, b, _r in objs:
-                this.slice(offset + a, b)
+                this.create(start=offset+a, stop=offset+a+b)
                 offset += a + b
             return
 
@@ -188,7 +186,7 @@ class RelBin():
         if r[0].words[0] not in VALID_FIRST:
             return
 
-        this = this.slice(pfx, i - pfx)
+        this = this.create(start=pfx, stop=i)
         if this.has_type("RelBin"):
             return
         self.this = this

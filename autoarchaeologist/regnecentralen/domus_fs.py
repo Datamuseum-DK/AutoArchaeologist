@@ -8,8 +8,6 @@
 import struct
 import itertools
 
-import autoarchaeologist
-
 # For convenience, we treat the first six sectors as a different artifact
 SEC_OFF = 6
 
@@ -169,7 +167,7 @@ class File():
 
     def commit(self):
         ''' Create an artifact for this file '''
-        self.a = autoarchaeologist.Artifact(self.this.this, self.bytes)
+        self.a = self.this.this.create(bits=self.bytes)
         self.a.add_type("DOMUS File")
         self.a.add_note(self.catent.name)
 
@@ -368,7 +366,7 @@ class Domus_Filesystem_Class():
 
         self.offset = offset
         self.length = length
-        self.this = this.slice(offset + SEC_OFF * SEC_SIZE, length - SEC_OFF * SEC_SIZE)
+        self.this = this.create(start=offset+SEC_OFF*SEC_SIZE, stop=offset+length)
 
         self.this.add_type("DOMUS Filesystem")
 

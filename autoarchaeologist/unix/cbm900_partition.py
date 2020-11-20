@@ -3,8 +3,6 @@
    ----------------------------
 '''
 
-import autoarchaeologist
-
 SLICE = 0x50c000
 NSLICE = 4
 
@@ -17,4 +15,4 @@ class CBM900_Partition():
 
         this.taken = self
         for i in range(NSLICE):
-            autoarchaeologist.Artifact(this, this[i * SLICE:(i+1) * SLICE])
+            this.create(start=i * SLICE, stop=(i+1) * SLICE)

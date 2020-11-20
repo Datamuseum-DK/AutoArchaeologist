@@ -16,37 +16,6 @@ import autoarchaeologist.generic.hexdump as hexdump
 class DuplicateName(Exception):
     ''' Set names must be unique '''
 
-class Slab():
-    ''' A slice of an artifact '''
-    def __init__(self, parent, offset, this):
-        self.parent = parent
-        self.offset = offset
-        self.this = this
-
-    def __lt__(self, other):
-        return self.offset < other.offset
-
-    def __str__(self):
-        return "<SL 0x%x %s>" % (self.offset, str(self.this))
-
-    def __repr__(self):
-        return "<SL 0x%x %s>" % (self.offset, str(self.this))
-
-    def overlaps(self, other):
-        ''' Check overlap against another slab '''
-        if self.offset >= other.offset + len(other.this):
-            return False
-        if other.offset >= self.offset + len(self.this):
-            return False
-        return True
-
-    def overlaps_any(self, others):
-        ''' Check overlap against multiple slab '''
-        for i in others:
-            if self.overlaps(i):
-                return True
-        return False
-
 class ArtifactClass():
 
     '''
@@ -84,10 +53,8 @@ class ArtifactClass():
         self.types = set()
         self.descriptions = []
         self.comments = []
-        self.slabs = []
-        self.slicings = []
         self.taken = False
-        self.myslab = None
+        self.layout = []
 
         self.add_parent(up)
         self.top = up.top
@@ -205,121 +172,51 @@ class ArtifactClass():
         ''' ask excavation '''
         return self.top.filename_for(self, *args, **kwargs)
 
-    def slice(self, offset, size):
-        ''' Return a new artifact which is a subset of this one '''
-
-        if not offset and size == len(self):
-            return self
-
-        assert offset + size <= len(self), ("OSZ", offset, size)
-        this = Artifact(self, self[offset:offset + size])
-
-        # Record where new slice was taken from
-        this.myslab = Slab(self, offset, this)
-        self.slabs.append(this.myslab)
-
+    def create(self, bits=None, start=None, stop=None, records=None):
+        ''' Return a new or old artifact for some bits '''
+        if records:
+            assert False
+            assert bits is None
+            assert len(records) > 0
+            #bits = scattergather.ScatterGather(records)
+            digest = bits.sha256()
+        elif isinstance(bits, memoryview):
+            digest = hashlib.sha256(bits.tobytes()).hexdigest()
+        elif bits:
+            digest = hashlib.sha256(bits).hexdigest()
+        else:
+            assert stop > start
+            assert stop <= len(self)
+            if not start and stop == len(self):
+                return self
+            bits = self[start:stop]
+            digest = hashlib.sha256(bits.tobytes()).hexdigest()
+        this = self.top.hashes.get(digest)
+        if not this:
+            this = ArtifactClass(self, digest, bits)
+        else:
+            this.add_parent(self)
+        if start or stop:
+            self.layout.append((start, stop, this))
         return this
-
-    def puzzle(self):
-        ''' Resolve overlapping slabs. '''
-
-        # Find the set of slabs which overlap any another slab
-        overlaps = set()
-        for i in range(len(self.slabs)):
-            sln = self.slabs[i]
-            for j in range(i+1, len(self.slabs)):
-                if sln.overlaps(self.slabs[j]):
-                    print("OVERLAP", self, sln, self.slabs[j])
-                    overlaps.add(i)
-                    overlaps.add(j)
-
-        # We need at least one slicing.
-        if not overlaps:
-            overlaps.add(0)
-
-        # Creat a slicing for each of the overlapping slabs, add
-        # all slabs not overlapping another.
-        for i in sorted(overlaps):
-            sl0 = self.slabs[i]
-            slicing = [sl0]
-            self.slicings.append(slicing)
-            for n, slab in enumerate(self.slabs):
-                if n not in overlaps:
-                    slicing.append(slab)
-
-        # Add any other slice which can fit in the slicing:
-        for slab in self.slabs:
-            for slicing in self.slicings:
-                if not slab.overlaps_any(slicing):
-                    slicing.append(slab)
-
-        # Flesh out the slicings with new slabs
-        for slicing in self.slicings:
-            offset = 0
-            for slab in sorted(slicing):
-                if offset < slab.offset:
-                    new_slab = self.slice(offset, slab.offset - offset)
-                    slicing.append(Slab(self, offset, new_slab))
-                    offset += len(new_slab)
-                offset += len(slab.this)
-            if offset < len(self):
-                new_slab = self.slice(offset, len(self) - offset)
-                slicing.append(Slab(self, offset, new_slab))
-            assert sum([len(x.this) for x in slicing]) == len(self)
 
     def examined(self):
         ''' Examination of this artifact is complete '''
-
-        if self.slabs:
-            self.puzzle()
-
-        if self.slabs and self.myslab and len(self.parents) == 1:
-            # If this artifact was itself a slice, adopt the slabs away
-            self.myslab.parent.adopt(self)
-
-        elif self.slabs:
-            # First sliced artifact in a new "slice-tree", render properly.
-            self.add_interpretation(self, self.html_interpretation_sliced)
-
-    def adopt(self, orphan):
-        ''' Hoist slabs of one of our own slabs up '''
-        assert len(self.slicings) > 0
-        assert len(orphan.parents) == 1, orphan.parents
-        assert len(orphan.slicings) == 1, orphan.slicings
-        newoff = orphan.myslab.offset
-
-        # Hoist the orphan's slabs up
-        # .puzzle will have fleshed out orphan.slabs
-        for slab in sorted(orphan.slicings[0]):
-            offset = slab.offset + orphan.myslab.offset
-            assert newoff == offset, (self, orphan, newoff, offset, orphan.slabs)
-            slab.this.parents.remove(orphan)
-            slab.this.parents.append(self)
-            orphan.children.remove(slab.this)
-            self.children.append(slab.this)
-            slab.this.myslab = Slab(self, newoff, slab.this)
-            self.slabs.append(slab.this.myslab)
-            newoff += len(slab.this)
-            # Add to all slicings orphan is in
-            for sln in self.slicings:
-                for slac in sln:
-                    if slac.this == orphan:
-                        sln.append(slab.this.myslab)
-        assert newoff == orphan.myslab.offset + len(orphan)
-
-        # If there is nothing left, kill the orphan
-        # XXX: Should also check notes, comments etc.
-        if not orphan.interpretations:
-            self.slabs.remove(orphan.myslab)
-            self.children.remove(orphan)
-            orphan.parents.remove(self)
-            del self.top.hashes[orphan.digest]
-            # Remove from all slicings
-            for sln in self.slicings:
-                for slab in sln:
-                    if slab.this == orphan:
-                        sln.remove(slab)
-                        break
+        # XXX: create left over slices
+        l = []
+        offset = 0
+        for start, stop, src in sorted(self.layout):
+            if start is None or stop is None:
+                continue
+            if offset < start:
+                l.append((offset, start))
+            offset = stop
+        if not offset:
+            return
+        if offset != len(self):
+            l.append((offset, len(self)))
+        for start, stop in l:
+            self.create(start=start, stop=stop)
 
     def summary(self, link=True, ident=True, notes=False):
         ''' Produce a one-line summary '''
@@ -366,7 +263,7 @@ class ArtifactClass():
         self.html_derivation(fo)
         fo.write("</pre>\n")
 
-        if self.children and not self.slabs and not self.interpretations:
+        if self.children and not self.interpretations:
             self.html_interpretation_children(fo, self)
 
         if self.comments:
@@ -390,8 +287,8 @@ class ArtifactClass():
 
         fo.write("<H4>Children</H4>\n")
         fo.write("<pre>\n")
-        for p in sorted(self.children):
-            fo.write("  " + p.summary() + "\n")
+        for start, stop, this in sorted(self.layout):
+            fo.write("  " + this.summary() + "\n")
         fo.write("</pre>\n")
 
     def html_interpretation_hexdump(self, fo, _this):
