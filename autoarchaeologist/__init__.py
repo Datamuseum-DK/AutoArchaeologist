@@ -1,3 +1,3 @@
 
 from .excavation import Excavation, DuplicateArtifact
-from .artifact import DuplicateName
+from .artifact import Artifact, DuplicateName

@@ -439,7 +439,14 @@ class Unix_Filesystem():
             iblk = indir(iiblk, block_no // self.NINDIR)
             return indir(iblk, block_no % self.NINDIR)
 
-        assert False, "XXX: 3Indir blocks"
+        iiiblk = getblk(self.NADDR - 1)
+        iiblk = indir(iiiblk, block_no // (self.NINDIR * self.NINDIR))
+        if not iiblk:
+            return iiblk
+        iblk = indir(iiblk, (block_no // self.NINDIR) % self.NINDIR)
+        if not iblk:
+            return iblk
+        return indir(iblk, block_no % self.NINDIR)
 
     def html_as_lsl(self, fo, _this):
         ''' Render as recusive ls -l '''
