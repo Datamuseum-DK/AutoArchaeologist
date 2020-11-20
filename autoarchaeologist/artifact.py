@@ -70,7 +70,7 @@ class ArtifactClass():
 
     def __init__(self, up, digest, bits):
         assert len(bits) > 0
-        self.body = bytes(bits)
+        self.bdx = memoryview(bits)
 
         self.digest = digest
         self.records = []		# For TAP files etc.
@@ -103,36 +103,24 @@ class ArtifactClass():
         return str(self)
 
     def __len__(self):
-        return len(self.body)
+        return len(self.bdx)
 
     def __hash__(self):
         return int(self.digest[:8], 16)
 
     def __getitem__(self, idx):
-        return self.body[idx]
+        return self.bdx[idx]
 
     def __lt__(self, other):
         if isinstance(other, excavation.Excavation):
             return 1
         return self.name() < other.name()
 
-    def find(self, *args, **kwargs):
-        return self.body.find(*args, **kwargs)
-
-    def rfind(self, *args, **kwargs):
-        return self.body.rfind(*args, **kwargs)
-
-    def rstrip(self, *args, **kwargs):
-        return self.body.rstrip(*args, **kwargs)
-
-    def split(self, *args, **kwargs):
-        return self.body.split(*args, **kwargs)
+    def tobytes(self):
+        return self.bdx.tobytes()
 
     def writetofile(self, fd):
-        fd.write(self.body)
-
-    def decode(self, *args, **kwargs):
-        return self.body.decode(*args, **kwargs)
+        fd.write(self.bdx)
 
     def name(self):
         ''' Get the canonical name of the artifact '''

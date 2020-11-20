@@ -8,7 +8,7 @@ class R1K_Tape_blocks():
             return
 
         try:
-            head = this[:5].decode('ASCII')
+            head = this[:5].tobytes().decode('ASCII')
             i = int(head, 10)
         except UnicodeDecodeError:
             return
@@ -19,7 +19,7 @@ class R1K_Tape_blocks():
         offset = 0
         b = bytearray()
         while offset < len(this):
-            head = this[offset:offset + 5].decode('ASCII')
+            head = this[offset:offset + 5].tobytes().decode('ASCII')
             length = int(head[1:], 10)
             b += this[offset + 5: offset + length]
             offset += length

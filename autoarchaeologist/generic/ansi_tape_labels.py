@@ -40,7 +40,7 @@ class Ansi_Tape_labels():
                 this.add_type("ANSI Tape Label")
             offset = 0
             for length in this.records:
-                label = this[offset:offset+length].decode("ASCII")
+                label = this[offset:offset+length].tobytes().decode("ASCII")
                 offset += length
                 t = ANSI_HEADERS.get(label[:4])
                 if not t:
@@ -60,7 +60,7 @@ class Ansi_Tape_labels():
         fo.write("-" * 80 + "\n")
         offset = 0
         for length in self.this.records:
-            label = self.this[offset:offset+length].decode("ASCII")
+            label = self.this[offset:offset+length].tobytes().decode("ASCII")
             fo.write(label + "\n")
             offset += length
         fo.write("-" * 80 + "\n")

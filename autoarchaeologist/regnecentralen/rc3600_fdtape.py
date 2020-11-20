@@ -36,10 +36,10 @@ class RC3600_FD_Tape():
         if len(this) != 77 * 26 * 128:
             return
 
-        if this.find(SIGNATURE_RAW) > 0:
+        if this.tobytes().find(SIGNATURE_RAW) > 0:
             self.interleave = False
             self.this = this
-        elif this.find(SIGNATURE_INTERLEAVE) > 0:
+        elif this.tobytes().find(SIGNATURE_INTERLEAVE) > 0:
             self.interleave = True
             self.this = this
         else:
@@ -70,7 +70,7 @@ class RC3600_FD_Tape():
                 label = autoarchaeologist.Artifact(this, self[i])
                 label.add_type("Namelabel")
                 name = None
-                b = label.rstrip(b'\x00')
+                b = label.tobytes().rstrip(b'\x00')
                 if b:
                     try:
                         name = b.decode('ASCII')

@@ -78,14 +78,14 @@ class R1K_Index_Data_Class():
         self.files = {}
 
         try:
-            b = self.indexfile.split(b'\n', 1)[0].decode("ASCII").split()
+            b = self.indexfile.tobytes().split(b'\n', 1)[0].decode("ASCII").split()
         except UnicodeDecodeError:
             return
         if len(b) != 3 or b[0] != "***" or b[2] != "***":
             return
 
         self.stanzas = []
-        for i in self.indexfile.decode("ASCII").split("\n!"):
+        for i in self.indexfile.tobytes().decode("ASCII").split("\n!"):
             self.stanzas.append(R1K_Index_Stanza(self, i))
 
         for i in sorted(self.stanzas):
