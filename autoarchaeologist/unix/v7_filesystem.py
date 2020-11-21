@@ -9,6 +9,11 @@
 import struct
 import time
 
+import autoarchaeologist
+
+class InvalidDirectory(Exception):
+    pass
+
 def swap_words(x):
     ''' swap two halves of a 32 bit word '''
     return (x >> 16) | ((x & 0xffff) << 16)
@@ -33,11 +38,13 @@ class Dinode(Struct):
         self.di_type = self.di_mode & self.fs.S_ISFMT
 
     def __iter__(self):
-        assert self.di_type in (self.fs.S_IFDIR, self.fs.S_IFREG), self
+        assert self.di_type in (0, self.fs.S_IFDIR, self.fs.S_IFREG), self
         block_no = 0
         yet = self.di_size
         while yet:
             b = self.fs.inode_get_block(self, block_no)
+            if not len(b) and not self.di_type:
+                return
             assert len(b) > 0, (str(self))
             if yet < self.fs.SECTOR_SIZE:
                 b = b[:yet]
@@ -109,7 +116,8 @@ class DirEnt():
         self.subdir = None
         self.artifact = None
         if self.fs.valid_inum(inum):
-            self.fs.inode_is[inum] = self
+            if name not in (".", "..",):
+                self.fs.inode_is[inum] = self
             self.inode = self.fs.read_inode(inum)
         else:
             self.inode = None
@@ -125,7 +133,7 @@ class DirEnt():
             b = bytes()
             for i in self.inode:
                 b += i
-            self.artifact = self.fs.this.create(bits=b)
+            self.artifact = self.fs.this.create(b)
             self.artifact.add_note("UNIX file")
             try:
                 self.artifact.set_name(self.path)
@@ -139,14 +147,24 @@ class Directory():
         self.path = path
         self.inode = inode
         self.dirents = []
+        self.fs.inode_is[inode.di_inum] = self
 
+        n = 0
         for i in self.inode:
             for j in range(0, len(i), 16):
+                n += 1
                 de_bytes = i[j:j+16]
                 if not max(de_bytes):
                     continue
                 words = struct.unpack(self.fs.ENDIAN + "H14s", de_bytes)
-                name = words[1].split(b'\x00')[0].decode(self.fs.CHARSET)
+                if n == -1 and words[0] != inode.di_inum:
+                    raise InvalidDirectory(
+                        ". does not point at self: " + str(words) + " " + str(inode)
+                    )
+                name = words[1].rstrip(b'\x00')
+                if 0 in name:
+                    raise InvalidDirectory("bad name: " + str(name))
+                name = name.decode(self.fs.CHARSET)
                 dirent = DirEnt(
                     self.fs,
                     self.path + name,
@@ -168,11 +186,14 @@ class Directory():
             if dirent.name in ('.', '..',):
                 continue
             if dirent.inode.di_type == self.fs.S_IFDIR:
-                dirent.subdir = Directory(
-                    self.fs,
-                    self.path + dirent.name + '/',
-                    dirent.inode
-                )
+                try:
+                    dirent.subdir = Directory(
+                        self.fs,
+                        self.path + dirent.name + '/',
+                        dirent.inode
+                    )
+                except InvalidDirectory:
+                    continue
                 yield dirent.subdir
 
     def html_as_lsl(self, fo, pfx=""):
@@ -297,30 +318,86 @@ class Unix_Filesystem():
             d = dlist.pop(0)
             dlist += d.subdirs()
             d.commit_files()
-        return
-        while self.hunt_orphan_directories():
-            dlist = self.orphan_dirs[-1:]
-            while dlist:
-                d = dlist.pop(0)
-                dlist += d.subdirs()
-                d.commit_files()
-        self.hunt_orphan_files()
+        for i in range(2):
+            while self.hunt_orphan_directories(i):
+                dlist = self.orphan_dirs[-1:]
+                while dlist:
+                    d = dlist.pop(0)
+                    dlist += d.subdirs()
+                    d.commit_files()
+        try:
+            self.hunt_orphan_files()
+        except Exception as e:
+            print("HUNTFILES", e)
 
-    def hunt_orphan_directories(self):
-        ''' Find the first unclaimed inode which looks like a directory '''
+    def iter_orphan_directories(self):
+        ''' find orphan directories '''
         for inum in self.iter_inodes():
             if not self.valid_inum(inum):
                 break
             if inum in self.inode_is:
                 continue
             inode = self.read_inode(inum)
-            if not inode.di_mode and not inode.di_size:
+            if not max(inode.di_addr):
                 continue
-            if inode.di_type == self.S_IFDIR:
-                self.orphan_dirs.append(
-                    Directory(self, "/ORPHANS/%d/" % inum, inode)
+            if inode.di_type and inode.di_type != self.S_IFDIR:
+                continue
+            if inode.di_size % 0x10:
+                continue
+            b = bytearray()
+            for i in inode:
+                try:
+                    b += i.tobytes()
+                except Exception as e:
+                    print("Speculate dir", type(b), type(i))
+                break
+            if len(b) < 0x20:
+                continue
+            words = struct.unpack(self.ENDIAN + "H14sH14s", b[0x0:0x20])
+            if words[0] and words[0] != inum:
+                continue
+            if words[1].rstrip(b'\x00') != b'.':
+                continue
+            if words[3].rstrip(b'\x00') != b'..':
+                continue
+            yield inum, inode, words[2]
+
+    def hunt_orphan_directories(self, mode = 0):
+        ''' Find the first unclaimed inode which looks like a directory '''
+        for inum, inode, pinum in self.iter_orphan_directories():
+            if mode == 0:
+                pdir = self.inode_is.get(pinum)
+                if not isinstance(pdir, Directory):
+                    continue
+                print("HD0", mode, inum, "0x%x" % inode.di_size, pinum)
+                try:
+                    d = Directory(
+                        self,
+                        pdir.path + "/ORPHAN_%d/" % inum,
+                        inode
+                    )
+                except InvalidDirectory:
+                    continue
+                self.orphan_dirs.append(d)
+                dirent = DirEnt(
+                    self,
+                    pdir.path,
+                    "ORPHAN_%d" % inum,
+                    inum
                 )
+                pdir.dirents.append(dirent)
                 return True
+            else:
+                print("HD1", mode, inum, "0x%x" % inode.di_size, pinum)
+                try:
+                    d = Directory(
+                        self,
+                        "/ORPHAN_%d/" % inum,
+                        inode
+                    )
+                except InvalidDirectory:
+                    continue
+                self.orphan_dirs.append(d)
         return False
 
     def hunt_orphan_files(self):
@@ -333,12 +410,14 @@ class Unix_Filesystem():
             inode = self.read_inode(inum)
             if not inode.di_size:
                 continue
-            if inode.di_type != self.S_IFREG:
+            if not max(inode.di_addr):
+                continue
+            if inode.di_type not in (0, self.S_IFREG):
                 continue
             b = bytearray()
             for i in inode:
-                b += i
-            j = self.this.create(bits=b)
+                b += i.tobytes()
+            j = self.this.create(b)
             j.add_note("UNIX file")
             j.add_note("Orphan File")
             self.orphan_files.append((inode, j))
@@ -418,6 +497,8 @@ class Unix_Filesystem():
 
         def indir(blk, baddr):
             blk = blk[baddr * 4:(baddr + 1) * 4]
+            if len(blk) != 4:
+                return
             offset = struct.unpack(self.ENDIAN + "HH", blk)
             offset = (offset[0] << 16) | offset[1]
             offset *= self.SECTOR_SIZE
@@ -435,7 +516,10 @@ class Unix_Filesystem():
         if block_no < self.NINDIR * self.NINDIR:
             iiblk = getblk(self.NADDR - 2)
             iblk = indir(iiblk, block_no // self.NINDIR)
+            if not iblk:
+                return iblk
             return indir(iblk, block_no % self.NINDIR)
+        block_no -= self.NINDIR * self.NINDIR
 
         iiiblk = getblk(self.NADDR - 1)
         iiblk = indir(iiiblk, block_no // (self.NINDIR * self.NINDIR))
