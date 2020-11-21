@@ -29,6 +29,8 @@ ANSI_HEADERS = {
 class Ansi_Tape_labels():
     ''' ANSI Tape Labels '''
     def __init__(self, this):
+        if not this.has_type("TAPE file"):
+            return
         # print("?ANSI", this)
         for tour in range(2):
             if tour:

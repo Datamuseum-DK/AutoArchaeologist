@@ -40,7 +40,10 @@ def R1K_job(html_dir, **kwargs):
         "-30000528",	# DFS
         "-30000744",	# DFS
         "-30000407",	# DFS
+        "-30000408",	# PNG
         "-30000743",	# DFS
+        "-30000410",	# PNG
+        "-30000406",	# PNG
         "-30000746",	# Defects tape
         "-30000533",	# ASIS(AIX)
         "-30000544",	# PAM arrival backup, different format.

@@ -7,7 +7,7 @@ class R1K_Tape_blocks():
     def __init__(self, this):
         if not this.has_type("TAPE file"):
             return
-        print("?R1KT", this)
+        # print("?R1KT", this)
         l = []
         b = []
         for n, r in enumerate(this.iterrecords()):

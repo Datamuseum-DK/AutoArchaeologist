@@ -167,6 +167,10 @@ class FromBitStore():
             if line1[:10] != '|[[Bits:30':
                 continue
             line2 = lines.pop(0)
+            line2 = line2[2:].split()[0]
+            ident = line2.split("/")[-1]
+            if ident in self.blacklist:
+                continue
             line3 = lines.pop(0)
             _line4 = lines.pop(0)
             line5 = lines.pop(0)
@@ -176,6 +180,4 @@ class FromBitStore():
                 continue
             if not j:
                 continue
-            line2 = line2[2:].split()[0]
-            ident = line2.split("/")[-1]
             self.fetch_single(ident)

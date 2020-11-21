@@ -47,13 +47,13 @@ class R1K_Index_Stanza():
         if self.offset >= 0 and self.length < 0 and self.offset - self.length <= len(self.up.datafile):
             self.up.slices.append((self.offset, -self.length, self))
             return
-        print(self.cmd, self.flds, self.lines[0], len(self.lines), self.up.datafile)
+        # print(self.cmd, self.flds, self.lines[0], len(self.lines), self.up.datafile)
         for i in self.lines[2:]:
             if not i:
                 continue
             if i[0] == 'A' and "=>" in i:
                 continue
-            print("   ", i)
+            # print("   ", i)
 
     def render(self):
         t = html.escape(self.lines[0]) + " " + html.escape(self.lines[1])
@@ -62,7 +62,7 @@ class R1K_Index_Stanza():
 class R1K_Index_Data_Class():
 
     def __init__(self, indexfile, datafile):
-        print("R1KID", indexfile, datafile)
+        # print("R1KID", indexfile, datafile)
         if indexfile.has_type("R1K_INDEX_FILE"):
             return
         indexfile.add_type("R1K_INDEX_FILE")
@@ -160,17 +160,17 @@ class R1K_Index_Data():
     def __init__(self, this):
         if not this.has_type("R1K_LOGICAL_TAPE"):
             return
-        print("?R1ID", this)
+        # print("?R1ID", this)
 
         mytapefile = list(hunt_up(this, "TAPE file"))
         assert len(mytapefile) == 1
         mytapefile = mytapefile[0]
-        print("I am", mytapefile)
+        # print("I am", mytapefile)
 
         mytape = list(hunt_up(mytapefile, "TAP tape"))
         assert len(mytape) == 1
         tape = mytape[0]
-        print("Tape is", tape)
+        # print("Tape is", tape)
 
         vol=None
         filename=None
