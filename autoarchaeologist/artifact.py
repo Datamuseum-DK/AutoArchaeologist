@@ -302,7 +302,8 @@ class ArtifactClass():
         fo.write("<H4>Children</H4>\n")
         fo.write("<pre>\n")
         for start, stop, this in sorted(self.layout):
-            fo.write("  " + this.summary() + "\n")
+            fo.write("  0x%08x" % start + "-0x%08x  " % stop)
+            fo.write(this.summary() + "\n")
         fo.write("</pre>\n")
 
     def html_interpretation_hexdump(self, fo, _this):
