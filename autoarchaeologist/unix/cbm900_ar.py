@@ -4,6 +4,8 @@
 
 import struct
 
+import autoarchaeologist
+
 class Ar():
 
     def __init__(self, this):
