@@ -9,8 +9,14 @@ import urllib.request
 
 import autoarchaeologist
 
-SERVERNAME = "datamuseum.dk"
-PROTOCOL = "https"
+
+SERVERNAME = os.environ.get("AUTOARCHAEOLOGIST_BITSTORE_HOSTNAME")
+if SERVERNAME is None:
+    SERVERNAME = "datamuseum.dk"
+
+PROTOCOL = os.environ.get("AUTOARCHAEOLOGIST_BITSTORE_PROTOCOL")
+if PROTOCOL is None:
+    PROTOCOL = "http"
 
 BITSTORE_FORMATS = {
     "PDF": False,
