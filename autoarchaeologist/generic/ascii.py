@@ -55,6 +55,7 @@ class Ascii():
 
         if this.has_note("ASCII"):
             return
+        #print("?A", this)
 
         par = [0, 0, 0, 0]
         pfx = None
@@ -72,15 +73,16 @@ class Ascii():
 
             j = CHARSET[c & 0x7f][0]
             if not j:
+                #print("-A", this, "0x%02x" % c, "0x%x" % j)
                 return
-            if not j & 16:
-                last_idx = idx
-                bodylen += 1
+            last_idx = idx
+            bodylen += 1
             if j & 4:
                 break
             if j & 1:
                 lines += 1
 
+        #print("?A", this, pfx, last_idx, bodylen, lines, par)
         if last_idx is None or bodylen < 10 or not lines:
             return
 
