@@ -83,7 +83,8 @@ class Inode(Struct):
         self.di_type = self.di_mode & self.ufs.S_ISFMT
 
     def __iter__(self):
-        assert self.di_type in (0, self.ufs.S_IFDIR, self.ufs.S_IFREG), self
+        if self.di_type not in (0, self.ufs.S_IFDIR, self.ufs.S_IFREG):
+            return
         block_no = 0
         yet = self.di_size
         while yet:
@@ -217,12 +218,12 @@ class DirEnt():
 
     def commit_file(self):
         ''' Create artifact, if possible '''
-        self.ufs.inode_is[self.inum] = self
         if not self.inode:
             return
         if self.directory:
             self.directory.commit_files()
         elif self.inode.di_type == self.ufs.S_IFREG:
+            self.ufs.inode_is[self.inode.di_inum] = self
             if not self.inode.di_size:
                 return
             b = bytes()
@@ -245,6 +246,7 @@ class Directory():
         self.path = path
         self.inode = inode
         self.dirents = []
+        self.ufs.inode_is[self.inode.di_inum] = self
         n = 0
         for inum, dname in self.parse():
             if n == 0 and dname != ".":
@@ -260,6 +262,9 @@ class Directory():
             self.dirents.append(dirent)
         self.recurse()
 
+    def __str__(self):
+        return "<DIR %d " % self.inode.di_inum + str(self.inode) + ">"
+
     def recurse(self):
         ''' Recursively read tree under this directory '''
         for dirent in self.dirents:
@@ -268,6 +273,9 @@ class Directory():
             if dirent.inode.di_type != self.ufs.S_IFDIR:
                 continue
             if dirent.path[-1] in (".", "..",):
+                continue
+            inodeis = self.ufs.inode_is.get(dirent.inode.di_inum)
+            if isinstance(inodeis, Directory):
                 continue
             dirent.directory = self.ufs.DIRECTORY(
                 self.ufs,
@@ -279,7 +287,7 @@ class Directory():
         ''' Tell the autoarchaeologist about the files we found '''
         for dirent in sorted(self.dirents):
             dirent.commit_file()
-        self.ufs.inode_is[self.inode.di_inum] = self
+        assert self.ufs.inode_is[self.inode.di_inum] == self
 
     def html_as_lsl(self, fo):
         ''' Recursively render as ls -l output '''
@@ -307,6 +315,8 @@ class Directory():
                     continue
                 words = struct.unpack(self.ufs.ENDIAN + "H14s", de_bytes)
                 name = words[1].rstrip(b'\x00')
+                if b'\x00' in name:
+                    continue
                 name = name.decode(self.ufs.CHARSET)
                 yield words[0], name
 
@@ -349,7 +359,9 @@ class UnixFileSystem():
         self.suspect_inodes = {}
         self.analyse()
         if self.sblock:
+            print("Speculate", self.this)
             self.speculate()
+            print("Speculation over", self.this)
 
     def analyse(self):
         ''' What it says on the tin '''
@@ -363,7 +375,6 @@ class UnixFileSystem():
 
     def speculate(self):
         ''' Look for orphan inodes '''
-        print("Speculate", self.this)
         for inum in range(2, self.sblock.fs_imax + 1):
             if inum in self.inode_is:
                 continue
@@ -435,7 +446,6 @@ class UnixFileSystem():
             dirent.directory = specdir
             pdir.dirents.append(dirent)
             specdir.commit_files()
-            self.inode_is[pdino] = pdir		# XXX why ?!
             return True
 
     def speculate_ifreg(self):
@@ -479,7 +489,6 @@ class UnixFileSystem():
         data = struct.unpack(fmt, self.this[where:where+size])
         data = list(data)
         args = {}
-        args["_size"] = size
         for i, j in layout:
             n = int(j[:-1])
             args[i] = data[:n]
@@ -489,6 +498,7 @@ class UnixFileSystem():
             if n == 1:
                 args[i] = args[i][0]
         assert len(data) == 0
+        args["_size"] = size
         return args
 
     def get_superblock(self):
