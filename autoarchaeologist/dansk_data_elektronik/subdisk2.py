@@ -12,7 +12,9 @@ class SubDisk2():
             return
 
         words = struct.unpack(">32H", this[0x300:0x340])
-        print("?SD2", words, words[0] << 16, len(this))
+        print("?SD2", this)
+        print("\t", words)
+        print("\t", words[0] << 16, len(this))
         if words[0] << 16 > len(this):
             return
         offset = 8192

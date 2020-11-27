@@ -254,7 +254,7 @@ class Directory():
             if n == 1 and dname != "..":
                 return
             n += 1
-            if inum <= self.ufs.sblock.fs_imax:
+            if inum >= 2 and inum <= self.ufs.sblock.fs_imax:
                 dinode = self.ufs.get_inode(inum)
             else:
                 dinode = None
@@ -311,12 +311,12 @@ class Directory():
             b = b.tobytes()
             for j in range(0, len(b), 16):
                 de_bytes = b[j:j+16]
+                if len(de_bytes) != 16:
+                    break
                 if not max(de_bytes):
                     continue
                 words = struct.unpack(self.ufs.ENDIAN + "H14s", de_bytes)
                 name = words[1].rstrip(b'\x00')
-                if b'\x00' in name:
-                    continue
                 name = name.decode(self.ufs.CHARSET)
                 yield words[0], name
 
@@ -428,9 +428,6 @@ class UnixFileSystem():
                 continue
             if len(specdir.dirents) < 2:
                 continue
-            print(type(specdir.dirents))
-            print(len(specdir.dirents))
-            print(specdir.dirents)
             pdino = specdir.dirents[1].inode.di_inum
             pdir = self.inode_is.get(pdino)
             if pdir is None:
