@@ -7,10 +7,6 @@ import autoarchaeologist.unix.unix_fs as ufs
 class SysVInode(ufs.Inode):
     ''' System V inode '''
 
-    def __init__(self, ufs, **kwargs):
-        super().__init__(ufs, **kwargs)
-        self.fix_di_addr()
-
     def fix_di_addr(self):
         ''' convert .di_addr[] to .di_db[] and di.ib[] '''
         raw = self.di_addr
@@ -85,12 +81,11 @@ class SysVFileSystem(ufs.UnixFileSystem):
             return
         print("?SysVFIleSystem", self.this,  i.hex())
 
-        sblock = ufs.Struct(
+        sblock = self.this.record(
+            self.SBLOCK_LAYOUT,
+            endian=self.ENDIAN,
+            offset=0x200,
             name="sblock",
-            **self.read_struct(
-                self.SBLOCK_LAYOUT,
-                0x200,
-            )
         )
         if sblock.s_type == 3:
             self.SECTOR_SIZE = 2048
@@ -111,11 +106,14 @@ class SysVFileSystem(ufs.UnixFileSystem):
         ''' Return an Inode '''
         inoa = 2 * self.SECTOR_SIZE
         inoa += (inum - 1) * self.INODE_SIZE
-        return SysVInode(
-            self,
+        return self.this.record(
+            self.INODE_LAYOUT,
+            offset=inoa,
+            endian=self.ENDIAN,
+            use_type=SysVInode,
+            ufs=self,
             name="sysv",
             di_inum=inum,
-            **self.read_struct(self.INODE_LAYOUT, inoa)
         )
 
     def get_block(self, blockno):

@@ -18,8 +18,8 @@ class V7_Inode(ufs.Inode):
        if the words themselves are LE order.
     '''
 
-    def __init__(self, ufs, **kwargs):
-        super().__init__(ufs, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.fix_di_addr()
 
     def fix_di_addr(self):
@@ -80,12 +80,11 @@ class V7_Filesystem(ufs.UnixFileSystem):
 
     def get_superblock(self):
         ''' Read the superblock '''
-        sblock = ufs.Struct(
+        sblock = self.this.record(
+            self.SBLOCK_LAYOUT,
+            endian=self.ENDIAN,
+            offset=self.DISK_OFFSET + self.SUPERBLOCK_OFFSET,
             name="sblock",
-            **self.read_struct(
-                self.SBLOCK_LAYOUT,
-                self.DISK_OFFSET + self.SUPERBLOCK_OFFSET
-            )
         )
         if not sblock:
             return
@@ -106,11 +105,14 @@ class V7_Filesystem(ufs.UnixFileSystem):
         inoa = self.DISK_OFFSET
         inoa += 2 * self.SECTOR_SIZE
         inoa += (inum - 1) * self.INODE_SIZE
-        return V7_Inode(
-            self,
+        return self.this.record(
+            self.INODE_LAYOUT,
+            offset=inoa,
+            endian=self.ENDIAN,
+            use_type=V7_Inode,
+            ufs=self,
             name="v7",
             di_inum=inum,
-            **self.read_struct(self.INODE_LAYOUT, inoa)
         )
 
     def get_block(self, blockno):

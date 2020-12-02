@@ -34,32 +34,9 @@ import sys
 import struct
 import time
 
-def swap_words(x):
-    ''' swap two halves of a 32 bit word '''
-    return (x >> 16) | ((x & 0xffff) << 16)
+import autoarchaeologist
 
-class Struct():
-    ''' Brute force data-container class '''
-    def __init__(self, **kwargs):
-        self.name = ""
-        self.__v = kwargs
-        for i, j in kwargs.items():
-            setattr(self, i, j)
-
-    def __str__(self):
-        return "<S "+", ".join([i+"="+str(j) for i,j in self.__v.items()])+">"
-
-    def dump(self, fo=sys.stdout):
-        ''' One element per line & hexadecimal for debugging '''
-        fo.write("struct %s {\n" % self.name)
-        for i, j in self.__v.items():
-            if isinstance(j, int):
-                fo.write("   %-16s 0x%x\n" % (i, j))
-            else:
-                fo.write("   %-16s %s\n" % (i, str(j)))
-        fo.write("}\n")
-
-class Inode(Struct):
+class Inode(autoarchaeologist.Record):
     ''' Inode in a UNIX filesystem '''
 
     def __init__(self, ufs, **kwargs):
@@ -81,6 +58,7 @@ class Inode(Struct):
         super().__init__(**kwargs)
 
         self.di_type = self.di_mode & self.ufs.S_ISFMT
+        self.fix_di_addr()
 
     def __iter__(self):
         if self.di_type not in (0, self.ufs.S_IFDIR, self.ufs.S_IFREG):
@@ -150,6 +128,9 @@ class Inode(Struct):
         mtime = time.gmtime(self.di_mtime)
         txt += time.strftime(" %Y-%m-%dT%H:%M:%SZ", mtime)
         return txt
+
+    def fix_di_addr(self):
+        ''' Implemented by specific filesystems as needed '''
 
     def indir_get(self, blk, idx):
         ''' Pick a block number out of an indirect block '''
@@ -468,35 +449,6 @@ class UnixFileSystem():
         fo.write("<H3>ls -l</H3>\n")
         fo.write("<pre>\n")
         self.rootdir.html_as_lsl(fo)
-
-    def read_struct(self, layout, where):
-        '''
-            Read an on-disk structure
-
-            We cannot use straight struct.unpack because we
-            need support for 32 bits with swapped halves ('X')
-
-            Go the full way and pack into a nice Struct while
-            at it anyway.
-        '''
-        fmt = self.ENDIAN + "".join([j for i, j in layout])
-        fmt = fmt.replace('X', 'L')
-        size = struct.calcsize(fmt)
-
-        data = struct.unpack(fmt, self.this[where:where+size])
-        data = list(data)
-        args = {}
-        for i, j in layout:
-            n = int(j[:-1])
-            args[i] = data[:n]
-            data = data[n:]
-            if j[-1] == 'X':
-                args[i] = [swap_words(x) for x in args[i]]
-            if n == 1:
-                args[i] = args[i][0]
-        assert len(data) == 0
-        args["_size"] = size
-        return args
 
     def get_superblock(self):
         '''

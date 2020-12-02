@@ -12,6 +12,7 @@ import hashlib
 
 import autoarchaeologist.excavation as excavation
 import autoarchaeologist.generic.hexdump as hexdump
+import autoarchaeologist.record as record
 import autoarchaeologist.scattergather as scattergather
 
 class DuplicateName(Exception):
@@ -182,6 +183,10 @@ class ArtifactClass():
             for child in self.children:
                 assert child != self, (child, self)
                 yield from child.iter_notes(recursive)
+
+    def record(self, layout, **kwargs):
+        ''' Extract a compound record '''
+        return record.Extract_Record(self, layout, **kwargs)
 
     def filename_for(self, *args, **kwargs):
         ''' ask excavation '''

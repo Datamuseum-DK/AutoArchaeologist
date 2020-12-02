@@ -187,7 +187,11 @@ class FFS(ufs.UnixFileSystem):
                 print("XXX: UFS2 unhandled")
             return False
 
-        self.sblock = ufs.Struct(name="sb", **self.read_struct(FFS_SUPERBLOCK, 0x2000))
+        self.sblock = self.this.record(
+            FFS_SUPERBLOCK,
+            offset=offset,
+            endian=self.ENDIAN,
+        )
         return True
 
     def cgget(self, cgnum):
@@ -196,7 +200,11 @@ class FFS(ufs.UnixFileSystem):
         offset += cgnum * self.sblock.fs_fpg
         offset += self.sblock.fs_old_cgoffset * (cgnum & ~self.sblock.fs_old_cgmask)
         offset <<= self.sblock.fs_fshift
-        return ufs.Struct(name="cg", offset=offset, **self.read_struct(FFS_CYLINDERGROUP, offset))
+        return self.this.record(
+            FFS_CYLINDERGROUP,
+            offset=offset,
+            endian=self.ENDIAN,
+        )
 
     def get_inode(self, inum):
         ''' Get Inode '''
@@ -205,15 +213,17 @@ class FFS(ufs.UnixFileSystem):
         if cgn >= len(self.cylgroup):
             print("NO CG", inum, cgn, self.sblock)
             return None
-        offset = self.cylgroup[cgn].offset
+        offset = self.cylgroup[cgn]._offset
         offset += ((self.sblock.fs_iblkno - self.sblock.fs_cblkno) << self.sblock.fs_fshift)
         offset += self.INODE_SIZE * irem
-        return ufs.Inode(
-            self,
+        return self.this.record(
+            UFS1_INODE,
+            offset=offset,
+            endian=self.ENDIAN,
+            use_type=ufs.Inode,
+            ufs=self,
             name="ufs1",
-            _offset=offset,
             di_inum=inum,
-            **self.read_struct(UFS1_INODE, offset)
        )
 
     def get_block(self, bno):

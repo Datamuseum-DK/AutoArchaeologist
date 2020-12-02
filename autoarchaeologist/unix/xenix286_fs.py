@@ -10,10 +10,6 @@ import autoarchaeologist.unix.unix_fs as ufs
 class SysVInode(ufs.Inode):
     ''' System V inode '''
 
-    def __init__(self, ufs, **kwargs):
-        super().__init__(ufs, **kwargs)
-        self.fix_di_addr()
-
     def fix_di_addr(self):
         ''' convert .di_addr[] to .di_db[] and di.ib[] '''
         raw = self.di_addr
@@ -112,12 +108,10 @@ class Xenix_FileSystem(ufs.UnixFileSystem):
         self.SECTOR_SIZE = 1024
         self.ENDIAN = "<"
 
-        sblock = ufs.Struct(
+        sblock = self.this.record(
+            self.FILSYS_LAYOUT,
+            endian=self.ENDIAN,
             name="filsys",
-            **self.read_struct(
-                self.FILSYS_LAYOUT,
-                0,
-            )
         )
         if max(sblock.fs_fname):
             return
@@ -131,22 +125,20 @@ class Xenix_FileSystem(ufs.UnixFileSystem):
         sblock.cylinders = []
         off = sblock._size
         for i in range(0, self.MAXCGS):
-            cginfo = ufs.Struct(
+            cginfo = self.this.record(
+                self.CGINFO_LAYOUT,
+                offset=off,
+                endian=self.ENDIAN,
                 name="cginfo",
-                **self.read_struct(
-                    self.CGINFO_LAYOUT,
-                    off,
-                )
             )
             if not cginfo.fs_cgblk:
                 break
-            cylgrp = ufs.Struct(
+            cylgrp = self.this.record(
+                self.CYLGRP_LAYOUT,
+                offset=(cginfo.fs_cgblk - 1) * self.SECTOR_SIZE,
+                cgoffset=cginfo.fs_cgblk * self.SECTOR_SIZE,
+                endian=self.ENDIAN,
                 name="cylgrp",
-                offset=cginfo.fs_cgblk*self.SECTOR_SIZE,
-                **self.read_struct(
-                    self.CYLGRP_LAYOUT,
-                    (cginfo.fs_cgblk-1) * self.SECTOR_SIZE,
-                )
             )
             sblock.cylinders.append(cylgrp)
             off += cginfo._size
@@ -159,18 +151,19 @@ class Xenix_FileSystem(ufs.UnixFileSystem):
         ''' Return an Inode '''
         cgn = inum // self.sblock.fs_cginodes
         irem = inum % self.sblock.fs_cginodes
-        inoa = self.sblock.cylinders[cgn].offset
+        inoa = self.sblock.cylinders[cgn].cgoffset
         inoa += (irem - 1) * self.INODE_SIZE
         if inoa > len(self.this) - 64:
             return None
-        rv = SysVInode(
-            self,
+        return self.this.record(
+            self.INODE_LAYOUT,
+            offset=inoa,
+            endian=self.ENDIAN,
+            use_type=SysVInode,
+            ufs=self,
             name="sysv",
-            _offset=inoa,
             di_inum=inum,
-            **self.read_struct(self.INODE_LAYOUT, inoa)
         )
-        return rv
 
     def get_block(self, blockno):
         ''' Return a block '''
