@@ -12,6 +12,7 @@ import autoarchaeologist.generic.ascii as ascii
 from autoarchaeologist.generic.tap_file import TAPfile
 
 from autoarchaeologist.rational.dfs_tape import R1K_DFS_Tape
+from autoarchaeologist.rational.r1k_assy import R1K_Assy_File
 
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
@@ -26,6 +27,7 @@ def R1K_DFS_job(html_dir, **kwargs):
 
     ctx.add_examiner(TAPfile)
     ctx.add_examiner(R1K_DFS_Tape)
+    ctx.add_examiner(R1K_Assy_File)
     ctx.add_examiner(ascii.Ascii)
     ctx.add_examiner(SameSame)
 
