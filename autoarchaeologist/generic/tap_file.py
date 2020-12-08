@@ -11,9 +11,11 @@ class TapeFile():
 
     ''' One data file on the tape '''
 
-    def __init__(self, this):
+    def __init__(self, this, start):
         self.this = this
         self.records = []
+        self.start = start
+        self.end = None
         self.sizes = []
 
     def add_record(self, start, stop):
@@ -23,8 +25,8 @@ class TapeFile():
     def commit(self, parent):
         ''' Register the artifact '''
         self.a = parent.create(
-            start=self.records[0][0] - 4,
-            stop=self.records[-1][1] + 4,
+            start=self.start,
+            stop=self.end,
             records=self.records
         )
         self.a.add_type("TAPE file")
@@ -63,6 +65,7 @@ class TAPfile():
         self.parts = []
 
         i = 0
+        accounted = 0
         while i + 4 <= len(this):
             preword = struct.unpack("<L", this[i:i+4])[0]
             i += 4
@@ -81,7 +84,7 @@ class TAPfile():
                 return
 
             if not self.parts or not isinstance(self.parts[-1], TapeFile):
-                self.parts.append(TapeFile(this))
+                self.parts.append(TapeFile(this, accounted))
 
             self.parts[-1].add_record(i, i + preword)
 
@@ -98,7 +101,15 @@ class TAPfile():
                 if self.parts:
                     print("TAP pre/post-word mismatch at 0x%x (0x%x/0x%x)" % (i, preword, postword))
                 return
+            self.parts[-1].end = i
+            accounted = i
 
+        # Adjust last tapefile to account for the remaining bytes
+        # so that Artifact.examined do not create filler artifacts
+        for i in reversed(self.parts):
+            if isinstance(i, TapeFile):
+                i.end = len(this)
+                break
         this.add_type("TAP tape")
         for i in self.parts:
             if isinstance(i, TapeFile):
