@@ -10,7 +10,7 @@ from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.generic.ascii import Ascii
 from autoarchaeologist.generic.tap_file import TAPfile
-from autoarchaeologist.generic.ansi_tape_labels import Ansi_Tape_labels
+from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
 
 from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
 from autoarchaeologist.rational.index_data import R1K_Index_Data
@@ -26,7 +26,7 @@ def R1K_job(html_dir, **kwargs):
     )
 
     ctx.add_examiner(TAPfile)
-    ctx.add_examiner(Ansi_Tape_labels)
+    ctx.add_examiner(AnsiTapeLabels)
     ctx.add_examiner(R1K_Tape_blocks)
     ctx.add_examiner(R1K_Index_Data)
     ctx.add_examiner(R1K_Assy_File)
