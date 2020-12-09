@@ -9,13 +9,24 @@ class R1K_Disk_Partition():
         if this.top not in this.parents:
             return
         print("?R1KDP", this)
+
+        self.bootcode = this.create(start=0x000, stop=0x400)
+        self.bootcode.add_type("R1K_Bootcode")
+
+        self.bootdir = this.create(start=0x400, stop=0x800)
+        self.bootdir.add_type("R1K_Bootdir")
+
         self.label = this.create(start=0x800, stop=0x1000)
         self.label.add_type("R1K_PartitionTable")
+
+        self.dfs_sb = this.create(start=0x1000, stop=0x1400)
+        self.dfs_sb.add_type("R1K_DFS_Superblock")
+
         if self.label[0:0x400].tobytes() != self.label[0x400:0x800].tobytes():
             print("NB: Labels differ")
         self.label.add_interpretation(self, self.render_label)
         b = self.label[:0x400]
-        self.geom = [struct.unpack(">HBB", b[x:x+4]) for x in range(0x08, 0x36, 4)]
+        self.geom = [struct.unpack(">HBB", b[x:x+4]) for x in range(0x08, 0x34, 4)]
         self.secsize = 512
         self.nsect = self.geom[0][2]
         self.nhead = self.geom[0][1]
