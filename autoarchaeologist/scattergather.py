@@ -31,6 +31,9 @@ class ScatterGather():
     def iterrecords(self):
         yield from self.sgx
 
+    def block(self, n):
+        return self.sgx[n]
+
     def subsection(self, start, stop):
         ''' yields pieces of a subrange '''
         assert start >= 0
