@@ -30,34 +30,77 @@ def flds(this):
 class R1kObject():
     ''' whatever that is... '''
 
-    def __init__(self, this, space_info):
+    def __init__(self, up, this, space_info):
+        self.up = up
         self.this = this
         self.space_info = space_info
         self.n_block = space_info[6]
         self.block_list = space_info[13:]
+        self.indir = None
 
     def resolve(self, iblock):
         l = []
         n = self.n_block
-        i = 0
-        for j in self.block_list:
-            if j:
-                l.append(iblock[j])
-                n -= 1
-                i += 1
-            else:
-                l.append(self.this[:0])
-            if not n:
-                break
+        if self.n_block >= 163:
+            for j in self.block_list:
+                if j:
+                    l.append(iblock[j])
+                    n -= 1
+                else:
+                    l.append(self.this[:0])
+                if not n:
+                    break
+        elif self.n_block > 10 or (self.n_block > 1 and not max(self.block_list[1:])):
+            # Indirect block
+            # self.up.enough = True
+            self.indir = iblock[self.block_list[0]]
+            # l.append(self.indir)
+            if not isinstance(self.indir, bytes):
+                self.indir = self.indir.tobytes()
+            for i in range(0x29 + 3, len(self.indir), 6):
+                j = self.indir[i+2:i+8]
+                if len(j) != 6:
+                    print("SHORT", self.space_info)
+                    print("BI", self.indir[:128].hex())
+                    return
+                k = j[0] << 24
+                k |= j[1] << 16
+                k |= j[2] << 8
+                k |= j[3]
+                k = (k >> 4) & 0xffffff
+                # print("iy", n, j.hex(), "0x%x" % k, k in iblock)
+                if k and k in iblock:
+                    l.append(iblock[k])
+                    n -= 1
+                elif k:
+                    print("K 0x%x not in iblock" % k, self.space_info)
+                    print("BI", self.indir[:128].hex())
+                    return
+                else:
+                    l.append(self.this[:0])
+                if not n:
+                    break
+        else:
+            for j in self.block_list:
+                if j:
+                    l.append(iblock[j])
+                    n -= 1
+                else:
+                    l.append(self.this[:0])
+                if not n:
+                    break
 
         self.obj = self.this.create(records=l)
-        if not self.obj.has_note("R1K_Object"):
-            self.obj.add_note("R1K_Object")
-            self.obj.add_interpretation(self, self.render_obj)
-            if i < self.n_block:
-                self.obj.add_note("R1K_Object_Indir")
-            else:
-                self.obj.add_note("R1K_Object" + self.obj[:4].tobytes().hex())
+        # print("IX", self.obj, self.n_block, len(l))
+        if self.obj.has_note("R1K_Object"):
+            return
+        if self.n_block >= 163:
+            self.obj.add_note("R1K_ObjectHuge")
+        if self.indir:
+            self.obj.add_note("R1K_ObjectIndir")
+        self.obj.add_note("R1K_Object")
+        self.obj.add_interpretation(self, self.render_obj)
+        self.obj.add_note("R1K_Object" + self.obj[:4].tobytes().hex())
 
     def render_space_info(self):
         t = ""
@@ -69,6 +112,10 @@ class R1kObject():
         fo.write("<H3>R1K Object</H3>\n")
         fo.write("<pre>\n")
         fo.write(self.render_space_info() + "\n")
+        if self.indir:
+            fo.write("\n")
+            fo.write("Indir:\n")
+            hexdump.hexdump_to_file(self.indir, fo, width=18)
         for n, i in enumerate(self.obj.iterrecords()):
             fo.write("\n")
             fo.write("Block #0x%x\n" % n)
@@ -90,7 +137,7 @@ class Volume():
         this.add_interpretation(self, self.render_space_info)
         this.add_type("R1K_Backup_Space_Info")
         l = list(flds(this))
-        self.space = [R1kObject(this, l[i:i+23]) for i in range(0, len(l), 23)]
+        self.space = [R1kObject(self.up, this, l[i:i+23]) for i in range(0, len(l), 23)]
 
     def add_block_info(self, this):
         print("add_block_info", this)
@@ -114,6 +161,8 @@ class Volume():
 
         for i in self.space:
             i.resolve(self.iblock)
+            if self.up.enough:
+                break
 
     def render_space_info(self, fo, _this):
         fo.write("<H3>Space Info</H3>\n")
@@ -151,6 +200,7 @@ class R1kBackup():
            a single one-reel example.
         '''
 
+        self.enough = False
         self.expect_next = None
         self.volumes = {}
 

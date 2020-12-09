@@ -17,7 +17,7 @@ class R1K_Assy_File():
     ''' Binary instruction segment '''
 
     def __init__(self, this):
-        if this[:3].tobytes() != b'\x00\x0f\x58':
+        if this[:3].tobytes() not in (b'\x00\x0f\x58', b'\x00\x0f\x59',):
             return
         if len(this) > 128<<10:
             return
