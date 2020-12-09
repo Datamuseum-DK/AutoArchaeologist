@@ -39,7 +39,7 @@ class R1K_Assy_File():
                 tf1.name,
                 self.tf2.name,
             ],
-            check = True,
+            check = False,
         )
         this.add_interpretation(self, self.render_disass)
 
