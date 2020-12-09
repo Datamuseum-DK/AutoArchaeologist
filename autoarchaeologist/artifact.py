@@ -67,6 +67,8 @@ class ArtifactClass():
         self.index_representation = None
         self.link_to = ""
 
+        self.by_class = {} # Experimental extension point
+
     def __str__(self):
         return "{A %d %s}" % (len(self), self.name())
 

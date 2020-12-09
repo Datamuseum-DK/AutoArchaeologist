@@ -61,6 +61,7 @@ class Excavation():
         # Duck-type as ArtifactClass
         self.top = self
         self.children = []
+        self.by_class = {} # Experimental extension point
 
     def __lt__(self, other):
         # Duck-type as ArtifactClass
