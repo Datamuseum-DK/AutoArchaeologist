@@ -100,22 +100,20 @@ class R1kObject():
             self.obj.add_note("R1K_ObjectIndir")
         self.obj.add_note("R1K_Object")
         self.obj.add_interpretation(self, self.render_obj)
-        self.obj.add_note("R1K_Object" + self.obj[:4].tobytes().hex())
+        self.obj.add_note("%x_marked" % self.space_info[8])
 
     def render_space_info(self):
         t = ""
         for j, w in zip(self.space_info, [2, 4, 2, 6, 14, 2, 4, 2, 2, 10, 2, 2, 2, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]):
             t += ("%x" % j).rjust(w+1)
+        t += " // " + self.obj.summary()
+        t += "  " + self.obj[:20].tobytes().hex()
         return t
 
     def render_obj(self, fo, _this):
         fo.write("<H3>R1K Object</H3>\n")
         fo.write("<pre>\n")
         fo.write(self.render_space_info() + "\n")
-        if self.indir:
-            fo.write("\n")
-            fo.write("Indir:\n")
-            hexdump.hexdump_to_file(self.indir, fo, width=18)
         for n, i in enumerate(self.obj.iterrecords()):
             fo.write("\n")
             fo.write("Block #0x%x\n" % n)
