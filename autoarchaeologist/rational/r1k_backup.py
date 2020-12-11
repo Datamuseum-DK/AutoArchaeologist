@@ -106,11 +106,13 @@ class R1kObject():
         t = ""
         for j, w in zip(self.space_info, [2, 4, 2, 6, 14, 2, 4, 2, 2, 10, 2, 2, 2, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]):
             t += ("%x" % j).rjust(w+1)
-        t += " // " + self.obj.summary()
-        t += "  " + self.obj[:20].tobytes().hex()
+        t += " [" + self.obj[:20].tobytes().hex()
+        t += "] // " + self.obj.summary()
         return t
 
-    def render_obj(self, fo, _this):
+    def render_obj(self, fo, this):
+        if len(this.interpretations) > 1:
+            return
         fo.write("<H3>R1K Object</H3>\n")
         fo.write("<pre>\n")
         fo.write(self.render_space_info() + "\n")
