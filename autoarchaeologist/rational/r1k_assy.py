@@ -24,7 +24,7 @@ class R1K_Assy_File():
         if not autoarchaeologist.PYREVENG3:
             return
         print("?R1K_ASSY", this)
-        this.add_note("R1K_CODE")
+        this.add_note(this[2:4].tobytes().hex() + "_R1K_CODE")
 
         tf1 = tempfile.NamedTemporaryFile()
         this.writetofile(tf1)
@@ -39,7 +39,7 @@ class R1K_Assy_File():
                 tf1.name,
                 self.tf2.name,
             ],
-            check = False,
+            check = True,
         )
         this.add_interpretation(self, self.render_disass)
 
