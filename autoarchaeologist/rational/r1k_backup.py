@@ -1,126 +1,155 @@
+'''
+   R1K Backup Tapes
+   ----------------
 
-import autoarchaeologist.generic.hexdump as hexdump
+   This file contains the "tape-aspects" of taking a backup tape apart.
+   The companion 'r1k_backup_objects' handles the "object-aspects"
+'''
 
-def fld(b, i):
-    l = b[i]
-    t = ""
-    if not l:
-        t += "-"
-    else:
-        t += b[i+1:i+1+l].hex()
-    return l+1, t
+import html
 
-def flds(this):
-    l = None
-    n = 0
-    for i in this:
-        if l is None:
-            if not i:
+import autoarchaeologist.rational.r1k_backup_objects as objects
+
+
+def byte_length_int(this):
+    '''
+    Split `this` into integers, each prefixed its length in a byte
+    '''
+    length = None
+    number = 0
+    for octet in this:
+        if length is None:
+            # Length byte
+            if not octet:
                 break
-            l = i
-            n = 0
-        elif l > 0:
-            n <<= 8
-            n |= i
-            l -= 1
-        if l == 0:
-            yield n
-            l = None
+            length = octet
+        elif length > 0:
+            # Content byte
+            number <<= 8
+            number |= octet
+            length -= 1
+        if length == 0:
+            # Field complete
+            yield number
+            length = None
+            number = 0
 
-class R1kObject():
-    ''' whatever that is... '''
+def byte_length_bytes(this):
+    '''
+    Split `this` into bytes, each prefixed its length in a byte
+    '''
+    length = None
+    data = bytearray()
+    for octet in this:
+        if length is None:
+            # Length byte
+            if not octet:
+                break
+            length = octet
+        elif length > 0:
+            # Content byte
+            data.append(octet)
+            length -= 1
+        if length == 0:
+            # Field complete
+            yield bytes(data)
+            length = None
+            data = bytearray()
 
-    def __init__(self, up, this, space_info):
-        self.up = up
+class MetaTapeFile():
+    '''
+       All metadata tapefiles (all but "Block Data" are encoded as:
+
+		<length byte> {<length byte> bytes}
+    '''
+    def __init__(self, this, name, length, fmt=bytes):
         self.this = this
-        self.space_info = space_info
-        self.n_block = space_info[6]
-        self.block_list = space_info[13:]
-        self.indir = None
-
-    def resolve(self, iblock):
-        l = []
-        n = self.n_block
-        if self.n_block >= 163:
-            for j in self.block_list:
-                if j:
-                    l.append(iblock[j])
-                    n -= 1
-                else:
-                    l.append(self.this[:0])
-                if not n:
-                    break
-        elif self.n_block > 10 or (self.n_block > 1 and not max(self.block_list[1:])):
-            # Indirect block
-            # self.up.enough = True
-            self.indir = iblock[self.block_list[0]]
-            # l.append(self.indir)
-            if not isinstance(self.indir, bytes):
-                self.indir = self.indir.tobytes()
-            for i in range(0x29 + 3, len(self.indir), 6):
-                j = self.indir[i+2:i+8]
-                if len(j) != 6:
-                    print("SHORT", self.space_info)
-                    print("BI", self.indir[:128].hex())
-                    return
-                k = j[0] << 24
-                k |= j[1] << 16
-                k |= j[2] << 8
-                k |= j[3]
-                k = (k >> 4) & 0xffffff
-                # print("iy", n, j.hex(), "0x%x" % k, k in iblock)
-                if k and k in iblock:
-                    l.append(iblock[k])
-                    n -= 1
-                elif k:
-                    print("K 0x%x not in iblock" % k, self.space_info)
-                    print("BI", self.indir[:128].hex())
-                    return
-                else:
-                    l.append(self.this[:0])
-                if not n:
-                    break
+        self.name = name
+        self.fmt = fmt
+        if fmt == int:
+            l = list(byte_length_int(this))
         else:
-            for j in self.block_list:
-                if j:
-                    l.append(iblock[j])
-                    n -= 1
-                else:
-                    l.append(self.this[:0])
-                if not n:
-                    break
+            l = list(byte_length_bytes(this))
+        self.items = [l[i:i+length] for i in range(0, len(l), length)]
+        this.add_type(name)
 
-        self.obj = self.this.create(records=l)
-        # print("IX", self.obj, self.n_block, len(l))
-        if self.obj.has_note("R1K_Object"):
-            return
-        if self.n_block >= 163:
-            self.obj.add_note("R1K_ObjectHuge")
-        if self.indir:
-            self.obj.add_note("R1K_ObjectIndir")
-        self.obj.add_note("R1K_Object")
-        self.obj.add_interpretation(self, self.render_obj)
-        self.obj.add_note("%x_marked" % self.space_info[8])
+    def __iter__(self):
+        yield from self.items
 
-    def render_space_info(self):
-        t = ""
-        for j, w in zip(self.space_info, [2, 4, 2, 6, 14, 2, 4, 2, 2, 10, 2, 2, 2, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]):
-            t += ("%x" % j).rjust(w+1)
-        t += " [" + self.obj[:20].tobytes().hex()
-        t += "] // " + self.obj.summary()
-        return t
-
-    def render_obj(self, fo, this):
-        if len(this.interpretations) > 1:
-            return
-        fo.write("<H3>R1K Object</H3>\n")
+    def render_html(self, fo, _this):
+        ''' Brute force rendering '''
+        fo.write("<H3>" + self.name + "</H3>\n")
         fo.write("<pre>\n")
-        fo.write(self.render_space_info() + "\n")
-        for n, i in enumerate(self.obj.iterrecords()):
-            fo.write("\n")
-            fo.write("Block #0x%x\n" % n)
-            hexdump.hexdump_to_file(i, fo)
+        for i in self.items:
+            fo.write("    " + html.escape(str(i)) + "\n")
         fo.write("</pre>\n")
+
+class SpaceInfo(MetaTapeFile):
+    def __init__(self, vol, this):
+        super().__init__(this, "R1K Backup Space Info", 23, fmt=int)
+        self.vol = vol
+        self.space = [objects.R1kBackupObject(self, vol, this, i) for i in self]
+        this.add_interpretation(self, self.render_space_info)
+
+    def process(self):
+        for i in self.space:
+            i.resolve()
+
+    def render_space_info(self, fo, _this):
+        fo.write("<H3>" + self.name + "</H3>\n")
+        fo.write("<pre>\n")
+        for i in self.space:
+            fo.write(i.render_space_info() + "\n")
+        fo.write("</pre>\n")
+
+class BlockInfo(MetaTapeFile):
+    def __init__(self, vol, this):
+        super().__init__(this, "R1K Backup Block Info", 4, fmt=int)
+        self.vol = vol
+        this.add_interpretation(self, self.render_block_info)
+
+    def render_block_info(self, fo, _this):
+        fo.write("<H3>" + self.name + "</H3>\n")
+        fo.write("<pre>\n")
+        for i in self:
+            t = ""
+            for j, w in zip(i, [8, 8, 8, 8]):
+                t += ("%x" % j).rjust(w+1)
+            fo.write(t + "\n")
+        fo.write("</pre>\n")
+
+class VolInfo(MetaTapeFile):
+    def __init__(self, this):
+        super().__init__(this, "R1K Vol Info", 6)
+        this.add_interpretation(self, self.render_html)
+
+class VpInfo(MetaTapeFile):
+    def __init__(self, this):
+        super().__init__(this, "R1K VP Info", 10)
+        this.add_interpretation(self, self.render_html)
+
+class DbBackups(MetaTapeFile):
+    def __init__(self, this):
+        super().__init__(this, "R1K DB Backups", 12)
+        this.add_interpretation(self, self.render_html)
+
+class DbProcessors(MetaTapeFile):
+    def __init__(self, this):
+        super().__init__(this, "R1K DB Processors", 4)
+        this.add_interpretation(self, self.render_html)
+
+class DbDiskVolumes(MetaTapeFile):
+    def __init__(self, this):
+        super().__init__(this, "R1K Disk Volumes", 8)
+        this.add_interpretation(self, self.render_html)
+
+class DbTapeVolumes(MetaTapeFile):
+    def __init__(self, this):
+        super().__init__(this, "R1K Tape Volumes", 6)
+        this.add_interpretation(self, self.render_html)
+
+
+##############################################################################################
 
 class Volume():
     ''' One (disk) volume of a backup '''
@@ -128,66 +157,57 @@ class Volume():
     def __init__(self, up, volno):
         self.up = up
         self.volno = volno
-        self.space = []
-        self.block = []
+        self.space_info = None
+        self.block_info = None
+        self.block_data = None
+        self.block_use = {}
+        self.rblock = {
+            0: (None, None),
+        }
+
+    def __getitem__(self, idx):
+        rb = self.rblock[idx][0]
+        b = self.block_data.getblock(rb // 3)
+        j = (rb % 3) << 10
+        return b[j:j+1024]
+
+    def binfo(self, idx):
+        return self.rblock[idx]
 
     def add_space_info(self, this):
-        print("add_space_info", this)
-        self.space_info = this
-        this.add_interpretation(self, self.render_space_info)
-        this.add_type("R1K_Backup_Space_Info")
-        l = list(flds(this))
-        self.space = [R1kObject(self.up, this, l[i:i+23]) for i in range(0, len(l), 23)]
+        self.space_info = SpaceInfo(self, this)
+        self.process()
 
     def add_block_info(self, this):
-        print("add_block_info", this)
-        self.block_info = this
-        this.add_interpretation(self, self.render_block_info)
-        this.add_type("R1K_Backup_Block_Info")
-        l = list(flds(this))
-        self.block = [l[i:i+4] for i in range(0, len(l), 4)]
+        self.block_info = BlockInfo(self, this)
+        for i, j in enumerate(self.block_info):
+            self.rblock[j[0]] = (i, j)
+        self.process()
 
     def add_block_data(self, this):
-        print("add_block_data", this)
         self.block_data = this
+        this.add_type("R1K Backup Block Data")
         this.add_interpretation(self, self.render_block_data)
-        this.add_type("R1K_Backup_Block_Data")
-        self.iblock = {}
-        n = 0
-        for i in this.iterrecords():
-            for j in range(0, len(i), 1<<10):
-                self.iblock[self.block[n][0]] = i[j:j + (1<<10)]
-                n += 1
+        self.process()
 
-        for i in self.space:
-            i.resolve(self.iblock)
-            if self.up.enough:
-                break
-
-    def render_space_info(self, fo, _this):
-        fo.write("<H3>Space Info</H3>\n")
-        fo.write("<pre>\n")
-        for i in self.space:
-            fo.write(i.render_space_info() + "\n")
-        fo.write("</pre>\n")
-
-    def render_block_info(self, fo, _this):
-        fo.write("<H3>Block Info</H3>\n")
-        fo.write("<pre>\n")
-        for i in self.block:
-            t = ""
-            for j, w in zip(i, [8, 8, 8, 8]):
-                t += ("%x" % j).rjust(w+1)
-            fo.write(t + "\n")
-        fo.write("</pre>\n")
+    def process(self):
+        if None in (self.space_info, self.block_info, self.block_data):
+            return
+        self.space_info.process()
 
     def render_block_data(self, fo, _this):
-        fo.write("<H3>Block Info</H3>\n")
+        fo.write("<H3>R1K Backup Block Data</H3>\n")
         fo.write("<pre>\n")
-        for n, i in zip(self.block, self.block_data.iterrecords()):
+        for n, i in zip(self.block_info, self.block_data.iterrecords()):
             fo.write("0x%06x 0x%02x 0x%03x 0x%02x " % (n[0], n[1], n[2], n[3]))
-            fo.write(i[:32].tobytes().hex() + "\n")
+            fo.write(i[:32].tobytes().hex())
+            j = self.block_use.get(n[0])
+            if j:
+                fo.write("  " + j)
+            fo.write("\n")
         fo.write("</pre>\n")
+
+##############################################################################################
 
 class R1kBackup():
 
@@ -265,5 +285,19 @@ class R1kBackup():
                 self.volumes[volno].add_block_data(that)
             else:
                 print("unhandled", that, volno, self.expect_next)
+        elif self.expect_next == ["Vol", "Info"]:
+            VolInfo(that)
+        elif self.expect_next == ["VP", "Info"]:
+            VpInfo(that)
+        elif self.expect_next == ["DB", "Backups"]:
+            DbBackups(that)
+        elif self.expect_next == ["DB", "Processors"]:
+            DbProcessors(that)
+        elif self.expect_next == ["DB", "Disk", "Volumes"]:
+            DbDiskVolumes(that)
+        elif self.expect_next == ["DB", "Tape", "Volumes"]:
+            DbTapeVolumes(that)
         else:
             print("non-vol", that, self.expect_next)
+            for i in byte_length_bytes(that):
+                print("    ", len(i), i[:64])

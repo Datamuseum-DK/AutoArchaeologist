@@ -92,6 +92,11 @@ class ArtifactClass():
     def __iter__(self):
         yield from self.bdx
 
+    def getblock(self, idx):
+        if isinstance(self.bdx, scattergather.ScatterGather):
+            return self.bdx.block(idx)
+        return None
+
     def iterrecords(self):
         if isinstance(self.bdx, scattergather.ScatterGather):
             yield from self.bdx.iterrecords()
