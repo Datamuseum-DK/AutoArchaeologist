@@ -95,8 +95,6 @@ class R1kBackupObject():
             yield from IndirBlock(self.vol, block1)
 
     def resolve(self):
-        if self.space_info[8] != 0xe3:
-            return
         i = 0
         blocks = []
         for j in self.get_data():
