@@ -30,7 +30,7 @@ def R1K_backup_job(html_dir, **kwargs):
     ctx.add_examiner(AnsiTapeLabels)
     ctx.add_examiner(R1kBackup)
     ctx.add_examiner(R1kE3Objects)
-    ctx.add_examiner(R1K_Assy_File)
+    #ctx.add_examiner(R1K_Assy_File)
 
     FromBitStore(
         ctx,

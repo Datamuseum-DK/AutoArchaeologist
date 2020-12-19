@@ -61,6 +61,49 @@ class R1kE3Objects(bitdata.BitRecord):
         assert not len(pb)
         self.done = {}
 
+        for i in self:
+            j = i.split(maxsplit=1)
+            if not len(j) or j[0] not in ("pragma", "package"):
+                continue
+            for j in "(),;":
+                i = i.replace(j, " ")
+            j = i.split(maxsplit=4)
+            try:
+                if j[0] == "pragma" and j[1] == "Module_Name":
+                    self.this.add_note("_".join(j[:4]))
+                elif j[0] == "package" and j[2] == "is":
+                    self.this.add_note("_".join(j[:2]))
+                elif j[0] == "package" and j[1] == "body" and j[3] == "is":
+                    self.this.add_note("_".join(j[:2]))
+            except Exception as e:
+                print("JJ", j, e)
+
+    def __iter__(self):
+        buf = ""
+        next = self.recs[0].rec2
+        while next:
+            self.done[next] = True
+            adr = next << 10
+            that = self.this[adr:adr+0x400].tobytes()
+            next = (that[0] << 8) | that[1]
+            end = 4 + (that[2] << 8) | that[3]
+            ptr = 4
+            while ptr < end:
+                if not that[ptr]:
+                    yield buf
+                    buf = ""
+                length = that[ptr + 1]
+                length2 = that[ptr + length + 2]
+                assert length == length2
+                ptr += 2
+                for a in that[ptr:ptr+length]:
+                    if 0x20 <= a <= 0x7e:
+                        buf += "%c" % a
+                    else:
+                        buf += "\\x%02x" % a
+                ptr += length + 1
+        yield buf
+
     def render_meta(self, fo, _this):
         if self.nblk1 > 100:
             print("LONG SOURCE", self.this, self.nblk1)
@@ -85,58 +128,11 @@ class R1kE3Objects(bitdata.BitRecord):
  
         fo.write("</pre>\n")
 
-    def render_block(self, fo, nbr):
-        adr = nbr << 10
-        that = self.this[adr:adr+0x400].tobytes()
-        # hexdump.hexdump_to_file(that, fo)
-        next = (that[0] << 8) | that[1]
-        end = (that[2] << 8) | that[3]
-        if self.verbose:
-            fo.write(" next=0x%x length=0x%x\n" % (next, end))
-        end += 4
-        ptr = 4
-        while ptr < end:
-            flag = that[ptr]
-            if not flag and not self.verbose:
-                fo.write("\n")
-            length = that[ptr + 1]
-            length2 = that[ptr + length + 2]
-            if length != length2:
-                print("LL MISMATCH", self.this, "0x%x" % ptr, flag, length, length2)
-                fo.write("\nXXX LL mismatch @0x%x: 0x%x 0x%x\n" % (ptr, length, length2))
-                hexdump.hexdump_to_file(that, fo)
-                return 0
-            if self.verbose:
-                fo.write("%04x 0x%02x [%02x] " % (ptr, flag, length))
-            t = ""
-            ptr += 2
-            for a in that[ptr:ptr+length]:
-                if 0x20 <= a <= 0x7e:
-                    t += "%c" % a
-                else:
-                    t += "\\x%02x" % a
-            fo.write(html.escape(t))
-            if self.verbose:
-                fo.write("\n")
-            ptr += length + 1
-        return next
-                
     def render_text(self, fo, _this):
         fo.write("<H3>E3 Source Code</H3>\n")
         fo.write("<pre>\n")
-        next = self.recs[0].rec2
-        while next:
-            # print(self.this, "0x%x" % next, self.done.get(next))
-            assert next not in self.done
-            self.done[next] = True
-            if self.verbose:
-                 fo.write("\n[0x%02x] " % next)
-            try:
-                next = self.render_block(fo, next)
-            except Exception as e:
-                fo.write(" FAILED: 0x%x" % next + str(e) + "\n")
-                print("EEE", self.this, next, e)
-                next = 0
+        for i in self:
+            fo.write(html.escape(i) + "\n")
         fo.write("</pre>\n")
 
     def render_unclaimed(self, fo, _this):
