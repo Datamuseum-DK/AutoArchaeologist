@@ -74,7 +74,7 @@ class R1kE3Objects(bitdata.BitRecord):
                 elif j[0] == "package" and j[2] == "is":
                     self.this.add_note("_".join(j[:2]))
                 elif j[0] == "package" and j[1] == "body" and j[3] == "is":
-                    self.this.add_note("_".join(j[:2]))
+                    self.this.add_note("_".join(j[:3]))
             except Exception as e:
                 print("JJ", j, e)
 
