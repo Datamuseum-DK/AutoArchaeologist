@@ -17,8 +17,8 @@ class IndirBlock(bitdata.BitRecord):
     def __init__(self, vol, blockno):
         octets = vol[blockno]
         assert vol.binfo(blockno)[1][1], vol.binfo(blockno)
+        pb = bitdata.PackedBits(octets)
         super().__init__(
-            octets,
             (
                 ("hdr0", 1, False),
                 ("objid", 64, True),
@@ -35,6 +35,7 @@ class IndirBlock(bitdata.BitRecord):
                 ("nblocks", 32, False),
             ),
             "IndirBlock",
+            bits=pb,
         )
         vol.block_use[blockno] = "objid 0x%x indir%d" % (self.objid, self.indir_level)
         self.vol = vol
@@ -52,8 +53,8 @@ class IndirBlock(bitdata.BitRecord):
 
         self.blocks = []
         for _i in range(self.nblocks):
-            x = self._packed_bits.get(28)
-            y = self._packed_bits.get(20)
+            x = pb.get(28)
+            y = pb.get(20)
             self.blocks.append((x, y))
 
     def __iter__(self):
@@ -94,6 +95,8 @@ class R1kBackupObject():
             yield from IndirBlock(self.vol, block1)
 
     def resolve(self):
+        if self.space_info[8] != 0xe3:
+            return
         i = 0
         blocks = []
         for j in self.get_data():
@@ -105,6 +108,8 @@ class R1kBackupObject():
             else:
                 blocks.append(self.vol.space_info.this[0:0])
         self.obj = self.vol.space_info.this.create(records=blocks)
+        self.obj.add_note("%02x_tag" % self.space_info[8])
+        self.obj.add_interpretation(self, self.render_obj)
 
     def render_space_info(self):
         t = ""

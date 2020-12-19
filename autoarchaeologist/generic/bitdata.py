@@ -37,12 +37,22 @@ class BitRecord():
     the `name` becomes an attribute of `self`
     '''
 
-    def __init__(self, octets, field_spec, type_name="BitRecord"):
-        self._packed_bits = PackedBits(octets)
+    def __init__(
+        self,
+        field_spec,
+        type_name="BitRecord",
+        octets=None,
+        bits=None
+    ):
+        if bits:
+            assert octets is None
+            packed_bits = bits
+        else:
+            packed_bits = PackedBits(octets)
         self._field_spec = field_spec
         self._type_name = type_name
         for name, length, _visible in field_spec:
-            setattr(self, name, self._packed_bits.get(length))
+            setattr(self, name, packed_bits.get(length))
 
     def __str__(self):
         return '<' + self._type_name + ' ' + self.render(show_tag=True) + '>'

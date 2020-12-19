@@ -15,6 +15,7 @@ from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
 from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
 from autoarchaeologist.rational.r1k_assy import R1K_Assy_File
 from autoarchaeologist.rational.r1k_backup import R1kBackup
+from autoarchaeologist.rational.r1k_e3_objects import R1kE3Objects
 
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
@@ -28,6 +29,7 @@ def R1K_backup_job(html_dir, **kwargs):
     ctx.add_examiner(TAPfile)
     ctx.add_examiner(AnsiTapeLabels)
     ctx.add_examiner(R1kBackup)
+    ctx.add_examiner(R1kE3Objects)
     ctx.add_examiner(R1K_Assy_File)
 
     FromBitStore(
