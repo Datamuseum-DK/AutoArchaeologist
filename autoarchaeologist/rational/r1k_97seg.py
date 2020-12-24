@@ -467,8 +467,10 @@ class Seg97Thing5(Seg97Base):
         super().__init__(seg, seg.cut(address, 71), title="THING5", **kwargs)
         self.compact = True
         self.get_fields(
-            ("t5_unknown0", 39),
-            ("t5_thing5", 32),
+            ("t5_unknown0", 10),
+            ("t5_unknown1", 25),
+            ("t5_unknown2", 10),
+            ("t5_thing5", 26),
         )
 
 def mk_thing5(seg, address, **kwargs):
@@ -476,13 +478,13 @@ def mk_thing5(seg, address, **kwargs):
     if t and isinstance(t.owner, Seg97Thing5):
         return t.owner
     try:
-        y = Seg97Thing5(seg, address, **kwargs)
+        x = Seg97Thing5(seg, address, **kwargs)
     except MisFit as e:
         print("MISFIT THING5", seg.this, e)
         return None
-    if y.t5_thing5:
-        mk_thing5(seg, y.t5_thing5)
-    return y
+    if x.t5_thing5:
+        mk_thing5(seg, x.t5_thing5)
+    return x
 
 #######################################################################
 
@@ -628,30 +630,59 @@ class Seg97Trees(Seg97Base):
         # Assume that the table0 pointer points right past the Tree header
         p = seg.cut(address)
         size = int(p[32:64], 2) - address
+        size = min(size, 0xc0)
+        size = max(size, 0x40)
         super().__init__(seg, seg.cut(address, size))
+        assert self.chunk
         self.title = "TREE HEADER"
 
         flds = ()
         for i, j in enumerate(range(0, size, 0x40)):
             flds += (("tree_unknown%d" % i, 0x20), ("tree_table%d" % i, 0x20), )
         self.get_fields(*flds)
+        for _a, _b, _c, value in self.fields:
+            if value:
+                seg.mkcut(value)
 
-        if size == 0x40:
-            # Assume that the first table entry points right
-            # past the single table (evidence: ⟦bba8365f⟧)
-            p = seg.cut(self.end)
-            i = int(p[:32], 2)
-            assert i
-            assert i > self.end
-            n = (i - self.end) // 0x20
-        elif size >= 0x80:
-            # Assume the first table ends where the next starts
-            n = (self.tree_table1 - self.tree_table0) // 0x20
-        x = Seg97PointerArray(seg, self.tree_table0, 0x20 * n, ident="TREE_TABLE0")
-        for index, addr in x:
-            mk_thing5(seg, addr, ident="tree_table0[0x%x]" % index)
+        bad = False
+        if self.tree_unknown0:
+            print("TREE_UNKNOWN0", seg.this, "0x%x" % self.tree_unknown0)
+            bad = True
+        if size == 0xc0 and self.tree_unknown1:
+            print("TREE_UNKNOWN1", seg.this, "0x%x" % self.tree_unknown1)
+            bad = True
+        if size == 0xc0 and self.tree_unknown2:
+            print("TREE_UNKNOWN2", seg.this, "0x%x" % self.tree_unknown2)
+            bad = True
+        if bad:
+            return
 
-        if size == 0xc0:
+        if self.tree_table0:
+            if size == 0x40:
+                # Assume that the first table entry points right
+                # past the single table (evidence: ⟦bba8365f⟧)
+                p = seg.cut(self.end)
+                low = 1 << 26
+                for offset in range(0, len(p), 32):
+                    if p.offset + offset + 32 > low:
+                        break
+                    i = int(p[offset:offset+32], 2)
+                    if i >> 25:
+                        # offset -= 32
+                        break
+                    if i:
+                        low = min(low, i)
+                n = (p.offset + offset - self.end) // 0x20
+            elif size >= 0x80:
+                # Assume the first table ends where the next starts
+                n = (self.tree_table1 - self.tree_table0) // 0x20
+            x = Seg97PointerArray(seg, self.tree_table0, 0x20 * n, ident="TREE_TABLE0")
+            for index, addr in x:
+                z = mk_thing5(seg, addr, ident="tree_table0[0x%x]" % index)
+                if not z:
+                    print("!THING5", seg.this, "tree_table0[0x%x] = 0x%x" % (index, addr))
+
+        if size == 0xc0 and self.tree_table1 and self.tree_table2:
             # Assume the second and third table are the same,
             # and that the third follows the second
             n = (self.tree_table2 - self.tree_table1) // 0x20
@@ -664,15 +695,12 @@ class Seg97Trees(Seg97Base):
 
 class Seg97Stuff1(Seg97Base):
     def __init__(self, seg, address):
-        super().__init__(seg, seg.cut(address, 0xb3))
+        super().__init__(seg, seg.cut(address, 0x5f))
         self.title = "STUFF1 object"
         self.get_fields(
             ("stuff1_ident", 21),
-            ("stuff1_unknown1", 42),
-            ("stuff1_stuff5", 32),
-            ("stuff1_unknown4", 20),
-            ("stuff1_unknown5", 32),
-            ("stuff1_unknown6", 32),
+            ("stuff1_unknown1", 48),
+            ("s1_s5", 26),
         )
 
 def mk_stuff1(seg, address):
@@ -687,64 +715,63 @@ def mk_stuff1(seg, address):
         print("MISFIT", seg.this, "S1 0x%x" % address, e)
         return None
 
-    if x.stuff1_stuff5:
+    if x.stuff1_unknown1:
+        seg.mkcut(x.stuff1_unknown1)
+    if x.s1_s5:
         try:
-            mk_stuff5(seg, x.stuff1_stuff5)
+            mk_stuff5(seg, x.s1_s5)
         except MisFit as e:
-            print("MISFIT", seg.this, "S1.stuff5 0x%x" % x.stuff1_stuff5)
+            print("MISFIT", seg.this, "S1.stuff5 0x%x" % x.s1_s5, e)
 
     #seg.mkcut(x.stuff1_unknown5)
     #seg.mkcut(x.stuff1_unknown6)
     return x
 
 class Seg97Stuff2(Seg97Base):
-    def __init__(self, seg, address):
-        super().__init__(seg, seg.cut(address, 0x35))
-        self.title = "STUFF2 object"
+    def __init__(self, seg, address, **kwargs):
+        super().__init__(seg, seg.cut(address, 0x35), title="STUFF2", **kwargs)
+        self.compact = True
         self.get_fields(
-            ("s2_unknown0", 0x35 - 21),
-            ("s2_stuff3", 21)
+            ("s2_hdr", 1),
+            ("s2_s2", 26),
+            ("s2_s3", 26),
         )
 
-    def render(self, chunk, fo):
-        fo.write(self.title)
-        self.render_fields_compact(fo)
-        fo.write("\n")
-
-def mk_stuff2(seg, address):
+def mk_stuff2(seg, address, **kwargs):
     t = seg.get(address)
     if t and isinstance(t.owner, Seg97Stuff2):
         return t.owner
+    p = seg.mkcut(address)
+    if 0 and p[:27] != "1" + "0" * 26:
+        print("!mk_stuff2", seg.this, "@0x%x" % address, p[:27])
+        return None
     try:
-        x = Seg97Stuff2(seg, address)
+        x = Seg97Stuff2(seg, address, **kwargs)
     except MisFit as e:
         print("MISFIT", seg.this, "S2 0x%x" % address, e)
         return None
-    if x.s2_stuff3:
+    if x.s2_s3:
         try:
-            mk_stuff3(seg, x.s2_stuff3)
+            mk_stuff3(seg, x.s2_s3)
         except MisFit as e:
-            print("MISFIT", seg.this, "S3.stuff3 0x%x" % x.s2_stuff3)
+            print("MISFIT", seg.this, "S3.stuff3 0x%x" % x.s2_s3)
+    if x.s2_s2:
+        mk_stuff2(seg, x.s2_s2)
     return x
 
 
 class Seg97Stuff3(Seg97Base):
-    def __init__(self, seg, address):
-        super().__init__(seg, seg.cut(address, 0x77))
-        self.title = "STUFF3 object"
+    def __init__(self, seg, address, **kwargs):
+        super().__init__(seg, seg.cut(address, 0x77), title="STUFF3", **kwargs)
+        self.compact = True
         self.get_fields(
-            ("unknown0", 21),
-            ("stuff4", 22),
-            ("unknown2", 41),
-            ("zero", -1),
+            ("s3_hdr", 21),
+            ("s3_s7", 22),
+            ("s3_unknown2", 50),
+            ("s3_unknown3", 26),
         )
 
-    def render(self, chunk, fo):
-        fo.write(self.title)
-        self.render_fields_compact(fo)
-        fo.write("\n")
-
-def mk_stuff3(seg, address):
+def mk_stuff3(seg, address, **kwargs):
     t = seg.get(address)
     if t and isinstance(t.owner, Seg97Stuff3):
         return t.owner
@@ -752,33 +779,25 @@ def mk_stuff3(seg, address):
     if int(p[:21], 2) != 0x13b170:
         return None
     try:
-        y = Seg97Stuff3(seg, address)
+        x = Seg97Stuff3(seg, address, **kwargs)
     except MisFit as e:
         print("MISFIT", seg.this, "S3 0x%x" % address, e)
         return None
-    if 0 and y.stuff4:
-        try:
-            mk_stuff4(seg, y.stuff4)
-        except MisFit as e:
-            print("MISFIT", seg.this, "S3 0x%x" % address, "-> S4 0x%x" % y.stuff4)
-    return y
+    if x.s3_s7:
+        mk_stuff7(seg, x.s3_s7)
+    return x
 
 class Seg97Stuff4(Seg97Base):
-    def __init__(self, seg, address):
-        super().__init__(seg, seg.cut(address, 0x70))
-        self.title = "STUFF4 object"
+    def __init__(self, seg, address, **kwargs):
+        super().__init__(seg, seg.cut(address, 0x70), title="STUFF4", **kwargs)
+        self.compact = True
         self.get_fields(
-            ("unknown0", 17),
-            ("stuff5", 26),
-            ("unknown2", 26),
-            ("stuff2_3", 26),
-            ("unknown4", -1),
+            ("s4_unknown0", 17),
+            ("s4_stuff5", 26),
+            ("s4_unknown2", 26),
+            ("s4_stuff2_3", 26),
+            ("s4_unknown4", -1),
         )
-
-    def render(self, chunk, fo):
-        fo.write(self.title)
-        self.render_fields_compact(fo)
-        fo.write("\n")
 
 def mk_stuff4(seg, address):
     t = seg.get(address)
@@ -813,6 +832,8 @@ def mk_stuff4(seg, address):
             y = mk_stuff2(seg, x.stuff2_3)
         except MisFit as e:
             print("MISFIT", seg.this, "S4.stuff2_3(3) 0x%x" % x.stuff2_3, e)
+        if not y:
+            print("!STUFF2", seg.this, "S4.stuff2_3(3) 0x%x" % x.stuff2_3)
     elif x.stuff2_3:
         try:
             y = mk_stuff3(seg, x.stuff2_3)
@@ -825,8 +846,8 @@ class Seg97Stuff5(Seg97Base):
         super().__init__(seg, seg.cut(address, 0x70))
         self.title = "STUFF5 object"
         self.get_fields(
-            ("stuff5_ident", 21),
-            ("stuff5_stuff1", 22),
+            ("stuff5_ident", 17),
+            ("stuff5_stuff1", 26),
             ("stuff5_unknown2", 28),
             ("stuff5_stuff6", 24),
             ("stuff5_tail", -1),
@@ -842,26 +863,31 @@ def mk_stuff5(seg, address):
         print("MISFIT", seg.this, "S5 0x%x" % address, e)
         return None
     if x.stuff5_stuff1:
-        mk_stuff1(seg, x.stuff5_stuff1)
+        try:
+            mk_stuff1(seg, x.stuff5_stuff1)
+        except MisFit as e:
+            print("!STUFF1", seg.this, "s5_s1 0x%x" % x.stuff5_stuff1, e)
     if x.stuff5_unknown2:
         seg.mkcut(x.stuff5_unknown2)
     if x.stuff5_stuff6:
-        t = seg.mkcut(x.stuff5_stuff6)
-        if 1 or t[:11] == "10000000000":
+        try:
             mk_stuff6(seg, x.stuff5_stuff6)
+        except MisFit as e:
+            print("!STUFF6", seg.this, "s5_s6 0x%x" % x.stuff5_stuff6, e)
+       
     return x
 
 class Seg97Stuff6(Seg97Base):
     def __init__(self, seg, address):
-        super().__init__(seg, seg.cut(address, 0x8b))
+        super().__init__(seg, seg.cut(address, 27))
         self.title = "STUFF6 object"
         self.get_fields(
             ("s6_unknown0", 1),
             ("s6_s6", 26),
-            ("s6_u1", 32),
-            ("s6_u2", 39),
-            ("s6_s2", 24),
-            ("s6_tail", -1),
+            #("s6_u1", 32),
+            #("s6_u2", 39),
+            #("s6_s2", 24),
+            #("s6_tail", -1),
         )
 
     def render(self, chunk, fo):
@@ -879,28 +905,73 @@ def mk_stuff6(seg, address):
         print("MISFIT", seg.this, "S6 0x%x" % address, e)
         return None
     if x.s6_s6:
-        mk_stuff6(seg, x.s6_s6)
-    if x.s6_s2:
-        mk_stuff2(seg, x.s6_s2)
+        try:
+            mk_stuff6(seg, x.s6_s6)
+        except MisFit as e:
+            print("!STUFF6", seg.this, "s6_s6 0x%x" % x.s6_s6, e)
+    #if x.s6_s2:
+    #    mk_stuff2(seg, x.s6_s2)
+    try:
+        mk_stuff7(seg, x.end)
+    except MisFit as e:
+        print("!STUFF7", seg.this, "s6.end 0x%x" % x.end, e)
     return x
 
 
 class Seg97Stuff7(Seg97Base):
     def __init__(self, seg, address):
-        super().__init__(seg, seg.cut(address, 0x4a))
-        self.title = "STUFF7 object"
+        super().__init__(seg, seg.cut(address, 112), title="STUFF7")
+        self.compact = True
         self.get_fields(
-            ("unknown0", 32),
-            ("unknown1", 5),
-            ("unknown2", 4),
-            ("unknown3", 28),
-            ("unknown4", -1),
+            ("s7_unknown0", 19),
+            ("s7_unknown1", 26),
+            ("s7_unknown2", 26),
+            ("s7_s2", 24),
+            ("s7_unknown4", -1),
         )
 
-    def render(self, chunk, fo):
-        fo.write(self.title)
-        self.render_fields_compact(fo)
-        fo.write("\n")
+def mk_stuff7(seg, address):
+    t = seg.get(address)
+    if t and isinstance(t.owner, Seg97Stuff7):
+        return t.owner
+    try:
+        x = Seg97Stuff7(seg, address)
+    except MisFit as e:
+        print("MISFIT", seg.this, "S7 0x%x" % address, e)
+        return None
+    if x.s7_s2:
+        seg.mkcut(x.s7_s2)
+        if x.s7_unknown4 == 1:
+            try:
+                y = mk_stuff2(seg, x.s7_s2)
+            except MisFit as e:
+                print("!STUFF2", seg.this, "S7(0x%x).s7_s2 0x%x" % (address, x.s7_s2), e)
+        elif x.s7_unknown4 != 2:
+            try:
+                y = mk_stuff3(seg, x.s7_s2)
+            except MisFit as e:
+                print("!STUFF3", seg.this, "S7(0x%x).s7_s2 0x%x" % (address, x.s7_s2), e)
+    return x
+
+class Seg97Stuff8(Seg97Base):
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, 0xa2), title="STUFF8")
+        self.compact = True
+        self.get_fields(
+            ("s8_unknown0", -1),
+        )
+
+def mk_stuff8(seg, address):
+    t = seg.get(address)
+    if t and isinstance(t.owner, Seg97Stuff8):
+        return t.owner
+    try:
+        x = Seg97Stuff8(seg, address)
+    except MisFit as e:
+        print("MISFIT", seg.this, "S8 0x%x" % address, e)
+        return None
+    return x
+
 
 class Seg97Tail(Seg97Base):
     def __init__(self, seg, address):
@@ -967,8 +1038,14 @@ class Seg97Head(Seg97Base):
         )
 
         if self.head_free_ptr > len(seg.this) * 8:
-            print(seg.this, "head.head_free_ptr past end of artifact")
+            print(seg.this, "head.head_free_ptr past end of artifact 0x%x", self.head_free_ptr)
             return
+
+        try:
+            Seg97Tail(seg, self.head_free_ptr + 0x7f)
+        except MisFit as e:
+            print("MISFIT TAIL", seg.this, "0x%x" % (self.head_free_ptr + 0x7f), e)
+
 
         if self.head_chains:
             try:
@@ -976,39 +1053,20 @@ class Seg97Head(Seg97Base):
             except MisFit as e:
                 print("MISFIT CHAINS", seg.this, "0x%x" % self.head_chains)
 
-        if False: # ⟦bba8365f⟧
-            i = Seg97PointerArray(
-                seg,
-                0x11971,
-                0x125d1 - 0x11971,
-                "Tree#3"
-            )
-            for index, addr in i:
-                if not seg.get(addr):
-                    seg.cut(addr)
-
-            if False:
-                seg.cut(0xae16)
-                seg.cut(0xcf1d)
-            if False:
-                for chunk, offset, address in seg.hunt("100111011000101110000"):
-                    if chunk.owner or address > 0x10000:
-                        continue
-                    mk_stuff3(seg, address)
-    
         if self.head_stuff1:
             mk_stuff1(seg, self.head_stuff1)
 
+        if False:
+            for chunk, offset, address in seg.hunt("100111011000101110000"):
+                if chunk.owner or address > 0x10000:
+                    continue
+                mk_stuff3(seg, address, ident="discovery")
+   
         if self.head_trees:
             try:
                 Seg97Trees(seg, self.head_trees)
             except MisFit as e:
                 print("MISFIT TREES", seg.this, "0x%x" % self.head_trees, e)
-
-        try:
-            Seg97Tail(seg, self.head_free_ptr + 0x7f)
-        except MisFit as e:
-            print("MISFIT TAIL", seg.this, "0x%x" % (self.head_free_ptr + 0x7f), e)
 
         return
 
@@ -1030,7 +1088,7 @@ class R1k97Seg():
             Seg97Head(self)
         except Exception as e:
             print("DIED HORRIBLY in HEAD", this, e)
-            raise
+            # raise
 
         # self.hunt_orphans()
 
@@ -1075,6 +1133,7 @@ class R1k97Seg():
         return t
 
     def cut(self, where, length=-1):
+        assert where or length == 0x400
         for index, chunk in enumerate(self.chunks):
             assert self.starts.get(chunk.offset) == chunk, "0x%x -> %s vs %s" % (chunk.offset, str(self.starts.get(chunk.offset)), str(chunk))
             if not chunk.offset <= where < chunk.offset + len(chunk):
