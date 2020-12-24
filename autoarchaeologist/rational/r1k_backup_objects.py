@@ -6,8 +6,18 @@
    The "tape-aspects" are handled in `r1k_bakcup.py`
 '''
 
+import tempfile
+import mmap
+
 import autoarchaeologist.generic.hexdump as hexdump
 import autoarchaeologist.generic.bitdata as bitdata
+
+def make_void():
+    tf = tempfile.TemporaryFile()
+    tf.write(b'-=VOID=-' * 1024)
+    tf.flush()
+    return memoryview(mmap.mmap(tf.fileno(), 0, access=mmap.ACCESS_READ))
+void = make_void()
 
 class IndirBlock(bitdata.BitRecord):
     '''
@@ -97,6 +107,7 @@ class R1kBackupObject():
     def resolve(self):
         i = 0
         blocks = []
+        sparse = False
         for j in self.get_data():
             if j:
                 blocks.append(self.vol[j])
@@ -104,8 +115,12 @@ class R1kBackupObject():
                 if i == self.n_block:
                     break
             else:
-                blocks.append(self.vol.space_info.this[0:0])
+		# XXX: This should probably be zero bytes.
+                blocks.append(void[:1024])
+                sparse = True
         self.obj = self.vol.space_info.this.create(records=blocks)
+        if sparse:
+            self.obj.add_note("Sparse_R1k_Segment")
         self.obj.add_note("%02x_tag" % self.space_info[8])
         self.obj.add_interpretation(self, self.render_obj)
 
@@ -125,6 +140,9 @@ class R1kBackupObject():
         fo.write("<pre>\n")
         fo.write(self.render_space_info() + "\n")
         for n, i in enumerate(self.obj.iterrecords()):
+            if n > 10:
+                fo.write("\nTruncated…\n")
+                break
             fo.write("\n")
             fo.write("Block #0x%x\n" % n)
             hexdump.hexdump_to_file(i, fo)
