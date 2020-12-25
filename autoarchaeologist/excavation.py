@@ -13,8 +13,16 @@ import os
 import mmap
 import hashlib
 
-import autoarchaeologist.generic.hexdump as hexdump
 import autoarchaeologist.artifact as artifact
+import autoarchaeologist.type_case as type_case
+
+def dotdotdot(gen, limit=35):
+    ''' Return a limited number of elements, and mark as truncated if so. '''
+    for n, i in enumerate(gen):
+        if n == limit:
+            yield "[…]"
+            return
+        yield i
 
 class DuplicateArtifact(Exception):
     ''' Top level artifacts should not be identical '''
@@ -42,7 +50,51 @@ class Excavation():
 
     '''
 
-    def __init__(self):
+    def __init__(
+        self,
+        digest_prefix=9,        # SHA256 length in links/filenames
+        downloads=False,   	# Create downloadable .bin files
+        download_links=False,   # Include links to .bin files
+        hexdump_limit=8192,	# How many bytes to hexdump
+        html_dir="/tmp/aa",	# Where to put HTML output
+        subdir=None,		# Subdir under html_dir
+        link_prefix=None,	# Default is file://[…]
+    ):
+
+        # Sanitize parameters
+        try:
+            os.mkdir(html_dir)
+        except FileExistsError:
+            pass
+
+        if subdir:
+            html_dir = os.path.join(html_dir, subdir)
+            try:
+                os.mkdir(html_dir)
+            except FileExistsError:
+                pass
+
+        if link_prefix is None:
+            # use "file://{abs path to html_dir}/"
+            dir_fd = os.open(".", os.O_RDONLY)
+            os.chdir(html_dir)
+            abspath = os.getcwd()
+            os.chdir(dir_fd)
+            os.close(dir_fd)
+            link_prefix = "file://" + abspath + "/"
+
+        if download_links:
+            downloads = True
+
+
+        # Parameters
+        self.digest_prefix = digest_prefix
+        self.downloads = downloads
+        self.download_links = download_links
+        self.hexdump_limit = hexdump_limit
+        self.html_dir = html_dir
+        self.link_prefix = link_prefix
+
         self.hashes = {}
         self.busy = True
         self.queue = []
@@ -51,17 +103,13 @@ class Excavation():
 
         self.index = {}
 
-        # Helper field for the HTML production
-        self.html_dir = None
-        self.digest_prefix = 8
-        self.link_prefix = ""
-        self.download_links = False
-        self.hexdump_limit = 8192
-
         # Duck-type as ArtifactClass
         self.top = self
         self.children = []
         self.by_class = {} # Experimental extension point
+
+        # Default character set
+        self.type_case = type_case.Ascii()
 
     def __lt__(self, other):
         # Duck-type as ArtifactClass
@@ -73,6 +121,8 @@ class Excavation():
         assert this.digest not in self.hashes
         self.hashes[this.digest] = this
         self.queue.append(this)
+        if this.type_case is None:
+            this.type_case = self.type_case
         if not self.busy:
             self.examine()
 
@@ -141,7 +191,6 @@ class Excavation():
         ''' Polish things up before HTML production '''
 
         # Find the shortest unique digest length
-        self.digest_prefix = 8
         while True:
             if len({x[:self.digest_prefix] for x in self.hashes}) == len(self.hashes):
                 break
@@ -163,42 +212,19 @@ class Excavation():
         else:
             basedir = this.digest[:2]
             try:
-                os.mkdir(self.html_dir + "/" + basedir)
+                os.mkdir(os.path.join(self.html_dir, basedir))
             except FileExistsError:
                 pass
-            base = basedir + "/" + this.digest[2:self.digest_prefix] + suf
+            base = os.path.join(basedir, this.digest[2:self.digest_prefix] + suf)
         return OutputFile(
-            self.html_dir + "/" + base,
-            self.link_prefix + "/" + base,
+            os.path.join(self.html_dir, base),
+            os.path.join(self.link_prefix, base),
         )
 
     def produce_html(
         self,
-        html_dir,               # Where to dump the files
-        hexdump_limit=None,     # How much of unrecognized artifacts should be  hexdumped
-        link_prefix=None,       # HTML link prefix to reach the files
-        downloads=False,   	# Create downloadable .bin files
-        download_links=False,   # Include links to .bin files
     ):
         ''' Produce default HTML pages '''
-
-        if link_prefix is None:
-            # use "file://{abs path to html_dir}/"
-            dir_fd = os.open(".", os.O_RDONLY)
-            os.chdir(html_dir)
-            abspath = os.getcwd()
-            os.chdir(dir_fd)
-            os.close(dir_fd)
-            link_prefix = "file://" + abspath + "/"
-
-        if download_links:
-            downloads = True
-            self.download_links = True
-
-        self.link_prefix = link_prefix
-        self.html_dir = html_dir
-        if hexdump_limit:
-            self.hexdump_limit = hexdump_limit
 
         self.polish()
 
@@ -206,7 +232,7 @@ class Excavation():
 
         for this in self.hashes.values():
 
-            if downloads:
+            if self.downloads:
                 binfile = self.filename_for(this, suf=".bin")
                 this.writetofile(open(binfile.filename, 'wb'))
             fn = self.filename_for(this)
@@ -214,6 +240,8 @@ class Excavation():
             self.html_prefix(fo, this)
             this.html_page(fo)
             self.html_suffix(fo)
+
+        return self.filename_for(self).link
 
     def produce_front_page(self):
         ''' Top level html page '''
@@ -242,7 +270,7 @@ class Excavation():
             fo.write("<tr>\n")
             fo.write("<td></td>")
             fo.write('<td style="font-size: 70%;">')
-            fo.write(", ".join(sorted({y for x, y in this.iter_notes(True)})))
+            fo.write(", ".join(dotdotdot(sorted({y for x, y in this.iter_notes(True)}))))
             fo.write("</td>\n")
             fo.write("</tr>\n")
         fo.write("</table>\n")

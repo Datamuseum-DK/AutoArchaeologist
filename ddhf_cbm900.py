@@ -1,25 +1,30 @@
 '''
-	Commordore CBM-900 Artifacts from Datamuseum.dk's BitStore
+Commordore CBM-900 Artifacts from Datamuseum.dk's BitStore
 '''
-
-import os
 
 from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
 
 from autoarchaeologist.ddhf.bitstore import FromBitStore
 
-from autoarchaeologist.generic.samesame import SameSame
-from autoarchaeologist.generic.ascii import Ascii
-from autoarchaeologist.unix.v7_filesystem import V7_Filesystem
 from autoarchaeologist.unix.cbm900_partition import CBM900_Partition
+from autoarchaeologist.unix.v7_filesystem import V7_Filesystem
 from autoarchaeologist.unix.cbm900_ar import Ar
 from autoarchaeologist.unix.cbm900_l_out import L_Out
+from autoarchaeologist.generic.ascii import Ascii
+from autoarchaeologist.generic.samesame import SameSame
 
-def CBM900_job(html_dir, **kwargs):
+def cbm900_job(**kwargs):
+
+    '''
+    Two CBM900 hard-disk images, one also contains the four distribution
+    floppy images.
+    '''
 
     ctx = DDHF_Excavation(
         ddhf_topic = "Commodore CBM-900",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Commodore/CBM900',
+        hexdump_limit=1<<10,
+        **kwargs,
     )
 
     ctx.add_examiner(CBM900_Partition)
@@ -36,21 +41,8 @@ def CBM900_job(html_dir, **kwargs):
         "30001972",
     )
 
-    ctx.start_examination()
-
-    try:
-        os.mkdir(html_dir)
-    except FileExistsError:
-        pass
-
-    ctx.produce_html(
-       html_dir=html_dir,
-       hexdump_limit=1<<10,
-       **kwargs,
-    )
-
     return ctx
 
 if __name__ == "__main__":
     import subr_main
-    subr_main.main(CBM900_job, "cbm900")
+    subr_main.main(cbm900_job, subdir="cbm900")

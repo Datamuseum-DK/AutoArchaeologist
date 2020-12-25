@@ -10,7 +10,6 @@ import html
 
 import autoarchaeologist.rational.r1k_backup_objects as objects
 
-
 def byte_length_int(this):
     '''
     Split `this` into integers, each prefixed its length in a byte
@@ -223,6 +222,7 @@ class R1kBackup():
         self.enough = False
         self.expect_next = None
         self.volumes = {}
+        self.void = None
 
         us = this.parents[0].by_class.get(R1kBackup)
         if us:

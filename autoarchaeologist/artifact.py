@@ -11,7 +11,6 @@
 import hashlib
 
 import autoarchaeologist.excavation as excavation
-import autoarchaeologist.generic.hexdump as hexdump
 import autoarchaeologist.record as record
 import autoarchaeologist.scattergather as scattergather
 
@@ -60,6 +59,8 @@ class ArtifactClass():
         self.taken = False
         self.layout = []
 
+        self.type_case = None
+
         self.add_parent(up)
         self.top = up.top
         self.top.add_artifact(self)
@@ -106,11 +107,11 @@ class ArtifactClass():
     def tobytes(self):
         return self.bdx.tobytes()
 
-    def writetofile(self, fd):
+    def writetofile(self, fo):
         if isinstance(self.bdx, scattergather.ScatterGather):
-            self.bdx.writetofile(fd)
+            self.bdx.writetofile(fo)
         else:
-            fd.write(self.bdx)
+            fo.write(self.bdx)
 
     def name(self):
         ''' Get the canonical name of the artifact '''
@@ -220,6 +221,7 @@ class ArtifactClass():
         this = self.top.hashes.get(digest)
         if not this:
             this = ArtifactClass(self, digest, bits)
+            this.type_case = self.type_case
         else:
             this.add_parent(self)
         if start or stop:
@@ -229,19 +231,19 @@ class ArtifactClass():
     def examined(self):
         ''' Examination of this artifact is complete '''
         # XXX: create left over slices
-        l = []
+        lst = []
         offset = 0
-        for start, stop, src in sorted(self.layout):
+        for start, stop, _src in sorted(self.layout):
             if start is None or stop is None:
                 continue
             if offset < start:
-                l.append((offset, start))
+                lst.append((offset, start))
             offset = stop
         if not offset:
             return
         if offset != len(self):
-            l.append((offset, len(self)))
-        for start, stop in l:
+            lst.append((offset, len(self)))
+        for start, stop in lst:
             self.create(start=start, stop=stop)
 
     def summary(self, link=True, ident=True, notes=False):
@@ -255,17 +257,14 @@ class ArtifactClass():
                 else:
                     nam = self.name() + " "
             j = set()
-            for i in self.iter_types(True):
+            for i in sorted(self.iter_types(True)):
                 if i not in j:
                     txt.append(i)
                     j.add(i)
             if self.descriptions:
                 txt += sorted(self.descriptions)
             if notes:
-                nn = sorted({y for _x, y in self.iter_notes(True)})
-                txt += nn[:35]
-                if len(nn) > 35:
-                    txt.append("…")
+                txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
             if not link or not ident:
                 return nam + ", ".join(txt)
             self.index_representation = nam + ", ".join(txt)
@@ -325,19 +324,18 @@ class ArtifactClass():
 
         if not isinstance(self.bdx, scattergather.ScatterGather):
             if len(self) > self.top.hexdump_limit:
-                hexdump.hexdump_to_file(
-                    self[:self.top.hexdump_limit].tobytes(),
-                    fo
+                self.type_case.hexdump_html(
+                    self.bdx[:self.top.hexdump_limit],
+                    fo,
                 )
                 fo.write("[…]\n")
             else:
-                hexdump.hexdump_to_file(self.tobytes(), fo)
+                self.type_case.hexdump_html(self.bdx, fo)
         else:
             done = 0
-            idx = 0
             for n, r in enumerate(self.iterrecords()):
                 fo.write("Record #0x%x\n" % n)
-                hexdump.hexdump_to_file(r.tobytes(), fo)
+                self.type_case.hexdump_html(r.tobytes(), fo)
                 fo.write("\n")
                 done += len(r)
                 if done > self.top.hexdump_limit:
@@ -352,16 +350,3 @@ class ArtifactClass():
                 prefix = t
             fo.write(t + "└─" + self.summary() + '\n')
         return prefix + "    "
-
-    def html_interpretation_sliced(self, fo, this):
-        ''' Produce table of slicings '''
-        # XXX: slices may overlap
-        assert this == self
-        fo.write("<H3>Sliced</H3>\n")
-        fo.write("<pre>\n")
-        for sln in self.slicings:
-            for slab in sorted(sln):
-                fo.write("0x%05x-0x%05x " % (slab.offset, slab.offset + len(slab.this)))
-                fo.write(slab.this.summary(notes=True) + "\n")
-            fo.write("\n")
-        fo.write("</pre>\n")

@@ -9,17 +9,18 @@ OK_ENVS = {
     "AUTOARCHAEOLOGIST_LINK_PREFIX": "link_prefix",
 }
 
-def main(job, subdir, **kwargs):
-    if os.path.isdir("/critter/aa"):
-        kwargs['html_dir'] = "/critter/aa/" + subdir
-    else:
-        kwargs['html_dir'] = "/critter/aa/" + subdir
+def main(job, **kwargs):
 
     for key in os.environ:
         i = OK_ENVS.get(key)
         if i:
             kwargs[i] = os.environ[key]
 
-    i = job(**kwargs)
+    ctx = job(**kwargs)
+
+    ctx.start_examination()
+    baseurl = ctx.produce_html()
+
     print("Now point your browser at:")
-    print("\t", i.filename_for(i).link)
+    print("\t", baseurl)
+    return ctx

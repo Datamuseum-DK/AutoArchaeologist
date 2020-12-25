@@ -1,28 +1,30 @@
 '''
-   Rational R1000/400 Artifacts from Datamuseum.dk's BitStore
+Rational R1000/400 Artifacts from Datamuseum.dk's BitStore
 '''
-
-import os
-import cProfile
 
 from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
 
-from autoarchaeologist.generic.samesame import SameSame
-from autoarchaeologist.generic.ascii import Ascii
+from autoarchaeologist.ddhf.bitstore import FromBitStore
+
 from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
-
 from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
 from autoarchaeologist.rational.index_data import R1K_Index_Data
 from autoarchaeologist.rational.r1k_assy import R1K_Assy_File
+from autoarchaeologist.generic.ascii import Ascii
+from autoarchaeologist.generic.samesame import SameSame
 
-from autoarchaeologist.ddhf.bitstore import FromBitStore
+def r1k_job(**kwargs):
 
-def R1K_job(html_dir, **kwargs):
+    '''
+    Rational R1000/400 tapes except DFS and backup tapes
+    '''
 
     ctx = DDHF_Excavation(
         ddhf_topic = "Rational R1000/400",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
+        hexdump_limit=1<<10,
+        **kwargs,
     )
 
     ctx.add_examiner(TAPfile)
@@ -53,21 +55,8 @@ def R1K_job(html_dir, **kwargs):
         #"30000535",
     )
 
-    ctx.start_examination()
-
-    try:
-        os.mkdir(html_dir)
-    except FileExistsError:
-        pass
-
-    ctx.produce_html(
-       html_dir=html_dir,
-       hexdump_limit=1<<10,
-       **kwargs
-    )
-
     return ctx
 
 if __name__ == "__main__":
     import subr_main
-    subr_main.main(R1K_job, "r1k")
+    subr_main.main(r1k_job, subdir="r1k")
