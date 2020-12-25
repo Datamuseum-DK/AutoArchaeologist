@@ -27,11 +27,9 @@ def r1k_backup_job(**kwargs):
     ctx.add_examiner(TAPfile)
     ctx.add_examiner(AnsiTapeLabels)
     ctx.add_examiner(R1kBackup)
-    if False:
-        ctx.add_examiner(R1kE3Objects)
+    ctx.add_examiner(R1kE3Objects)
     ctx.add_examiner(R1k97Seg)
-    if False:
-        ctx.add_examiner(R1K_Assy_File)
+    ctx.add_examiner(R1K_Assy_File)
 
     FromBitStore(
         ctx,

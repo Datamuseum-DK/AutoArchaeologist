@@ -27,6 +27,9 @@
 
 '''
 
+import tempfile
+import html
+
 class MisFit(Exception):
     ''' bla '''
 
@@ -1085,13 +1088,14 @@ class R1k97Seg():
 
     def __init__(self, this):
         if not this.has_note("97_tag"):
-            return;
-        print("?97:", this)
+            return
         self.this = this
-        this.add_interpretation(self, self.render_chunks)
-        b = bin(int.from_bytes(b'\xff' + this.tobytes(), 'big'))[10:]
+        self.chunks = [
+            Chunk(0,
+                bin(int.from_bytes(b'\xff' + this.tobytes(), 'big'))[10:]
+            )
+        ]
         self.starts = {}
-        self.chunks = [Chunk(0, b)]
         self.starts[0] = self.chunks[-1]
         try:
             Seg97Head(self)
@@ -1100,6 +1104,18 @@ class R1k97Seg():
             # raise
 
         # self.hunt_orphans()
+     
+        this.add_interpretation(self, self.render_real)
+
+        # Render to a temporary file so we can delete all the bitmaps
+        # otherwise the memory footprint roughly doubles.
+        self.tfile = tempfile.TemporaryFile(mode="w+", dir=self.this.top.html_dir)
+        self.render_chunks(self.tfile)
+        self.tfile.flush()
+        self.tfile.seek(0)
+
+        del self.starts
+        del self.chunks
 
     def hunt_orphans(self):
         for chunk in self.chunks:
@@ -1177,9 +1193,7 @@ class R1k97Seg():
         raise MisFit("Found nothing at 0x%x" % where)
 
 
-    def render_chunks(self, fo, _this):
-        fo.write("<H3>97 Seg</H3>\n")
-        fo.write("<pre>\n")
+    def render_chunks(self, fo):
         ocheck = 0
         for chunk in self.chunks:
             assert ocheck == chunk.offset
@@ -1190,6 +1204,12 @@ class R1k97Seg():
                 render_chunk(fo, chunk)
             else:
                 chunk.owner.render(chunk, fo)
-        fo.write("</pre>\n")
         assert ocheck == len(self.this) * 8
+
+    def render_real(self, fo, _this):
+        fo.write("<H3>97 Seg</H3>\n")
+        fo.write("<pre>\n")
+        for i in self.tfile:
+            fo.write(html.escape(i))
+        fo.write("</pre>\n")
 
