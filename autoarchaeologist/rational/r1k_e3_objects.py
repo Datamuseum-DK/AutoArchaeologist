@@ -69,14 +69,16 @@ class R1kE3Objects(bitdata.BitRecord):
                 i = i.replace(j, " ")
             j = i.split(maxsplit=4)
             try:
-                if j[0] == "pragma" and j[1] == "Module_Name":
+                if len(j) == 2 and j[0] == "package":
+                    self.this.add_note("_".join(j[:2]))
+                elif j[0] == "pragma" and j[1] == "Module_Name":
                     self.this.add_note("_".join(j[:4]))
                 elif j[0] == "package" and j[2] == "is":
                     self.this.add_note("_".join(j[:2]))
                 elif j[0] == "package" and j[1] == "body" and j[3] == "is":
                     self.this.add_note("_".join(j[:3]))
             except Exception as e:
-                print("JJ", j, e)
+                print("R1KE3", self.this, j, e)
 
     def __iter__(self):
         buf = ""
@@ -105,8 +107,6 @@ class R1kE3Objects(bitdata.BitRecord):
         yield buf
 
     def render_meta(self, fo, _this):
-        if self.nblk1 > 100:
-            print("LONG SOURCE", self.this, self.nblk1)
         fo.write("<H3>E3 Meta Data</H3>\n")
         fo.write("<pre>\n")
         fo.write(self.render(show_tag=True, one_per_line=True) + "\n")
