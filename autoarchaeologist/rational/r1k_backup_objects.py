@@ -14,7 +14,7 @@ import autoarchaeologist.generic.bitdata as bitdata
 
 def make_void():
     tf = tempfile.TemporaryFile()
-    tf.write(b'-=VOID=-' * 1024)
+    tf.write(b'\x00' * 1024)
     tf.flush()
     return memoryview(mmap.mmap(tf.fileno(), 0, access=mmap.ACCESS_READ))
 void = make_void()
@@ -121,6 +121,7 @@ class R1kBackupObject():
         self.obj = self.vol.space_info.this.create(records=blocks)
         if sparse:
             self.obj.add_note("Sparse_R1k_Segment")
+        self.obj.add_note("R1k_Segment")
         self.obj.add_note("%02x_tag" % self.space_info[8])
         self.obj.add_interpretation(self, self.render_obj)
 
