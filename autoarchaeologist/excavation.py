@@ -52,13 +52,14 @@ class Excavation():
 
     def __init__(
         self,
-        digest_prefix=9,        # SHA256 length in links/filenames
-        downloads=False,   	# Create downloadable .bin files
-        download_links=False,   # Include links to .bin files
-        hexdump_limit=8192,	# How many bytes to hexdump
-        html_dir="/tmp/aa",	# Where to put HTML output
-        subdir=None,		# Subdir under html_dir
-        link_prefix=None,	# Default is file://[…]
+        digest_prefix=9,           # SHA256 length in links/filenames
+        downloads=False,   	   # Create downloadable .bin files
+        download_links=False,      # Include links to .bin files
+        download_limit=15 << 20,   # Only produce downloads if smaller than
+        hexdump_limit=8192,	   # How many bytes to hexdump
+        html_dir="/tmp/aa",	   # Where to put HTML output
+        subdir=None,		   # Subdir under html_dir
+        link_prefix=None,	   # Default is file://[…]
     ):
 
         # Sanitize parameters
@@ -91,6 +92,7 @@ class Excavation():
         self.digest_prefix = digest_prefix
         self.downloads = downloads
         self.download_links = download_links
+        self.download_limit = download_limit
         self.hexdump_limit = hexdump_limit
         self.html_dir = html_dir
         self.link_prefix = link_prefix
@@ -215,7 +217,7 @@ class Excavation():
                 os.mkdir(os.path.join(self.html_dir, basedir))
             except FileExistsError:
                 pass
-            base = os.path.join(basedir, this.digest[2:self.digest_prefix] + suf)
+            base = os.path.join(basedir, this.digest[:self.digest_prefix] + suf)
         return OutputFile(
             os.path.join(self.html_dir, base),
             os.path.join(self.link_prefix, base),
@@ -232,7 +234,7 @@ class Excavation():
 
         for this in self.hashes.values():
 
-            if self.downloads:
+            if self.downloads and len(this) < self.download_limit:
                 binfile = self.filename_for(this, suf=".bin")
                 this.writetofile(open(binfile.filename, 'wb'))
             fn = self.filename_for(this)
@@ -328,7 +330,7 @@ class Excavation():
         self.html_prefix_banner(fo, this)
         fo.write("<pre>")
         fo.write(self.html_link_to(self, "top"))
-        if not isinstance(this, Excavation) and self.download_links:
+        if not isinstance(this, Excavation) and self.download_links and self.download_limit > len(this):
             fo.write(" - " + self.html_link_to(this, "download", suf=".bin"))
         fo.write("</pre>\n")
 
