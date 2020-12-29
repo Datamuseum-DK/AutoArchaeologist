@@ -9,7 +9,7 @@
    The overall structure is that there is a header which points into
    the segment, where "chunks" are appended as needed
 
-   pointers are 32bit wide and point to the bit-offset into the segment.
+   pointers are up to 32bit wide and point to the bit-offset into the segment.
 
    The code is very brute-force:  We convert the artifact to a binary
    (Unicode-)string, and operate on that, using `int(...., 2)` when we
@@ -18,9 +18,6 @@
    For a lot of type `97` segments, this code accounts for all bits,
    save four extents, three in the header, and the end of the segment
    which is belived to be unallocated.
-
-   It looks a lot like the first 32 bits is a pointer to the first free
-   bit in the segment, but I can't quite make that work.
 
    There are also plenty of seqments where this code explodes, those
    are "for further study"
@@ -1001,6 +998,8 @@ class Seg97Soak(Seg97Base):
             ("soak_tail", -1),
         )
 
+fhack = open("/tmp/_hack", "w")
+
 class Seg97Head(Seg97Base):
     '''
         The start of the segment
@@ -1009,40 +1008,41 @@ class Seg97Head(Seg97Base):
     def __init__(self, seg):
         super().__init__(seg, seg.cut(0x0, 0x400))
         self.title = "HEAD"
+        self.compact = True
         self.get_fields(
-            ("head_free_ptr", 32,),
-            ("head_c_020", 32,),
-            ("head_z_040", 32,),
-            ("head_unknown_060", 32,),
-            ("head_z_080", 32,),
-            ("head_unknown_0a0", 32,),
-            ("head_c_0c0", 31,),
-            ("head_chains", 32,),
-            ("head_z_0ff", 1,),
-            ("head_z_100", 31,),
-            ("head_stuff1", 32,),
-            ("head_c_13f", 33,),
-            ("head_unknown_160", 32,),
-            ("head_c_180", 32,),
-            ("head_z_1a0", 32,),
-            ("head_z_1c0", 32,),
-            ("head_z_1e0", 32,),
-            ("head_z_200", 32,),
-            ("head_z_220", 32,),
-            ("head_z_240", 32,),
-            ("head_unknown_260", 42,),
-            ("head_trees", 32,),
-            ("head_z_2aa",  22,),
-            ("head_unknown_2c0", 32,),
-            ("head_z_2e0", 32,),
-            ("head_c_300", 32,),
-            ("head_unknown_320", 32,),
-            ("head_unknown_340", 32,),
-            ("head_unknown_360", 32,),
-            ("head_z_380", 32,),
-            ("head_z_3a0", 32,),
-            ("head_z_3c0", 32,),
-            ("head_z_3e0", 32,),
+            ("head_free_ptr", 32,),        # pointer to first unused bit 
+            ("head_c_020", 32,),           # {0x3ffffff, 0xffffffff}
+            ("head_z_040", 32,),           # 0x0
+            ("head_unknown_060", 32,),     # (n << 12) | 0xfff
+            ("head_z_080", 32,),           # 0x80000001
+            ("head_unknown_0a0", 32,),     # Unique except for two cases
+            ("head_c_0c0", 31,),           # 0x1
+            ("head_chains", 32,),          # 0x231a, one case 0x0
+            ("head_z_0ff", 1,),            # 0x0
+            ("head_z_100", 31,),           # 0x0
+            ("head_stuff1", 32,),          # bit-address
+            ("head_c_13f", 33,),           # 0x12, one case 0x0
+            ("head_unknown_160", 32,),     # looks like addres, most invalid
+            ("head_c_180", 32,),           # 0x4
+            ("head_z_1a0", 32,),           # 0
+            ("head_z_1c0", 32,),           # 0
+            ("head_z_1e0", 32,),           # 0
+            ("head_z_200", 32,),           # 0
+            ("head_z_220", 32,),           # 0
+            ("head_z_240", 32,),           # 0
+            ("head_unknown_260", 42,),     # {0x1a00000000,0x800000000,0x1100000000}
+            ("head_trees", 32,),           # valid address
+            ("head_z_2aa",  22,),          # looks like addres, most invalid
+            ("head_unknown_2c0", 32,),     # Logs 0x0, rest random
+            ("head_z_2e0", 32,),           # {0x0, 0x68400000}
+            ("head_c_300", 32,),           # 0x400, one 0x0
+            ("head_unknown_320", 32,),     # random
+            ("head_unknown_340", 32,),     # random
+            ("head_unknown_360", 32,),     # random
+            ("head_z_380", 32,),           # random
+            ("head_z_3a0", 32,),           # random
+            ("head_z_3c0", 32,),           # random
+            ("head_z_3e0", 32,),           # random
         )
 
         if self.head_free_ptr > len(seg.this) * 8:
@@ -1075,6 +1075,9 @@ class Seg97Head(Seg97Base):
                 mk_stuff3(seg, address, ident="discovery")
    
         if self.head_trees:
+            p = seg.mkcut(self.head_trees)
+            fhack.write(str(seg.this).ljust(30) + " 0x%011x 0x%08x " % (self.head_unknown_260, self.head_trees) + p.bits + "\n")
+        if False:
             try:
                 Seg97Trees(seg, self.head_trees)
             except MisFit as e:
