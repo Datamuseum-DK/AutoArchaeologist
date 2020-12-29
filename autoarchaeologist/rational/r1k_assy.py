@@ -35,7 +35,7 @@ class R1K_Assy_File():
         this.writetofile(tf1)
         tf1.flush()
 
-        self.tf2 = tempfile.NamedTemporaryFile()
+        self.tf2 = tempfile.NamedTemporaryFile(dir=this.top.html_dir)
         # print("NAME", tf1.name, self.tf2.name)
         sys.stdout.flush()
         sys.stderr.flush()
