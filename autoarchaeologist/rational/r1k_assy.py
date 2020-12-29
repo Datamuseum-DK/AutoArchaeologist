@@ -7,6 +7,7 @@
    (https://github.com/bsdphk/PyReveng3)
 '''
 
+import sys
 import subprocess
 import tempfile
 import html
@@ -25,22 +26,32 @@ class R1K_Assy_File():
             return
         print("?R1K_ASSY", this)
         this.add_note(this[2:4].tobytes().hex() + "_R1K_CODE")
+        if not this[22] and not this[23]:
+            this.add_note("Zero_Subprog_0xb")
+        if this[12] or this[13]:
+            this.add_note("ELAB_segment_table")
 
         tf1 = tempfile.NamedTemporaryFile()
         this.writetofile(tf1)
         tf1.flush()
 
         self.tf2 = tempfile.NamedTemporaryFile()
-        print("NAME", tf1.name, self.tf2.name)
-        subprocess.run(
-            [
-                "python3",
-                autoarchaeologist.PYREVENG3 + "/examples/R1000_400/example_ada.py",
-                tf1.name,
-                self.tf2.name,
-            ],
-            check = True,
-        )
+        # print("NAME", tf1.name, self.tf2.name)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        try:
+            subprocess.run(
+                [
+                    "python3",
+                    autoarchaeologist.PYREVENG3 + "/examples/R1000_400/example_ada.py",
+                    tf1.name,
+                    self.tf2.name,
+                ],
+                check = True,
+            )
+        except subprocess.CalledProcessError as e:
+            print("Disassmbly failed", this, e)
+            return
         this.add_interpretation(self, self.render_disass)
 
     def render_disass(self, fo, _this):
