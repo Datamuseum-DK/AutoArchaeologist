@@ -53,4 +53,4 @@ def r1k_backup_job(**kwargs):
 
 if __name__ == "__main__":
     import subr_main
-    subr_main.main(r1k_backup_job, subdir="r1k_backup2", downloads=True)
+    subr_main.main(r1k_backup_job, subdir="r1k_backup", downloads=True)
