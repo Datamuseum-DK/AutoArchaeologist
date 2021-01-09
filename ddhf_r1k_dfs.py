@@ -17,8 +17,6 @@ from autoarchaeologist.rational.r1k_ucode import R1K_Ucode_File
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.generic.ascii import Ascii
 
-# ascii.CHARSET[0][0] = 16
-
 def r1k_dfs_job(**kwargs):
 
     ''' Rational R1000/400 DFS tapes '''
@@ -38,17 +36,18 @@ def r1k_dfs_job(**kwargs):
     ctx.add_examiner(R1K_Assy_File)
     ctx.add_examiner(R1K_Ucode_File)
     ctx.add_examiner(Ascii)
-    ctx.add_examiner(SameSame)
+    #ctx.add_examiner(SameSame)
 
     FromBitStore(
         ctx,
         "_ddhf_bitstore_cache",
-        "30000750",
-        "30000528",
-        "30000744",
-        "30000407",
-        "30000743",
-        "30000443",
+        "30000744",   # precise file sizes
+        "30000407",   # precise file sizes
+
+        "30000528",   # file sizes rounded up
+        "30000743",   # file sizes rounded up
+        "30000750",   # file sizes rounded up
+
     )
 
     return ctx
