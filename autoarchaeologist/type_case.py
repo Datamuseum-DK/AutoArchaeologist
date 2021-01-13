@@ -26,6 +26,7 @@ class TypeCase():
         self.bitwidth = bitwidth
         self.maxval = (1 << bitwidth)
         self.slugs = [' '] * self.maxval
+        self.valid = [False] * self.maxval
         self.fmt = ' %%0%dx' % ((bitwidth + 3)//4)
         self.pad = ' ' * ((bitwidth + 3)//4 + 1)
 
@@ -72,14 +73,21 @@ class WellKnown(TypeCase):
         for i, char in enumerate(j):
             if char == '\ufffd':
                 pass
+            elif char == "\t":
+                self.slugs[i] = '\u2409'    # Show HT explicitly
+                self.valid[i] = True
             elif char == "\n":
                 self.slugs[i] = '\u21b2'    # Show LF explicitly
+                self.valid[i] = True
             elif char == "\r":
                 self.slugs[i] = '\u21e4'    # Show CR explicitly
+                self.valid[i] = True
             elif char == " ":
                 self.slugs[i] = '\u2423'    # Show SP explicitly
+                self.valid[i] = True
             elif unicodedata.category(char)[0] in "LNPSZ":
                 self.slugs[i] = char
+                self.valid[i] = True
 
 class Ascii(WellKnown):
     ''' Aka: ISO 646 '''
