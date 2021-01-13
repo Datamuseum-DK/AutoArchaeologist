@@ -1,8 +1,12 @@
+#!/usr/bin/env python3
+# pylint: disable=E1101
+'''
+   'a2' type 'This is a Link Pack.' segments
+'''
+import autoarchaeologist.rational.r1k_bittools as bittools
 
-import autoarchaeologist.rational.r1k_bittools as BitTools
-
-class MagicString(BitTools.R1kSegBase):
-
+class MagicString(bittools.R1kSegBase):
+    ''' The magic 'This is a Link Pack.' marker '''
     def __init__(self, seg, address, **kwargs):
         super().__init__(
             seg,
@@ -10,12 +14,14 @@ class MagicString(BitTools.R1kSegBase):
             title="MAGIC_STRING",
             **kwargs,
         )
-        self.text = BitTools.to_text(self.chunk)
+        _i, self.text = bittools.to_text(seg, self.chunk, 0, 0x14)
 
-    def render(self, chunk, fo):
+    def render(self, _chunk, fo):
+        ''' one line '''
         fo.write(self.title + ' "' + self.text + '"\n')
 
-class Header(BitTools.R1kSegBase):
+class Header(bittools.R1kSegBase):
+    ''' Looks like the overall header '''
     def __init__(self, seg, address, **kwargs):
         super().__init__(
             seg,
@@ -23,7 +29,7 @@ class Header(BitTools.R1kSegBase):
             title="HEADER",
             **kwargs,
         )
-        self.compact = True
+        #self.compact = True
         self.get_fields(
             ("hdr_f0", 32),
             ("hdr_f1", 32),
@@ -33,8 +39,9 @@ class Header(BitTools.R1kSegBase):
             ("hdr_f5", 33),
         )
 
-class Thing1(BitTools.R1kSegBase):
-    def __init__(self, seg, up, address, **kwargs):
+class Thing1(bittools.R1kSegBase):
+    ''' Looks like a Y-branch in a tree, but also used as a list '''
+    def __init__(self, seg, address, **kwargs):
         super().__init__(
             seg,
             seg.cut(address, 0xe1),
@@ -43,72 +50,122 @@ class Thing1(BitTools.R1kSegBase):
         )
         self.compact = True
         self.get_fields(
-            ("t1_str", 32),
-            ("t1_t2", 32),
+            ("t1_str1", 32),
+            ("t1_str2", 32),
             ("t1_h2", 32),
             ("t1_h3", 32),
             ("t1_h4", 32),
-            ("t1_h5", 32),
-            ("t1_h6", 32),
+            ("t1_left", 32),
+            ("t1_right", 32),
             ("t1_tail", -1),
         )
-        self.left = None
-        self.right = None
-        self.name = None
-        self.t2 = None
+        self.str1 = bittools.make_one(self, 't1_str1', Thing2B, func=mk_thing2b)
+        self.str2 = bittools.make_one(self, 't1_str2', Thing2B, func=mk_thing2b)
+        self.left = bittools.make_one(self, 't1_left', Thing1)
+        self.right = bittools.make_one(self, 't1_right', Thing1)
 
-    def dump(self, fo, pfx=""):
-        text = pfx + self.name.text + " -> " + self.t2.text
-        fo.write(text.ljust(100) + str(self).ljust(20))
-        self.render_fields_compact(fo)
-        fo.write('\n')
+    def dump(self, fo):
+        ''' Custom summary of the look-up table '''
+        fo.write("    ")
+        fo.write(" 0x%x" % self.t1_h2)
+        fo.write(" 0x%06x" % self.t1_h3)
+        fo.write(" 0x%x" % self.t1_h4)
+        fo.write(" 0x%x" % self.t1_tail)
+        fo.write(" " + self.str1.text.ljust(40))
+        fo.write(" " + self.str2.text)
+        fo.write("\n")
         if self.left:
-            self.left.dump(fo, pfx + "    ")
+            self.left.dump(fo)
         if self.right:
-            self.right.dump(fo, pfx + "    ")
+            self.right.dump(fo)
 
-def mk_thing1(seg, up, address, **kwargs):
-    y = Thing1(seg, up, address, **kwargs)
-    if y.t1_str:
-        Thing6(seg, y.t1_str - 0x34)
-        y.name = BitTools.String(seg, y.t1_str)
-    y.t2 = mk_thing2(seg, up, y.t1_t2)
-    if y.t1_h5:
-        try:
-            y.left = mk_thing1(seg, up, y.t1_h5)
-        except BitTools.MisFit as e:
-            print("T1.H5", seg.this, "0x%x" % y.t1_h5, e)
-    if y.t1_h6:
-        y.right = mk_thing1(seg, up, y.t1_h6)
-    return y
-
-class Thing2(BitTools.R1kSegBase):
+class Thing2A(bittools.R1kSegBase):
+    ''' Head of a variant record '''
     def __init__(self, seg, address, **kwargs):
-        p = seg.mkcut(address)
-        i0 = int(p[32:64], 2)
         super().__init__(
             seg,
-            seg.cut(address, 0x40 + i0 * 8),
-            title="THING2",
+            seg.cut(address, 0x34),
+            title="THING2A",
             **kwargs,
         )
-        offset = self.get_fields(
-            ("t2_h0", 32),
-            ("t2_h1", 32),
+        self.compact = True
+        self.get_fields(
+            ("t2a_var", 0x1),
+            ("t2a_head", 0x33),
         )
-        self.text = BitTools.to_text(self.chunk[offset:])
 
-    def render(self, chunk, fo):
+class Thing2B(bittools.R1kSegBase):
+    ''' String version of body '''
+    def __init__(self, seg, address, **kwargs):
+        p = seg.mkcut(address)
+        length = int(p[32:64], 2)
+        super().__init__(
+            seg,
+            seg.cut(address, 0x40 + length * 8),
+            title="THING2B",
+            **kwargs,
+        )
+        self.compact = True
+        offset = self.get_fields(
+            ("t2b_x", 0x20),
+            ("t2b_y", 0x20),
+        )
+        i, self.text = bittools.to_text(seg, self.chunk, offset, self.t2b_y)
+        offset += 8 * i
+
+    def render(self, _chunk, fo):
+        ''' One line '''
         fo.write(self.title + " ")
         self.render_fields_compact(fo)
         fo.write(' "' + self.text + '"\n')
 
-def mk_thing2(seg, up, address, **kwargs):
-    Thing6(seg, address - 0x34)
-    y = Thing2(seg, address, **kwargs)
-    return y
+class Thing2C(bittools.R1kSegBase):
+    ''' Pointer version of body '''
+    def __init__(self, seg, address, length, **kwargs):
+        super().__init__(
+            seg,
+            seg.cut(address, length),
+            title="THING2C",
+            **kwargs,
+        )
+        self.compact = True
+        self.get_fields(
+            ("t2c_h0", 0x20),
+            ("t2c_h1", 0x20),
+            ("t2c_h2", 0x20),
+            ("t2c_h3", 0x20),
+        )
 
-class Thing3(BitTools.R1kSegBase):
+def mk_thing2x(seg, address, **kwargs):
+    ''' Create head+body(+tail) '''
+    head = Thing2A(seg, address, **kwargs)
+    seg.fdot.write('X_%x [shape=hexagon]\n' % head.begin)
+    if head.t2a_var and (head.t2a_head & 0xffff):
+        body = Thing2B(seg, address + 0x34, **kwargs)
+        seg.fdot.write('X_%x [shape=plaintext, label="%s"]\n' % (body.begin, body.text))
+    else:
+        body = Thing2C(seg, address + 0x34, 0x80, **kwargs)
+        seg.fdot.write("X_%x [shape=box]\n" % body.begin)
+
+        if body.t2c_h1 < seg.end - 2:
+            bittools.make_one(body, 't2c_h1', Thing2A, func=mk_thing2a)
+        bittools.make_one(body, 't2c_h2', Thing2A, func=mk_thing2a)
+        bittools.make_one(body, 't2c_h3', Thing2A, func=mk_thing2a)
+    seg.fdot.write("X_%x -> X_%x [color=red]\n" % (head.begin, body.begin))
+    return head, body
+
+def mk_thing2a(seg, address, **kwargs):
+    ''' Create and return the head '''
+    head, _body = mk_thing2x(seg, address, **kwargs)
+    return head
+
+def mk_thing2b(seg, address, **kwargs):
+    ''' Create and return the body '''
+    _head, body = mk_thing2x(seg, address - 0x34, **kwargs)
+    return body
+
+class Thing3(bittools.R1kSegBase):
+    ''' no idea '''
     def __init__(self, seg, address, **kwargs):
         super().__init__(
             seg,
@@ -117,125 +174,44 @@ class Thing3(BitTools.R1kSegBase):
             **kwargs,
         )
         self.compact = True
-        offset = self.get_fields(
+        self.get_fields(
             ("t3_h0", 32),
             ("t3_h1", 32),
-            ("t3_h2", 32),
+            ("t3_t2", 32),
             ("t3_h3", 32),
             ("t3_h4", 32),
-            ("t3_h5", 32),
-            # ("t3_tail", -1),
+            ("t3_t1", 32),
         )
-
-def mk_thing3(seg, address, **kwargs):
-    y = Thing3(seg, address, **kwargs)
-    try:
-        mk_thing4(seg, y.t3_h2)
-    except BitTools.MisFit as e:
-        print("T3->T4", seg.this, "0x%x" % y.t3_h2, "\n\t", e)
-
-class Thing4(BitTools.R1kSegBase):
-    def __init__(self, seg, address, **kwargs):
-        super().__init__(
-            seg,
-            seg.cut(address, 0xb4),
-            title="THING4",
-            **kwargs,
-        )
-        self.compact = True
-        offset = self.get_fields(
-            ("t4_head", 0x74),
-            ("t4_h0", 0x20),
-            ("t4_h2", 0x20),
-        )
-
-def mk_thing4(seg, address, **kwargs):
-    y = Thing4(seg, address, **kwargs)
-    if y.t4_h0 != address:
-        try:
-            mk_thing5(seg, y.t4_h0)
-        except BitTools.MisFit as e:
-            print("T4->T5", seg.this, "0x%x" % y.t4_h0, "\n\t", e)
-    return y
-
-class Thing5(BitTools.R1kSegBase):
-    def __init__(self, seg, address, **kwargs):
-        super().__init__(
-            seg,
-            seg.cut(address, 0xb4),
-            title="THING5",
-            **kwargs,
-        )
-        self.compact = True
-        offset = self.get_fields(
-            ("t5_h0", 32),
-            ("t5_h1", 32),
-            ("t5_h2", 20),
-            ("t5_h3", 32),
-
-            ("t5_h4", 32),
-            ("t5_h5", 32),
-        )
-
-def mk_thing5(seg, address, **kwargs):
-    y = Thing5(seg, address, **kwargs)
-    if 0 and y.t5_h2:
-        try:
-            seg.mkcut(y.t5_h2)
-        except BitTools.MisFit as e:
-            print("T5.h2", seg.this, "0x%x" % y.t5_h2, "\n\t", e)
-    if y.t5_h3:
-        try:
-            seg.mkcut(y.t5_h3)
-        except BitTools.MisFit as e:
-            print("T5.h3", seg.this, "0x%x" % y.t5_h3, "\n\t", e)
-    return y
-
-class Thing6(BitTools.R1kSegBase):
-    def __init__(self, seg, address, **kwargs):
-        super().__init__(
-            seg,
-            seg.cut(address, 0x34),
-            title="THING6",
-            **kwargs,
-        )
-        self.compact = True
-        offset = self.get_fields(
-            ("t6_h0", 0x24),
-            ("t6_h1", 0x10),
-        )
+        bittools.make_one(self, 't3_t2', Thing2A, func=mk_thing2a)
+        if self.t3_t1 < seg.end:
+            bittools.make_one(self, 't3_t1', Thing1)
 
 class R1kSegLinkPack():
-
+    ''' A Link Pack Segment '''
     def __init__(self, seg, chunk):
         #print("?R1KLP", seg.this, chunk)
+        seg.fdot = open("/tmp/_.dot", "w")
+        seg.fdot.write("digraph {\n")
         seg.this.add_note("R1K_Link_Pack")
-        y = MagicString(seg, chunk.offset)
+        y = MagicString(seg, chunk.begin)
         self.hdr = Header(seg, y.end)
         a = self.hdr.end
-        self.root = []
-        n = 0
-        while a < self.hdr.hdr_f5:
-            y = BitTools.BitPointer(seg, a)
-            if y.destination:
-                z = mk_thing1(seg, self, y.destination)
-                self.root.append((n, z))
-            a += 32
-            n += 1
-        try:
-            mk_thing3(seg, self.hdr.hdr_f5)
-        except BitTools.MisFit as e:
-            print("HDR.F5->T3", seg.this, "0x%x" % self.hdr.hdr_f5)
 
-        if False:
-            l = seg.hunt("100000000000000000000011010000001000000000")
-            for ch, off, add in l:
-                if off and not ch.owner:
-                    print(">> 0x%x" % add)
-                    seg.mkcut(add)
-            seg.hunt_orphans()
+        self.tbl5 = bittools.BitPointerArray(
+            seg,
+            a,
+            (self.hdr.hdr_f5 - a) // 32
+        )
+
+        self.root = []
+        for n, i in enumerate(self.tbl5.data):
+            if i:
+                self.root.append((n, Thing1(seg, i)))
+
+        bittools.make_one(self.hdr, 'hdr_f5', Thing3)
 
         for n, i in self.root:
-            seg.tfile.write("[0x%x]:\n" % n)
-            i.dump(seg.tfile, "    ")
+            i.dump(seg.tfile)
         seg.tfile.write("\n")
+
+        seg.fdot.write("}\n")
