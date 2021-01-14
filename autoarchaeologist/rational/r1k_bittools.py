@@ -42,18 +42,27 @@ def render_chunk(fo, chunk, offset=0):
     Render the bits in a/our chunk
     compact all-zero chunks
     '''
+    width = 128
+    mask = width - 1
+    residual = width - (chunk.begin & mask)
     while offset < len(chunk):
+        end = residual + ((offset + mask) & ~mask)
+        end = min(end, len(chunk))
         n = chunk.bits.find('1', offset)
-        if n < 0:
-            fo.write(" " * 39 + "0[0x%x]\n" % (len(chunk.bits) - offset))
-            return
-        if n - offset > 128:
-            fo.write(" " * 39 + "0[0x%x]\n" % n)
-            offset += n
+        t = "    0x%06x " % (offset + chunk.begin)
+        if n > offset + width:
+            end = n & ~mask
+            t += "0x0 ".rjust(39)
+            t += "[0x%02x] 0…" % (end - offset)
+            offset = end
         else:
-            i = chunk.bits[offset:offset+128]
-            fo.write(("0x%x " % int(i, 2)).rjust(39) + i + "\n")
+            i = chunk.bits[offset:end]
+            t += ("0x%x " % int(i, 2)).rjust(39)
+            t += "[0x%02x]" % (end - offset)
+            for j in range(0, len(i), 16):
+                t += " " + i[j:j+16]
             offset += len(i)
+        fo.write(t + "\n")
 
 class R1kSegBase():
 
@@ -119,8 +128,6 @@ class R1kSegBase():
         if chunk is None:
             chunk = self.chunk
         render_chunk(fo, chunk, offset=offset)
-        #for j in range(offset, len(chunk), 128):
-        #    fo.write("    " + chunk.bits[j:j+128] + "\n")
 
     def render(self, chunk, fo):
         ''' Default render this bit-structure '''
