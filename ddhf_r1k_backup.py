@@ -10,7 +10,7 @@ from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
 from autoarchaeologist.rational.r1k_backup import R1kBackup
 from autoarchaeologist.rational.r1k_e3_objects import R1kE3Objects
-from autoarchaeologist.rational.r1k_assy import R1K_Assy_File
+from autoarchaeologist.rational.r1k_assy import R1kAssyFile
 from autoarchaeologist.rational.r1k_6zero import R1k6ZeroSegment
 from autoarchaeologist.rational.r1k_seg_heap import R1kSegHeap
 from autoarchaeologist.generic.ascii import Ascii
@@ -33,7 +33,7 @@ def r1k_backup_job(**kwargs):
     ctx.add_examiner(R1kBackup)
 
     ctx.add_examiner(R1kE3Objects)
-    ctx.add_examiner(R1K_Assy_File)
+    ctx.add_examiner(R1kAssyFile)
     ctx.add_examiner(R1k6ZeroSegment)
 
     ctx.add_examiner(R1kSegHeap)

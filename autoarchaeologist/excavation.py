@@ -34,6 +34,17 @@ class OutputFile():
         self.filename = filename
         self.link = link
 
+class TempFile():
+    ''' Self deleting temporary file '''
+    def __init__(self, filename):
+        self.filename = filename
+
+    def __del__(self):
+        try:
+            os.remove(self.filename)
+        except FileNotFoundError:
+            pass
+
 class Excavation():
 
     '''
@@ -63,17 +74,11 @@ class Excavation():
     ):
 
         # Sanitize parameters
-        try:
-            os.mkdir(html_dir)
-        except FileExistsError:
-            pass
 
         if subdir:
             html_dir = os.path.join(html_dir, subdir)
-            try:
-                os.mkdir(html_dir)
-            except FileExistsError:
-                pass
+
+        os.makedirs(html_dir, exist_ok=True)
 
         if link_prefix is None:
             # use "file://{abs path to html_dir}/"
@@ -207,17 +212,16 @@ class Excavation():
         for child in self.children:
             yield from child.iter_notes(True)
 
-    def filename_for(self, this, suf=".html"):
+    def filename_for(self, this, suf=".html", temp=False):
         ''' Come up with a suitable filename related to an artifact '''
         if this == self:
             base = "index" + suf
         else:
             basedir = this.digest[:2]
-            try:
-                os.mkdir(os.path.join(self.html_dir, basedir))
-            except FileExistsError:
-                pass
+            os.makedirs(os.path.join(self.html_dir, basedir), exist_ok=True)
             base = os.path.join(basedir, this.digest[:self.digest_prefix] + suf)
+        if temp:
+            return TempFile(os.path.join(self.html_dir, base))
         return OutputFile(
             os.path.join(self.html_dir, base),
             os.path.join(self.link_prefix, base),

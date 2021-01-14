@@ -8,7 +8,9 @@
     ensures their uniqueness.
 '''
 
+import os
 import hashlib
+import html
 
 import autoarchaeologist.excavation as excavation
 import autoarchaeologist.record as record
@@ -16,6 +18,29 @@ import autoarchaeologist.scattergather as scattergather
 
 class DuplicateName(Exception):
     ''' Set names must be unique '''
+
+class Utf8Interpretation():
+    '''
+       Some examinations output a UTF8 representation, containing
+       no references to other artifacts during the examination phase.
+       That output can be stored in a temporary file until the html
+       production phase, saving VM.
+       Using Pythons tempfile is not a good idea, because the file
+       hang around.
+    '''
+
+    def __init__(self, this, title):
+        self.this = this
+        self.title = title
+        self.filename = this.tmpfile_for().filename
+        this.add_interpretation(self, self.html_interpretation)
+
+    def html_interpretation(self, fo, _this):
+        fo.write("<H3>" + self.title + "</H3>\n")
+        fo.write("<pre>\n")
+        for i in open(self.filename):
+            fo.write(html.escape(i))
+        os.remove(self.filename)
 
 class ArtifactClass():
 
@@ -52,6 +77,7 @@ class ArtifactClass():
 
         self.named = None
         self.interpretations = []
+        self.unique = 0
         self.notes = set()
         self.types = set()
         self.descriptions = []
@@ -92,6 +118,12 @@ class ArtifactClass():
 
     def __iter__(self):
         yield from self.bdx
+
+    def get_unique(self):
+        ''' Return a unique (increasing) number '''
+        rv = self.unique
+        self.unique += 1
+        return rv
 
     def getblock(self, idx):
         if isinstance(self.bdx, scattergather.ScatterGather):
@@ -158,6 +190,9 @@ class ArtifactClass():
         ''' Add an interpretation '''
         self.interpretations.append((owner, func))
 
+    def add_utf8_interpretation(self, title):
+        return Utf8Interpretation(self, title)
+
     def add_description(self, desc):
         ''' Add a description '''
         self.descriptions.append(desc)
@@ -199,6 +234,14 @@ class ArtifactClass():
     def filename_for(self, *args, **kwargs):
         ''' ask excavation '''
         return self.top.filename_for(self, *args, **kwargs)
+
+    def tmpfile_for(self):
+        ''' create a temporary file '''
+        return self.top.filename_for(
+            self,
+            suf=".tmp.%d" % self.get_unique(),
+            temp=True
+        )
 
     def create(self, bits=None, start=None, stop=None, records=None):
         ''' Return a new or old artifact for some bits '''

@@ -165,7 +165,7 @@ class R1kSegHeap():
         self.starts = {}
         self.starts[0] = chunk
 
-        self.tfn = this.filename_for(suf=".segheap")
+        self.tfn = this.add_utf8_interpretation("Segmented Heap")
         self.tfile = open(self.tfn.filename, "w")
 
         self.head = HeapHead(self, self.cut(0x0, 0x80))
@@ -182,8 +182,6 @@ class R1kSegHeap():
 
         self.render_chunks(self.tfile)
         self.tfile.close()
-
-        this.add_interpretation(self, self.render_real)
 
         del self.starts
         del self.tree
@@ -330,7 +328,6 @@ class R1kSegHeap():
 
         return newchunk
 
-
     def render_chunks(self, fo):
         ''' Ask all the chunks to chime in '''
         loffset = 0
@@ -344,12 +341,3 @@ class R1kSegHeap():
             else:
                 chunk.owner.render(chunk, fo)
         assert loffset == self.end
-
-    def render_real(self, fo, _this):
-        ''' Copy from temp file to output file '''
-        fo.write("<H3>Segmented Heap</H3>\n")
-        fo.write("<pre>\n")
-        for i in open(self.tfn.filename):
-            fo.write(html.escape(i))
-        fo.write("</pre>\n")
-        os.remove(self.tfn.filename)
