@@ -46,13 +46,19 @@ def render_chunk(fo, chunk, offset=0):
     '''
     width = 128
     mask = width - 1
-    residual = width - (chunk.begin & mask)
+    residual = width - (chunk.begin & mask) # absolute alignment
+    residual = 128 # relative alignment
     while offset < len(chunk):
         end = residual + ((offset + mask) & ~mask)
         end = min(end, len(chunk))
         n = chunk.bits.find('1', offset)
         t = "    0x%06x " % (offset + chunk.begin)
-        if n > offset + width:
+        t += " +0x%04x: " % offset
+        if n < 0:
+            t += "0x0 ".rjust(39)
+            t += "[0x%02x] 0…" % (len(chunk) - offset)
+            offset = len(chunk)
+        elif n > offset + width:
             end = n & ~mask
             t += "0x0 ".rjust(39)
             t += "[0x%02x] 0…" % (end - offset)
@@ -146,7 +152,8 @@ class R1kSegBase():
         retval = 0
         for fld in self.fields:
             if not self.compact:
-                fo.write("    @0x%x:" % fld.offset)
+                fo.write("    0x%06x" % (fld.offset + self.begin))
+                fo.write(" +0x%04x:" % fld.offset)
             fo.write(fld.render())
             if not self.compact:
                 fo.write(" [%s]\n" % self.chunk[fld.offset:fld.offset+fld.width])
@@ -186,10 +193,12 @@ def make_one(self, attr, cls, func=None, **kwargs):
         return None
     p = self.seg.mkcut(a)
     self.seg.dot.edge(self, p)
+    if cls is R1kCut:
+        return p
     if isinstance(p.owner, cls):
         return p.owner
     if p.owner:
-        print(self.seg.this, "COLL 0x%x" % a, self, attr, p.owner)
+        print(self.seg.this, "COLL at 0x%x, Want:" % a, self, attr, cls, "Exiting:", p.owner)
         return None
     try:
         if func:

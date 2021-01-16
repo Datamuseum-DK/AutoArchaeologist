@@ -284,21 +284,21 @@ class R1kSegHeap():
             if not chunk.owner:
                 bittools.hunt_strings(self, chunk)
 
-    def hunt_orphans(self):
-        ''' Hut for 32 bit pointers to start of existing chunks '''
+    def hunt_orphans(self, width=32):
+        ''' Hut for `width` bit pointers to start of existing chunks '''
         for _i, chunk in self.tree:
             if chunk.begin < 0x1000: # Too many false positives with small numbers
                 continue
-            cuts = self.hunt(bin((1<<32) + chunk.begin)[3:])
+            cuts = self.hunt(bin((1<<width) + chunk.begin)[3:])
             for chunk2, offset, address in cuts:
                 if chunk2.owner is not None:
                     continue
                 print(chunk, "    pointer at 0x%x in " % offset, chunk2)
                 if chunk.owner:
                     print("OWNED", chunk, self.this)
-                    bittools.BitPointer(self, address, ident="orphan " + chunk.owner.title)
+                    bittools.BitPointer(self, address, size=width, ident="orphan " + chunk.owner.title)
                 else:
-                    bittools.BitPointer(self, address, ident="orphan")
+                    bittools.BitPointer(self, address, size=width, ident="orphan")
                     print("WHITE SPACE", chunk, self.this)
 
     def hunt(self, pattern):
