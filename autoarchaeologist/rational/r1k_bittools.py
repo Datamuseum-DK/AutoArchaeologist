@@ -6,6 +6,8 @@
 
 '''
 
+import html
+
 class MisFit(Exception):
     ''' bla '''
 
@@ -95,6 +97,8 @@ class R1kSegBase():
     def __init__(self, seg, chunk, title="", ident=""):
         self.seg = seg
         self.chunk = chunk
+        if not title:
+            title = self.__class__.__name__
         self.title = title
         if ident:
             self.title += " " + ident
@@ -104,6 +108,7 @@ class R1kSegBase():
         self.fields = []
         self.compact = False
         self.text = None
+        self.offset = 0
 
         seg.dot.node(
            chunk,
@@ -114,19 +119,19 @@ class R1kSegBase():
     def __str__(self):
         return "{@0x%x: " % self.begin + self.title + "}"
 
-    def get_fields(self, *fields, offset=0):
+    def get_fields(self, *fields):
         '''
         Create numerical fiels, starting at the first bit
         '''
         assert self.chunk
         for name, width in fields:
             if width < 0:
-                width = len(self.chunk[offset:])
-            i = int(self.chunk[offset:offset+width], 2)
+                width = len(self.chunk[self.offset:])
+            i = int(self.chunk[self.offset:self.offset+width], 2)
             setattr(self, name, i)
-            self.fields.append(R1kSegField(offset, width, name, i))
-            offset += width
-        return offset
+            self.fields.append(R1kSegField(self.offset, width, name, i))
+            self.offset += width
+        return self.offset
 
     def render_fields_compact(self, fo):
         ''' Render the fields on a single line'''
@@ -207,19 +212,22 @@ class BitPointer(R1kSegBase):
 
 class BitPointerArray(R1kSegBase):
     ''' A pointer of some width '''
-    def __init__(self, seg, address, count, size=32, **kwargs):
+    def __init__(self, seg, address, count, size=32, target=None, **kwargs):
         super().__init__(
             seg,
             seg.cut(address, count * size),
-            title="POINTERARRAY",
             **kwargs,
         )
         offset = 0
         self.count = count
         self.size = size
         self.data = []
-        for _i in range(count):
-            self.data.append(int(self.chunk[offset:offset + size], 2))
+        for _n in range(count):
+            i = int(self.chunk[offset:offset + size], 2)
+            self.data.append(i)
+            if i and target:
+                j = target(seg, i)
+                seg.dot.edge(self, j)
             offset += size
 
     def render(self, _chunk, fo):
@@ -241,6 +249,7 @@ class ArrayString(R1kSegBase):
             ("y", 32)
         )
         _i, self.text = to_text(seg, self.chunk, offset, self.y)
+        seg.dot.node(self, 'shape=plaintext', 'label="%s"' % html.escape(self.text))
 
     def render(self, _chunk, fo):
         ''' Single line '''
