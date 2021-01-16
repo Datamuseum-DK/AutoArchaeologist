@@ -7,6 +7,7 @@
 import time
 import os
 import html
+import subprocess
 
 import autoarchaeologist.rational.r1k_linkpack as LinkPack
 import autoarchaeologist.rational.r1k_bittools as bittools
@@ -104,6 +105,60 @@ class HeapHead(bittools.R1kSegBase):
             ("alloced_bits", 32),
         )
 
+class DotPlot():
+    ''' Optional GraphWiz Plot '''
+    def __init__(self, seg):
+        self.seg = seg
+        self.dotfn = seg.this.filename_for(suf=".dot")
+        self.svgfn = seg.this.filename_for(suf=".svg")
+        self.dotf = open(self.dotfn.filename, "w")
+        self.dotf.write('digraph {\n')
+        self.empty = self.dotf.tell()
+        self.seg.this.add_interpretation(self, self.render_dot)
+        self.enabled = False
+
+    def enable(self):
+        self.enabled = True
+
+    def node(self, seg, *args):
+        if args:
+            self.dotf.write("X_0x%x\t[" % seg.begin)
+            self.dotf.write(",".join(args))
+            self.dotf.write("]\n")
+
+    def edge(self, fm, to, *args):
+        self.dotf.write("X_0x%x ->" % fm.begin)
+        self.dotf.write(" X_0x%x" % to.begin)
+        if args:
+            self.dotf.write("\t[")
+            self.dotf.write(",".join(args))
+            self.dotf.write("]")
+        self.dotf.write("\n")
+
+    def finish(self):
+        if self.dotf.tell() == self.empty:
+            self.enabled = False
+        self.dotf.write('}\n')
+        self.dotf.close()
+        if not self.enabled:
+            os.remove(self.dotfn.filename)
+            return
+        subprocess.run(
+            [
+                 "dot",
+                 "-Tsvg",
+                 self.dotfn.filename,
+                 "-o",
+                 self.svgfn.filename
+            ]
+        )
+
+    def render_dot(self, fo, _this):
+        if not self.enabled:
+            return
+        fo.write("<H3>Dot plot</H3>\n")
+        fo.write('<img src="%s" width="100%%"/>\n' % self.svgfn.link)
+
 class R1kSegHeap():
 
     ''' A '97' segment from the backup tape '''
@@ -154,6 +209,8 @@ class R1kSegHeap():
         self.fdot = None
         print("?R1SH", this)
 
+        self.dot = DotPlot(self)
+
         chunk = bittools.R1kSegChunk(
             0,
             bin(int.from_bytes(b'\xff' + this.tobytes(), 'big'))[10:10+self.end]
@@ -182,6 +239,9 @@ class R1kSegHeap():
 
         self.render_chunks(self.tfile)
         self.tfile.close()
+
+        #self.dot.enable()
+        self.dot.finish()
 
         del self.starts
         del self.tree

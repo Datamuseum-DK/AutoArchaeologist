@@ -64,6 +64,28 @@ def render_chunk(fo, chunk, offset=0):
             offset += len(i)
         fo.write(t + "\n")
 
+class R1kCut():
+    '''
+    Just leave a cut where the object will go
+    '''
+    def __init__(self, seg, address, **_kwargs):
+        p = seg.mkcut(address)
+        seg.dot.node(p, 'shape=plaintext', 'label="CUT\\n0x%x"' % address)
+
+class R1kSegField():
+    ''' Field in a R1kSegBase '''
+
+    def __init__(self, offset, width, name, val):
+        self.offset = offset
+        self.width = width
+        self.name = name
+        self.fmt = "0x%%0%dx" % (((width-1)>>2)+1)
+        self.val = val
+
+    def render(self):
+        ''' ... '''
+        return " " + self.name + " = " + self.fmt % self.val
+
 class R1kSegBase():
 
     '''
@@ -81,6 +103,13 @@ class R1kSegBase():
         self.end = self.chunk.begin + len(self.chunk)
         self.fields = []
         self.compact = False
+        self.text = None
+
+        seg.dot.node(
+           chunk,
+           "shape=box",
+           'label="%s\\n0x%x"' % (title, chunk.begin),
+        )
 
     def __str__(self):
         return "{@0x%x: " % self.begin + self.title + "}"
@@ -95,32 +124,32 @@ class R1kSegBase():
                 width = len(self.chunk[offset:])
             i = int(self.chunk[offset:offset+width], 2)
             setattr(self, name, i)
-            self.fields.append((offset, width, name, i))
+            self.fields.append(R1kSegField(offset, width, name, i))
             offset += width
         return offset
 
     def render_fields_compact(self, fo):
         ''' Render the fields on a single line'''
         retval = 0
-        for offset, width, name, value in self.fields:
-            fo.write(" " + name)
-            fo.write(" = 0x%x" % value)
-            retval = offset + width
+        for fld in self.fields:
+            fo.write(fld.render())
+            retval = fld.offset + fld.width
         return retval
 
     def render_fields(self, fo):
         ''' Render the fields '''
         retval = 0
-        for offset, width, name, value in self.fields:
+        for fld in self.fields:
             if not self.compact:
-                fo.write("    @0x%x:" % offset)
-            fo.write(" " + name)
-            fo.write(" = 0x%x" % value)
+                fo.write("    @0x%x:" % fld.offset)
+            fo.write(fld.render())
             if not self.compact:
-                fo.write(" [%s]\n" % self.chunk[offset:offset+width])
-            retval = offset + width
+                fo.write(" [%s]\n" % self.chunk[fld.offset:fld.offset+fld.width])
+            retval = fld.offset + fld.width
         if self.compact:
             fo.write("\n")
+        if self.text is not None:
+            fo.write(' "' + self.text + '"\n')
         return retval
 
     def render_bits(self, fo, chunk=None, offset=0):
@@ -151,8 +180,7 @@ def make_one(self, attr, cls, func=None, **kwargs):
     if not a:
         return None
     p = self.seg.mkcut(a)
-    if self.seg.fdot:
-        self.seg.fdot.write("X_%x -> X_%x\n" % (self.begin, a))
+    self.seg.dot.edge(self, p)
     if isinstance(p.owner, cls):
         return p.owner
     if p.owner:
