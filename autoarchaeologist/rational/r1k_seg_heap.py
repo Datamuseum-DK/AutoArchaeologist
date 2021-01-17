@@ -282,6 +282,7 @@ class R1kSegHeap():
                 seg97.R1kSeg97(self)
             except bittools.MisFit as err:
                 print("FAIL SEG97", self.this, err)
+            return
 
         # Make copy of chunks list, because it will be modified along the way
         for chunk in list(y for _x, y in self.tree):
@@ -295,7 +296,7 @@ class R1kSegHeap():
             if not chunk.owner:
                 bittools.hunt_strings(self, chunk)
 
-    def hunt_orphans(self, width=32):
+    def hunt_orphans(self, width=32, verbose=True):
         ''' Hut for `width` bit pointers to start of existing chunks '''
         for _i, chunk in self.tree:
             if chunk.begin < 0x1000: # Too many false positives with small numbers
@@ -304,10 +305,11 @@ class R1kSegHeap():
             for chunk2, offset, address in cuts:
                 if chunk2.owner is not None:
                     continue
-                print(
-                    "Orphan ptr from %s+0x%x" % (str(chunk2), offset),
-                    "to", chunk
-                )
+                if verbose:
+                    print(
+                        "Orphan ptr from %s+0x%x" % (str(chunk2), offset),
+                        "to", chunk
+                    )
                 bittools.BitPointer(self, address, size=width, ident="orphan")
 
     def hunt(self, pattern):
