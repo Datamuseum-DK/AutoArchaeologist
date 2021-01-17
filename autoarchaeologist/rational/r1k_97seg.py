@@ -287,7 +287,7 @@ class Diana_10863(DianaNPtr):
             ("Diana_10863_3_p", 26),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10863_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10863_3_p", DianaChain, func=make_chain)
 
 class Diana_10760(DianaNPtr):
     def __init__(self, seg, address):
@@ -336,7 +336,7 @@ class Diana_10984(DianaNPtr):
             ("Diana_10984_4", 17),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10984_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10984_3_p", DianaChain, func=make_chain)
 
 class Diana_10985(DianaNPtr):
     def __init__(self, seg, address):
@@ -346,7 +346,7 @@ class Diana_10985(DianaNPtr):
             ("Diana_10985_4", 17),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10985_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10985_3_p", DianaChain, func=make_chain)
         bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
 
 class Diana_10989(DianaNPtr):
@@ -356,7 +356,7 @@ class Diana_10989(DianaNPtr):
             ("Diana_10989_3_p", 26),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10989_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10989_3_p", DianaChain, func=make_chain)
 
 class Diana_10956(DianaNPtr):
     def __init__(self, seg, address):
@@ -365,7 +365,7 @@ class Diana_10956(DianaNPtr):
             ("Diana_10956_3_p", 26),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10956_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10956_3_p", DianaChain, func=make_chain)
 
 class Diana_10995(DianaNPtr):
     def __init__(self, seg, address):
@@ -379,7 +379,7 @@ class Diana_10997(DianaNPtr):
             ("Diana_10977_3_p", 26),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10977_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10977_3_p", DianaChain, func=make_chain)
 
 class Diana_10a0d(DianaNPtr):
     def __init__(self, seg, address):
@@ -403,7 +403,7 @@ class Diana_10c8c(DianaNPtr):
             ("Diana_10c8c_3_p", 26),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10c8c_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10c8c_3_p", DianaChain, func=make_chain)
 
 class Diana_10c8f(DianaNPtr):
     def __init__(self, seg, address):
@@ -417,7 +417,7 @@ class Diana_10c91(DianaNPtr):
             ("Diana_10c91_3_p", 26),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10c91_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10c91_3_p", DianaChain, func=make_chain)
 
 class Diana_10c94(DianaNPtr):
     def __init__(self, seg, address):
@@ -426,7 +426,7 @@ class Diana_10c94(DianaNPtr):
             ("Diana_10c94_3_p", 26),
         )
         self.explore()
-        bittools.make_one(self, "Diana_10c94_3_p", DianaChain)
+        bittools.make_one(self, "Diana_10c94_3_p", DianaChain, func=make_chain)
 
 class Diana_10e0e(DianaNPtr):
     def __init__(self, seg, address):
@@ -805,19 +805,23 @@ class DianaChain(bittools.R1kSegBase):
         super().__init__(seg, c)
         self.compact = DIANA_COMPACT
         self.get_fields(
-            ("diana04_type", 1),
-            ("diana04_next_p", 26),
+            ("chain_type", 1),
+            ("chain_next_p", 26),
         )
-        if self.diana04_type == 1:
+        if self.chain_type == 1:
             self.get_fields(
-                ("diana04_2_p", 26),
+                ("chain_2_p", 26),
             )
             self.truncate()
-            bittools.make_one(self, 'diana04_2_p', bittools.R1kSegBase, someclass)
+            bittools.make_one(self, 'chain_2_p', bittools.R1kSegBase, someclass)
         else:
             self.truncate()
             bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
-        bittools.make_one(self, 'diana04_next_p', DianaChain)
+
+def make_chain(seg, address):
+    while address:
+        y = DianaChain(seg, address)
+        address = y.chain_next_p
 
 #######################################################################
 # D1xx is header variant 1
