@@ -171,7 +171,17 @@ class Diana_1043e(DianaNPtr):
         super().__init__(seg, address, 4)
         self.explore()
 
+class Diana_1043f(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
 class Diana_10440(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_10446(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 4)
         self.explore()
@@ -181,6 +191,14 @@ class Diana_10447(DianaNPtr):
         super().__init__(seg, address, 4)
         self.get_fields(
             ("Diana_10447_5", 17),
+        )
+        self.explore()
+
+class Diana_10449(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.get_fields(
+            ("Diana_10449_5", 17),
         )
         self.explore()
 
@@ -200,6 +218,16 @@ class Diana_10450(DianaNPtr):
         self.explore()
 
 class Diana_10458(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_1045e(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_10479(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 4)
         self.explore()
@@ -265,6 +293,11 @@ class Diana_1064e(DianaNPtr):
         super().__init__(seg, address, 5)
         self.explore()
 
+class Diana_10653(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 5)
+        self.explore()
+
 class Diana_10654(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 5)
@@ -277,7 +310,7 @@ class Diana_1065b(DianaNPtr):
 
 class Diana_10701(DianaNPtr):
     def __init__(self, seg, address):
-        super().__init__(seg, address, 3)
+        super().__init__(seg, address, 2)
         self.explore()
 
 class Diana_10863(DianaNPtr):
@@ -369,7 +402,12 @@ class Diana_10956(DianaNPtr):
 
 class Diana_10995(DianaNPtr):
     def __init__(self, seg, address):
-        super().__init__(seg, address, 3)
+        super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_10996(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
         self.explore()
 
 class Diana_10997(DianaNPtr):
@@ -439,6 +477,11 @@ class Diana_10f05(DianaNPtr):
         self.explore()
 
 class Diana_10f0a(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_10f0f(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 4)
         self.explore()
@@ -521,6 +564,16 @@ class Diana_1182c(DianaNPtr):
         super().__init__(seg, address, 2)
         self.explore()
 
+class Diana_1182e(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_11962(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
 class Diana_11a7d(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 5)
@@ -534,6 +587,11 @@ class Diana_11a7e(DianaNPtr):
 class Diana_11a7f(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 5)
+        self.explore()
+
+class Diana_11b1f(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
         self.explore()
 
 class Diana_11d8d(DianaNPtr):
@@ -644,9 +702,19 @@ class Diana_13413(DianaNPtr):
         super().__init__(seg, address, 4)
         self.explore()
 
+class Diana_1350b(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
 class Diana_13677(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_13773(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 3)
         self.explore()
 
 class Diana_1382f(DianaNPtr):
@@ -657,6 +725,11 @@ class Diana_1382f(DianaNPtr):
 class Diana_13915(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 1)
+        self.explore()
+
+class Diana_13a0c(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
         self.explore()
 
 class Diana_13a16(DianaNPtr):
@@ -705,12 +778,17 @@ diana_types = {
     0x1043a: Diana_1043a,
     0x1043c: Diana_1043c,
     0x1043e: Diana_1043e,
+    0x1043f: Diana_1043f,
     0x10440: Diana_10440,
+    0x10446: Diana_10446,
     0x10447: Diana_10447,
+    0x10449: Diana_10449,
     0x1044d: Diana_1044d,
     0x1044f: Diana_1044f,
     0x10450: Diana_10450,
     0x10458: Diana_10458,
+    0x1045e: Diana_1045e,
+    0x10479: Diana_10479,
     0x1047c: Diana_1047c,
     0x1049f: Diana_1049f,
     0x104a1: Diana_104a1,
@@ -722,6 +800,7 @@ diana_types = {
     0x10641: Diana_10641,
     0x10648: Diana_10648,
     0x1064e: Diana_1064e,
+    0x10653: Diana_10653,
     0x10654: Diana_10654,
     0x1065b: Diana_1065b,
     0x10701: Diana_10701,
@@ -738,6 +817,7 @@ diana_types = {
     0x10985: Diana_10985,
     0x10989: Diana_10989,
     0x10995: Diana_10995,
+    0x10996: Diana_10996,
     0x10997: Diana_10997,
     0x10a0d: Diana_10a0d,
     0x10a90: Diana_10a90,
@@ -749,15 +829,19 @@ diana_types = {
     0x10e0e: Diana_10e0e,
     0x10f05: Diana_10f05,
     0x10f0a: Diana_10f0a,
+    0x10f0f: Diana_10f0f,
     0x11004: Diana_11004,
     0x112a8: Diana_112a8,
     0x11666: Diana_11666,
     0x11821: Diana_11821,
     0x11829: Diana_11829,
     0x1182c: Diana_1182c,
+    0x1182e: Diana_1182e,
+    0x11962: Diana_11962,
     0x11a7d: Diana_11a7d,
     0x11a7e: Diana_11a7e,
     0x11a7f: Diana_11a7f,
+    0x11b1f: Diana_11b1f,
     0x11d8d: Diana_11d8d,
     0x1ff9c: Diana_1ff9c,
     0x1ff9d: Diana_1ff9d,
@@ -779,9 +863,12 @@ diana_types = {
     0x13161: Diana_13161,
     0x13312: Diana_13312,
     0x13413: Diana_13413,
+    0x1350b: Diana_1350b,
     0x13677: Diana_13677,
+    0x13773: Diana_13773,
     0x1382f: Diana_1382f,
     0x13915: Diana_13915,
+    0x13a0c: Diana_13a0c,
     0x13a16: Diana_13a16,
     0x13b17: Diana_13b17,
     0x13eab: Diana_13eab,
