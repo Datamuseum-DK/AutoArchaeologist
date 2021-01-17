@@ -207,7 +207,6 @@ class R1kSegBase():
         if self.title:
             fo.write(self.title)
         else:
-            print("HERE", self)
             fo.write("=" * 40)
         if not self.compact:
             fo.write("\n")
