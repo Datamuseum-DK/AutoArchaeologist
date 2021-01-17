@@ -50,7 +50,12 @@ class Diana00(bittools.R1kSegBase):
             ("diana00_5_p", 26),
         )
         self.truncate()
-        assert self.diana00_type == 0x112a8
+        if self.diana00_type == 0x112a8:
+            pass
+        elif self.diana00_type == 0x13eab:
+            pass
+        else:
+            assert self.diana00_type < 0, "diana00_type = 0x%x" %  self.diana00_type
         bittools.make_one(self, 'diana00_back_p', Dummy)
         bittools.make_one(self, 'diana00_2_p', Diana10)
         bittools.make_one(self, 'diana00_3_p', Diana05)
