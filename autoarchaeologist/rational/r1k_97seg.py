@@ -496,10 +496,10 @@ class Diana_112a8(DianaNPtr):
         self.get_fields(
             ("Diana_112a8_6_p", 32),
             ("Diana_112a8_7", 17),
-            ("Diana_112a8_8", 32),
+            #("Diana_112a8_8", 32),
         )
         self.explore()
-        bittools.make_one(self, 'end', SomeList)
+        #bittools.make_one(self, 'end', SomeList)
 
 class Diana_11666(DianaNPtr):
     def __init__(self, seg, address):
