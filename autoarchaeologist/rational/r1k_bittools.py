@@ -153,6 +153,18 @@ class R1kSegBase():
         for name, width in fields:
             if width < 0:
                 width = len(self.chunk[self.offset:])
+            if self.offset+width > len(self.chunk):
+                print(
+                    "Not enough data",
+                    self,
+                    self.chunk,
+                    "Len",
+                    len(self.chunk),
+                    "Offset",
+                    self.offset,
+                    "Width",
+                    width
+                )
             i = int(self.chunk[self.offset:self.offset+width], 2)
             setattr(self, name, i)
             self.fields.append(R1kSegField(self, self.offset, width, name, i))
@@ -195,6 +207,7 @@ class R1kSegBase():
         if self.title:
             fo.write(self.title)
         else:
+            print("HERE", self)
             fo.write("=" * 40)
         if not self.compact:
             fo.write("\n")
@@ -237,7 +250,7 @@ class BitPointer(R1kSegBase):
             **kwargs,
         )
         self.get_fields(
-            ("ptr_p", 32)
+            ("ptr_p", size)
         )
         self.compact = True
 

@@ -61,7 +61,17 @@ class DianaNPtr(bittools.R1kSegBase):
                 bittools.R1kSegBase, someclass
             )
 
+class Diana_10079(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 0)
+        self.explore()
+
 class Diana_100ab(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 0)
+        self.explore()
+
+class Diana_100be(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 0)
         self.explore()
@@ -76,7 +86,22 @@ class Diana_10135(DianaNPtr):
         super().__init__(seg, address, 0)
         self.explore()
 
+class Diana_1015e(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 0)
+        self.explore()
+
+class Diana_1015f(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 0)
+        self.explore()
+
 class Diana_1017b(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 3)
+        self.explore()
+
+class Diana_10180(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 3)
         self.explore()
@@ -91,6 +116,11 @@ class Diana_10210(DianaNPtr):
         super().__init__(seg, address, 0)
         self.explore()
 
+class Diana_10252(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 3)
+        self.explore()
+
 class Diana_1025c(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 3)
@@ -101,9 +131,19 @@ class Diana_1025d(DianaNPtr):
         super().__init__(seg, address, 3)
         self.explore()
 
+class Diana_1036c(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
 class Diana_1037a(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_10381(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
         self.explore()
 
 class Diana_10402(DianaNPtr):
@@ -112,6 +152,11 @@ class Diana_10402(DianaNPtr):
         self.explore()
 
 class Diana_10437(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_1043a(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 4)
         self.explore()
@@ -134,6 +179,9 @@ class Diana_10440(DianaNPtr):
 class Diana_10447(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 4)
+        self.get_fields(
+            ("Diana_10447_5", 17),
+        )
         self.explore()
 
 class Diana_1044d(DianaNPtr):
@@ -149,6 +197,11 @@ class Diana_1044f(DianaNPtr):
 class Diana_10450(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 0)
+        self.explore()
+
+class Diana_10458(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
         self.explore()
 
 class Diana_1047c(DianaNPtr):
@@ -169,11 +222,17 @@ class Diana_104a1(DianaNPtr):
 class Diana_10630(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 0)
+        self.get_fields(
+            ("Diana_10630_1", 8),
+            ("Diana_10630_2_p", 26),
+            ("Diana_10630_3", 32),
+        )
         self.explore()
+        bittools.make_one(self, 'Diana_10630_2_p', bittools.R1kSegBase, someclass)
 
 class Diana_10638(DianaNPtr):
     def __init__(self, seg, address):
-        super().__init__(seg, address, 4)
+        super().__init__(seg, address, 5)
         self.explore()
 
 class Diana_10639(DianaNPtr):
@@ -206,10 +265,29 @@ class Diana_1064e(DianaNPtr):
         super().__init__(seg, address, 5)
         self.explore()
 
+class Diana_10654(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 5)
+        self.explore()
+
 class Diana_1065b(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 5)
         self.explore()
+
+class Diana_10701(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 3)
+        self.explore()
+
+class Diana_10863(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.get_fields(
+            ("Diana_10863_3_p", 26),
+        )
+        self.explore()
+        bittools.make_one(self, "Diana_10863_3_p", DianaChain)
 
 class Diana_10760(DianaNPtr):
     def __init__(self, seg, address):
@@ -239,6 +317,10 @@ class Diana_10899(DianaNPtr):
 class Diana_10945(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 2)
+        self.get_fields(
+            ("Diana_10945_3_p", 26),
+            ("Diana_10945_4", 17),
+        )
         self.explore()
 
 class Diana_10980(DianaNPtr):
@@ -251,6 +333,7 @@ class Diana_10984(DianaNPtr):
         super().__init__(seg, address, 2)
         self.get_fields(
             ("Diana_10984_3_p", 26),
+            ("Diana_10984_4", 17),
         )
         self.explore()
         bittools.make_one(self, "Diana_10984_3_p", DianaChain)
@@ -258,7 +341,13 @@ class Diana_10984(DianaNPtr):
 class Diana_10985(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 2)
+        self.get_fields(
+            ("Diana_10985_3_p", 26),
+            ("Diana_10985_4", 17),
+        )
         self.explore()
+        bittools.make_one(self, "Diana_10985_3_p", DianaChain)
+        bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
 
 class Diana_10989(DianaNPtr):
     def __init__(self, seg, address):
@@ -292,6 +381,21 @@ class Diana_10997(DianaNPtr):
         self.explore()
         bittools.make_one(self, "Diana_10977_3_p", DianaChain)
 
+class Diana_10a0d(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 3)
+        self.explore()
+
+class Diana_10a90(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 1)
+        self.explore()
+
+class Diana_10b03(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 3)
+        self.explore()
+
 class Diana_10c8c(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 2)
@@ -324,19 +428,82 @@ class Diana_10c94(DianaNPtr):
         self.explore()
         bittools.make_one(self, "Diana_10c94_3_p", DianaChain)
 
+class Diana_10e0e(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
 class Diana_10f05(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 4)
         self.explore()
 
-class Diana_112a8(DianaNPtr):
+class Diana_10f0a(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_11004(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 5)
         self.explore()
 
+class SomeBlock(bittools.R1kSegBase):
+    def __init__(self, seg, address, length):
+        super().__init__(seg, seg.cut(address, 0x9d), ident="(%d)" % length)
+        self.compact = True
+        self.get_fields(
+            ("p1_p", 32),
+            ("p2_p", 32),
+            ("p3_p", 32),
+            ("p4", 3),
+            ("p5_p", 32),
+            ("p6_p", 26),
+        )
+        bittools.make_one(self, 'p1_p', SomeBlock, length=length)
+        seg.mkcut(self.p2_p)
+        #seg.mkcut(self.p3_p)
+        bittools.make_one(self, 'p5_p', bittools.R1kSegBase, someclass)
+
+class SomeList(bittools.R1kSegBase):
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, 256*32))
+        length = 0
+        self.items = []
+        for a in range(0, 256*32, 32):
+            v = int(self.chunk.bits[a:a+32], 2)
+            if not v:
+                continue
+            if length is None:
+                length = v
+                continue
+            if v == a + self.begin + 32:
+                length = None
+                continue
+            y = SomeBlock(seg, v, length)
+            seg.dot.edge(self, y)
+            self.items.append((length, v))
+
+    def render_fields(self, fo):
+        for length, address in self.items:
+            fo.write("    0x%x bytes free at 0x%06x\n" % (length, address))
+        return len(self.chunk)
+
+class Diana_112a8(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 5)
+        self.compact = False
+        self.get_fields(
+            ("Diana_112a8_6_p", 32),
+            ("Diana_112a8_7", 17),
+            ("Diana_112a8_8", 32),
+        )
+        self.explore()
+        bittools.make_one(self, 'end', SomeList)
+
 class Diana_11666(DianaNPtr):
     def __init__(self, seg, address):
-        super().__init__(seg, address, 1)
+        super().__init__(seg, address, 4)
         self.explore()
 
 class Diana_11821(DianaNPtr):
@@ -374,9 +541,19 @@ class Diana_11d8d(DianaNPtr):
         super().__init__(seg, address, 3)
         self.explore()
 
-class Diana_12010(DianaNPtr):
+class Diana_1ff9c(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_1ff9d(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_12010(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 1)
         self.explore()
 
 class Diana_12122(DianaNPtr):
@@ -384,7 +561,17 @@ class Diana_12122(DianaNPtr):
         super().__init__(seg, address, 2)
         self.explore()
 
+class Diana_12311(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 3)
+        self.explore()
+
 class Diana_12436(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_12626(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 2)
         self.explore()
@@ -399,9 +586,29 @@ class Diana_1282d(DianaNPtr):
         super().__init__(seg, address, 2)
         self.explore()
 
+class Diana_12959(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
 class Diana_12a4a(DianaNPtr):
     def __init__(self, seg, address):
-        super().__init__(seg, address, 5)
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_12c07(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_12d30(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 2)
+        self.explore()
+
+class Diana_12e08(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 1)
         self.explore()
 
 class Diana_12f09(DianaNPtr):
@@ -409,9 +616,32 @@ class Diana_12f09(DianaNPtr):
         super().__init__(seg, address, 1)
         self.explore()
 
+class Diana_13100(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 0)
+        self.explore()
+
+class Diana_13101(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 1)
+        self.get_fields(
+            ("Diana_13101_2", 1),
+        )
+        self.explore()
+
+class Diana_13161(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
+        self.explore()
+
 class Diana_13312(DianaNPtr):
     def __init__(self, seg, address):
-        super().__init__(seg, address, 5)
+        super().__init__(seg, address, 4)
+        self.explore()
+
+class Diana_13413(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 4)
         self.explore()
 
 class Diana_13677(DianaNPtr):
@@ -424,6 +654,11 @@ class Diana_1382f(DianaNPtr):
         super().__init__(seg, address, 2)
         self.explore()
 
+class Diana_13915(DianaNPtr):
+    def __init__(self, seg, address):
+        super().__init__(seg, address, 1)
+        self.explore()
+
 class Diana_13a16(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 1)
@@ -432,6 +667,9 @@ class Diana_13a16(DianaNPtr):
 class Diana_13b17(DianaNPtr):
     def __init__(self, seg, address):
         super().__init__(seg, address, 1)
+        self.get_fields(
+            ("Diana_13b17_2", 76), # Last part could be vol+segment?
+        )
         self.explore()
 
 class Diana_13eab(DianaNPtr):
@@ -445,17 +683,26 @@ class Diana_13f5a(DianaNPtr):
         self.explore()
 
 diana_types = {
+    0x10079: Diana_10079,
     0x100ab: Diana_100ab,
+    0x100be: Diana_100be,
     0x10100: Diana_10100,
     0x10135: Diana_10135,
+    0x1015e: Diana_1015e,
+    0x1015f: Diana_1015f,
     0x1017b: Diana_1017b,
+    0x10180: Diana_10180,
     0x10183: Diana_10183,
     0x10210: Diana_10210,
+    0x10252: Diana_10252,
     0x1025c: Diana_1025c,
     0x1025d: Diana_1025d,
+    0x1036c: Diana_1036c,
     0x1037a: Diana_1037a,
+    0x10381: Diana_10381,
     0x10402: Diana_10402,
     0x10437: Diana_10437,
+    0x1043a: Diana_1043a,
     0x1043c: Diana_1043c,
     0x1043e: Diana_1043e,
     0x10440: Diana_10440,
@@ -463,6 +710,7 @@ diana_types = {
     0x1044d: Diana_1044d,
     0x1044f: Diana_1044f,
     0x10450: Diana_10450,
+    0x10458: Diana_10458,
     0x1047c: Diana_1047c,
     0x1049f: Diana_1049f,
     0x104a1: Diana_104a1,
@@ -474,8 +722,11 @@ diana_types = {
     0x10641: Diana_10641,
     0x10648: Diana_10648,
     0x1064e: Diana_1064e,
+    0x10654: Diana_10654,
     0x1065b: Diana_1065b,
+    0x10701: Diana_10701,
     0x10760: Diana_10760,
+    0x10863: Diana_10863,
     0x1088a: Diana_1088a,
     0x10890: Diana_10890,
     0x10893: Diana_10893,
@@ -488,11 +739,17 @@ diana_types = {
     0x10989: Diana_10989,
     0x10995: Diana_10995,
     0x10997: Diana_10997,
+    0x10a0d: Diana_10a0d,
+    0x10a90: Diana_10a90,
+    0x10b03: Diana_10b03,
     0x10c8c: Diana_10c8c,
     0x10c8f: Diana_10c8f,
     0x10c91: Diana_10c91,
     0x10c94: Diana_10c94,
+    0x10e0e: Diana_10e0e,
     0x10f05: Diana_10f05,
+    0x10f0a: Diana_10f0a,
+    0x11004: Diana_11004,
     0x112a8: Diana_112a8,
     0x11666: Diana_11666,
     0x11821: Diana_11821,
@@ -502,16 +759,29 @@ diana_types = {
     0x11a7e: Diana_11a7e,
     0x11a7f: Diana_11a7f,
     0x11d8d: Diana_11d8d,
+    0x1ff9c: Diana_1ff9c,
+    0x1ff9d: Diana_1ff9d,
     0x12010: Diana_12010,
     0x12122: Diana_12122,
+    0x12311: Diana_12311,
     0x12436: Diana_12436,
+    0x12626: Diana_12626,
     0x1282a: Diana_1282a,
     0x1282d: Diana_1282d,
+    0x12959: Diana_12959,
     0x12a4a: Diana_12a4a,
+    0x12c07: Diana_12c07,
+    0x12d30: Diana_12d30,
+    0x12e08: Diana_12e08,
     0x12f09: Diana_12f09,
+    # 0x13100: Diana_13100,
+    0x13101: Diana_13101,
+    0x13161: Diana_13161,
     0x13312: Diana_13312,
+    0x13413: Diana_13413,
     0x13677: Diana_13677,
     0x1382f: Diana_1382f,
+    0x13915: Diana_13915,
     0x13a16: Diana_13a16,
     0x13b17: Diana_13b17,
     0x13eab: Diana_13eab,
@@ -525,7 +795,8 @@ def someclass(seg, address):
     if not t:
         print(seg.this, "Dummy for 0x%x" % typ, " at 0x%x" % address)
         t = Dummy
-    return t(seg, address)
+    rv = t(seg, address)
+    return rv
 
 class DianaChain(bittools.R1kSegBase):
     ''' ... '''
@@ -581,7 +852,7 @@ class D102(bittools.R1kSegBase):
         self.get_fields(
             ("d102_0", 9),
             ("d102_1", 26),
-            ("d102_2", 5),
+            ("d102_2", 4),
             ("d102_d102", 32),
         )
         bittools.make_one(self, 'd102_d102', D102)
@@ -980,8 +1251,8 @@ class Head(bittools.R1kSegBase):
         The start of the segment
 
     '''
-    def __init__(self, seg, address, extra=0, **kwargs):
-        super().__init__(seg, seg.cut(address, 0x1e0 + extra), **kwargs)
+    def __init__(self, seg, address, **kwargs):
+        super().__init__(seg, seg.cut(address, -1), **kwargs)
         #self.compact = True
         self.get_fields(
             ("head_z_000", 32,),           # 0x80000001
@@ -1002,29 +1273,25 @@ class Head(bittools.R1kSegBase):
             ("head_z_1c0", 32,),           # 0
         )
 
-        bittools.make_one(self, "head_chains", Thing1)
-        # make_one(self, "head_trees", Thing5)
-
 class HeadVar1(Head):
     ''' First variant of Head '''
     def __init__(self, seg, address, **kwargs):
         seg.this.add_note("VAR1")
-        super().__init__(seg, address, 138, **kwargs)
-        #self.compact = True
+        super().__init__(seg, address, **kwargs)
         self.get_fields(
             ("hv1_v", 7,),
             ("hv1_d", 3,),
             ("hv1_z0", 32,),
             ("hv1_d100", 32,),
-            ("hv1_tl", -1,),
         )
+        self.truncate()
         bittools.make_one(self, 'hv1_d100', D100)
 
 class HeadVar2(Head):
     ''' Second variant of Head '''
     def __init__(self, seg, address, **kwargs):
         seg.this.add_note("VAR2")
-        super().__init__(seg, address, 138, **kwargs)
+        super().__init__(seg, address, **kwargs)
         #self.compact = True
         self.get_fields(
             ("hv2_v", 7,),
@@ -1034,6 +1301,7 @@ class HeadVar2(Head):
             ("hv2_u2", 32,),
             ("hv2_u3", 32,),
         )
+        self.truncate()
         bittools.make_one(self, 'hv2_u1', bittools.R1kCut)
         bittools.make_one(self, 'hv2_u3', bittools.R1kCut)
 
@@ -1041,7 +1309,7 @@ class HeadVar3(Head):
     ''' Third variant of Head '''
     def __init__(self, seg, address, **kwargs):
         seg.this.add_note("VAR3")
-        super().__init__(seg, address, 74, **kwargs)
+        super().__init__(seg, address, **kwargs)
         #self.compact = True
         self.get_fields(
             ("hv3_v", 7,),
@@ -1049,6 +1317,7 @@ class HeadVar3(Head):
             ("hv3_u0", 32,),
             ("hv3_d300", 32,),
         )
+        self.truncate()
         bittools.make_one(self, 'hv3_d300', D300)
 
 
@@ -1074,12 +1343,14 @@ class R1kSeg97():
             self.head = Head(seg, 0x80)
             print("97SEG", seg.this, "Unknown head variant", variant)
         seg.dot.edge(seg.mkcut(0), self.head)
-        if False:
-            bittools.make_one(self.head, 'head_stuff1', Diana00)
-        else:
-            bittools.make_one(self.head, 'head_stuff1', bittools.R1kSegBase, someclass)
-        #seg.hunt_orphans(26, verbose=False)
-
-
         self.table = bittools.BitPointerArray(seg, 0x31a, 256)
+        seg.dot.edge(seg.mkcut(0), self.table)
+
+        bittools.make_one(self.head, "head_chains", Thing1)
+        if self.head.head_stuff1:
+            someclass(seg, self.head.head_stuff1)
+
+        # seg.hunt_orphans(26, verbose=False)
+
+
         seg.dot.edge(self.head, self.table)
