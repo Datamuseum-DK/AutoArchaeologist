@@ -6,7 +6,6 @@
 
 import time
 import os
-import html
 import subprocess
 
 import autoarchaeologist.rational.r1k_linkpack as LinkPack
@@ -118,15 +117,18 @@ class DotPlot():
         self.enabled = False
 
     def enable(self):
+        ''' Produce the dot graphic '''
         self.enabled = True
 
     def node(self, seg, *args):
+        ''' Set node attributes '''
         if args:
             self.dotf.write("X_0x%x\t[" % seg.begin)
             self.dotf.write(",".join(args))
             self.dotf.write("]\n")
 
     def edge(self, fm, to, *args):
+        ''' Create an edge with optional attributes '''
         self.dotf.write("X_0x%x ->" % fm.begin)
         self.dotf.write(" X_0x%x" % to.begin)
         if args:
@@ -136,6 +138,7 @@ class DotPlot():
         self.dotf.write("\n")
 
     def finish(self):
+        ''' run dot(1) '''
         if self.dotf.tell() == self.empty:
             self.enabled = False
         self.dotf.write('}\n')
@@ -154,6 +157,7 @@ class DotPlot():
         )
 
     def render_dot(self, fo, _this):
+        ''' inline image '''
         if not self.enabled:
             return
         fo.write("<H3>Dot plot</H3>\n")
@@ -240,7 +244,7 @@ class R1kSegHeap():
         self.render_chunks(self.tfile)
         self.tfile.close()
 
-        #self.dot.enable()
+        self.dot.enable()
         self.dot.finish()
 
         del self.starts
@@ -255,6 +259,13 @@ class R1kSegHeap():
     def get(self, idx):
         ''' Look for chunk at specific address '''
         return self.starts.get(idx)
+
+    def label(self, adr):
+        ''' return a representation of what is at this address '''
+        i = self.starts.get(adr)
+        if not adr or not i:
+            return "0x%x" % adr
+        return str(i)
 
     def ponder(self):
         ''' Ponder the contents of this segment '''
@@ -293,13 +304,11 @@ class R1kSegHeap():
             for chunk2, offset, address in cuts:
                 if chunk2.owner is not None:
                     continue
-                print(chunk, "    pointer at 0x%x in " % offset, chunk2)
-                if chunk.owner:
-                    print("OWNED", chunk, self.this)
-                    bittools.BitPointer(self, address, size=width, ident="orphan " + chunk.owner.title)
-                else:
-                    bittools.BitPointer(self, address, size=width, ident="orphan")
-                    print("WHITE SPACE", chunk, self.this)
+                print(
+                    "Orphan ptr from %s+0x%x" % (str(chunk2), offset),
+                    "to", chunk
+                )
+                bittools.BitPointer(self, address, size=width, ident="orphan")
 
     def hunt(self, pattern):
         ''' hunt for particular pattern '''
@@ -339,9 +348,7 @@ class R1kSegHeap():
 
         if chunk.owner:
             raise bittools.MisFit(
-                "Has " + str(chunk) +
-                " already owned " + str(chunk.owner) +
-                " wanted 0x%x" % where
+                "At 0x%x " % where + " has " + str(chunk)
             )
 
         if chunk.begin == where and length in (-1, len(chunk)):

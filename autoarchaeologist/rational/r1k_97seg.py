@@ -21,6 +21,388 @@ def what_is(self, attr):
         print("IS 0x%06x" % a, self, attr, p.owner)
 
 #######################################################################
+# Diana Tree
+
+DIANA_COMPACT=True
+
+class Dummy(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        p = seg.mkcut(address)
+        t = int(p[:17], 2)
+        c = seg.cut(address, 1)
+        super().__init__(seg, c, title="Dummy_0x%x" % t)
+        self.compact = True
+        seg.dot.node(self, "shape=ellipse")
+
+class Diana00(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana00_type", 17),
+            ("diana00_back_p", 26),
+            ("diana00_2_p", 26),
+            ("diana00_3_p", 26),
+            ("diana00_4_p", 26),
+            ("diana00_5_p", 26),
+        )
+        self.truncate()
+        assert self.diana00_type == 0x112a8
+        bittools.make_one(self, 'diana00_back_p', Dummy)
+        bittools.make_one(self, 'diana00_2_p', Diana10)
+        bittools.make_one(self, 'diana00_3_p', Diana05)
+        bittools.make_one(self, 'diana00_4_p', Diana01)
+        bittools.make_one(self, 'diana00_5_p', Diana06)
+
+class Diana01(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana01_type", 17),
+            ("diana01_back_p", 26),
+            ("diana01_2_p", 26),
+            ("diana01_3_p", 26),
+            ("diana01_4_p", 26),
+        )
+        if self.diana01_type == 0x1043e:
+            self.truncate()
+        elif self.diana01_type == 0x10447:
+            self.truncate()
+        elif self.diana01_type == 0x1063d:
+            self.get_fields(
+                ("diana01_5_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana01_5_p', Diana02)
+        elif self.diana01_type == 0x10641:
+            self.get_fields(
+                ("diana01_5_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana01_5_p', Diana02)
+        elif self.diana01_type == 0x10648:
+            self.get_fields(
+                ("diana01_5_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana01_5_p', Diana02)
+        else:
+            assert self.diana01_type < 0, "diana01_type = 0x%x" %  self.diana01_type
+        bittools.make_one(self, 'diana01_back_p', bittools.R1kCut)
+        bittools.make_one(self, 'diana01_2_p', Diana08)
+        bittools.make_one(self, 'diana01_3_p', Diana09)
+        bittools.make_one(self, 'diana01_4_p', Diana02)
+
+class Diana02(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana02_type", 17),
+            ("diana02_back_p", 26),
+        )
+        if self.diana02_type == 0x1017b:
+            self.get_fields(
+                ("diana02_2_p", 26),
+                ("diana02_3_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana02_2_p', Diana08)
+            bittools.make_one(self, 'diana02_3_p', Diana03)
+        elif self.diana02_type == 0x1037a:
+            self.get_fields(
+                ("diana02_2_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana02_2_p', Diana08)
+        elif self.diana02_type == 0x1047c:
+            self.get_fields(
+                ("diana02_2_p", 26),
+                ("diana02_3_p", 26),
+                ("diana02_4_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana02_2_p', Diana08)
+            bittools.make_one(self, 'diana02_3_p', Diana03)
+            bittools.make_one(self, 'diana02_4_p', Diana03)
+        elif self.diana02_type == 0x1064e:
+            self.get_fields(
+                ("diana02_2_p", 26),
+                ("diana02_3_p", 26),
+                ("diana02_4_p", 26),
+                ("diana02_5_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana02_2_p', Diana08)
+            bittools.make_one(self, 'diana02_3_p', Diana03)
+            bittools.make_one(self, 'diana02_4_p', Diana03)
+            bittools.make_one(self, 'diana02_5_p', Diana07)
+        elif self.diana02_type == 0x10c8f:
+            self.truncate()
+        elif self.diana02_type == 0x12436:
+            self.get_fields(
+                ("diana02_2_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana02_2_p', Diana08)
+        elif self.diana02_type == 0x13677:
+            self.get_fields(
+                ("diana02_2_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana02_2_p', Diana08)
+        else:
+            assert self.diana02_type < 0, "diana02_type = 0x%x" %  self.diana02_type
+        bittools.make_one(self, 'diana02_back_p', bittools.R1kCut)
+
+class Diana03(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana03_type", 17),
+            ("diana03_back_p", 26),
+            ("diana03_2_p", 26),
+            ("diana03_3_p", 26),
+        )
+        if self.diana03_type == 0x10c8c:
+            self.truncate()
+        elif self.diana03_type == 0x10c91:
+            self.truncate()
+        elif self.diana03_type == 0x10997:
+            self.truncate()
+        elif self.diana03_type == 0x10c94:
+            self.truncate()
+        else:
+            assert self.diana03_type < 0, "diana03_type = 0x%x" %  self.diana03_type
+        bittools.make_one(self, 'diana03_back_p', bittools.R1kCut)
+        bittools.make_one(self, 'diana03_2_p', Dummy)
+        bittools.make_one(self, 'diana03_3_p', Diana04)
+
+class Diana04(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana04_type", 1),
+            ("diana04_next_p", 26),
+        )
+        if self.diana04_type == 1:
+            self.get_fields(
+                ("diana04_2_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana04_2_p', Diana01)
+        else:
+            self.truncate()
+            bittools.make_one(self, 'end', Diana11)
+        bittools.make_one(self, 'diana04_next_p', Diana04)
+
+class Diana05(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana05_type", 17),
+            ("diana05_back_p", 26),
+            ("diana05_2_p", 26),
+            ("diana05_3_p", 26),
+        )
+        if self.diana05_type == 0x10984:
+            self.truncate()
+        else:
+            assert self.diana05_type < 0, "diana05_type = 0x%x" %  self.diana05_type
+        bittools.make_one(self, 'diana05_back_p', bittools.R1kCut)
+        bittools.make_one(self, 'diana05_2_p', Dummy)
+        bittools.make_one(self, 'diana05_3_p', Dummy)
+
+class Diana06(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana06_type", 17),
+            ("diana06_back_p", 26),
+            ("diana06_2_p", 26),
+            ("diana06_3_p", 26),
+        )
+        if self.diana06_type == 0x10995:
+            self.truncate()
+        else:
+            assert self.diana06_type < 0, "diana06_type = 0x%x" %  self.diana06_type
+        bittools.make_one(self, 'diana06_back_p', bittools.R1kCut)
+        bittools.make_one(self, 'diana06_2_p', Dummy)
+        bittools.make_one(self, 'diana06_3_p', Dummy)
+
+class Diana07(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana07_type", 17),
+            ("diana07_back_p", 26),
+            ("diana07_2_p", 26),
+            ("diana07_3_p", 26),
+        )
+        if self.diana07_type == 0x10989:
+            self.truncate()
+        else:
+            assert self.diana07_type < 0, "diana07_type = 0x%x" %  self.diana07_type
+        bittools.make_one(self, 'diana07_back_p', bittools.R1kCut)
+        bittools.make_one(self, 'diana07_2_p', Dummy)
+        bittools.make_one(self, 'diana07_3_p', Dummy)
+
+
+class Diana08(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana08_type", 17),
+        )
+        if self.diana08_type == 0x10100:
+            self.truncate()
+        elif self.diana08_type == 0x10450:
+            self.truncate()
+        elif self.diana08_type == 0x10630:
+            self.truncate()
+        elif self.diana08_type == 0x10760:
+            self.truncate()
+        else:
+            assert self.diana08_type < 0, "diana08_type = 0x%x" %  self.diana08_type
+
+class Diana09(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana09_type", 17),
+            ("diana09_1_p", 26),
+            ("diana09_2_p", 26),
+            # next element is not a pointer
+        )
+        if self.diana09_type == 0x11821:
+            self.truncate()
+        elif self.diana09_type == 0x11829:
+            self.truncate()
+        elif self.diana09_type == 0x1182c:
+            self.truncate()
+        elif self.diana09_type == 0x12122:
+            self.truncate()
+        else:
+            assert self.diana09_type < 0, "diana09_type = 0x%x" %  self.diana09_type
+        bittools.make_one(self, 'diana09_1_p', Diana01)
+        bittools.make_one(self, 'diana09_2_p', Diana08)
+
+class Diana10(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana10_type", 17),
+        )
+        if self.diana10_type == 0x10210:
+            self.truncate()
+        elif self.diana10_type == 0x10980:
+            self.truncate()
+        else:
+            assert self.diana10_type < 0, "diana10_type = 0x%x" %  self.diana10_type
+
+class Diana11(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana11_type", 17),
+            ("diana11_1_p", 26),
+        )
+        if self.diana11_type == 0x1025d:
+            self.truncate()
+        elif self.diana11_type == 0x10402:
+            self.truncate()
+        elif self.diana11_type == 0x10437:
+            self.truncate()
+        elif self.diana11_type == 0x1043c:
+            self.truncate()
+        elif self.diana11_type == 0x10440:
+            self.truncate()
+        elif self.diana11_type == 0x1044d:
+            self.truncate()
+        elif self.diana11_type == 0x1044f:
+            self.truncate()
+        elif self.diana11_type == 0x10638:
+            self.get_fields(
+                ("diana11_2_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana11_2_p', Diana08)
+        elif self.diana11_type == 0x10639:
+            self.truncate()
+        elif self.diana11_type == 0x1063b:
+            self.get_fields(
+                ("diana11_2_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'diana11_2_p', Diana08)
+        elif self.diana11_type == 0x1065b:
+            self.truncate()
+        elif self.diana11_type == 0x10956:
+            self.truncate()
+        elif self.diana11_type == 0x11a7d:
+            self.truncate()
+        elif self.diana11_type == 0x11a7e:
+            self.truncate()
+        elif self.diana11_type == 0x11a7f:
+            self.truncate()
+        elif self.diana11_type == 0x12a4a:
+            self.truncate()
+        elif self.diana11_type == 0x13f5a:
+            self.truncate()
+        else:
+            assert self.diana11_type < 0, "diana11_type = 0x%x" %  self.diana11_type
+        bittools.make_one(self, 'diana11_1_p', Diana03)
+
+class Diana12(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("diana12_type", 17),
+        )
+        if self.diana12_type == 0x13677:
+            self.truncate()
+        else:
+            assert self.diana12_type < 0, "diana12_type = 0x%x" %  self.diana12_type
+
+#######################################################################
 # D1xx is header variant 1
 
 class D100(bittools.R1kSegBase):
@@ -482,6 +864,7 @@ class HeadVar1(Head):
     def __init__(self, seg, address, **kwargs):
         seg.this.add_note("VAR1")
         super().__init__(seg, address, 138, **kwargs)
+        #self.compact = True
         self.get_fields(
             ("hv1_v", 7,),
             ("hv1_d", 3,),
@@ -489,7 +872,6 @@ class HeadVar1(Head):
             ("hv1_d100", 32,),
             ("hv1_tl", -1,),
         )
-        self.compact = True
         bittools.make_one(self, 'hv1_d100', D100)
 
 class HeadVar2(Head):
@@ -497,6 +879,7 @@ class HeadVar2(Head):
     def __init__(self, seg, address, **kwargs):
         seg.this.add_note("VAR2")
         super().__init__(seg, address, 138, **kwargs)
+        #self.compact = True
         self.get_fields(
             ("hv2_v", 7,),
             ("hv2_d", 3,),
@@ -505,7 +888,6 @@ class HeadVar2(Head):
             ("hv2_u2", 32,),
             ("hv2_u3", 32,),
         )
-        self.compact = True
         bittools.make_one(self, 'hv2_u1', bittools.R1kCut)
         bittools.make_one(self, 'hv2_u3', bittools.R1kCut)
 
@@ -514,13 +896,13 @@ class HeadVar3(Head):
     def __init__(self, seg, address, **kwargs):
         seg.this.add_note("VAR3")
         super().__init__(seg, address, 74, **kwargs)
+        #self.compact = True
         self.get_fields(
             ("hv3_v", 7,),
             ("hv3_d", 3,),
             ("hv3_u0", 32,),
             ("hv3_d300", 32,),
         )
-        #self.compact = True
         bittools.make_one(self, 'hv3_d300', D300)
 
 
@@ -546,6 +928,9 @@ class R1kSeg97():
             self.head = Head(seg, 0x80)
             print("97SEG", seg.this, "Unknown head variant", variant)
         seg.dot.edge(seg.mkcut(0), self.head)
+        bittools.make_one(self.head, 'head_stuff1', Diana00)
+        #seg.hunt_orphans(26)
+
 
         self.table = bittools.BitPointerArray(seg, 0x31a, 256)
         seg.dot.edge(self.head, self.table)

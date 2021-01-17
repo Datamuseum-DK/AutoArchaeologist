@@ -30,7 +30,9 @@ class R1kSegChunk():
         return len(self.bits)
 
     def __str__(self):
-        return "{R1kSegChunk 0x%x-0x%x/0x%x}" % (self.begin, self.end, len(self.bits))
+        if self.owner:
+            return str(self.owner)
+        return "{R1kSegChunk 0x%x-0x%x/0x%x %s}" % (self.begin, self.end, len(self.bits), str(self.owner))
 
     def __getitem__(self, idx):
         return self.bits[idx]
@@ -52,7 +54,7 @@ def render_chunk(fo, chunk, offset=0):
         end = residual + ((offset + mask) & ~mask)
         end = min(end, len(chunk))
         n = chunk.bits.find('1', offset)
-        t = "    0x%06x " % (offset + chunk.begin)
+        t = "    0x%06x" % (offset + chunk.begin)
         t += " +0x%04x: " % offset
         if n < 0:
             t += "0x0 ".rjust(39)
@@ -77,13 +79,17 @@ class R1kCut():
     Just leave a cut where the object will go
     '''
     def __init__(self, seg, address, **_kwargs):
-        p = seg.mkcut(address)
+        p = seg.starts.get(address)
+        if not p:
+            p = seg.mkcut(address)
         seg.dot.node(p, 'shape=plaintext', 'label="CUT\\n0x%x"' % address)
+        return p
 
 class R1kSegField():
     ''' Field in a R1kSegBase '''
 
-    def __init__(self, offset, width, name, val):
+    def __init__(self, up, offset, width, name, val):
+        self.up = up
         self.offset = offset
         self.width = width
         self.name = name
@@ -92,6 +98,8 @@ class R1kSegField():
 
     def render(self):
         ''' ... '''
+        if self.name[-2:] == "_p":
+            return " " + self.name + " → " + self.up.seg.label(self.val)
         return " " + self.name + " = " + self.fmt % self.val
 
 class R1kSegBase():
@@ -125,6 +133,18 @@ class R1kSegBase():
     def __str__(self):
         return "{@0x%x: " % self.begin + self.title + "}"
 
+    def truncate(self, offset=None):
+        '''
+        Change the length of our chunk
+        '''
+        if offset is None:
+            offset = self.offset
+        self.chunk.owner = None
+        self.chunk = self.seg.cut(self.begin, offset)
+        self.chunk.owner = self
+        self.end = self.chunk.begin + len(self.chunk)
+        self.offset = offset
+
     def get_fields(self, *fields):
         '''
         Create numerical fiels, starting at the first bit
@@ -135,7 +155,7 @@ class R1kSegBase():
                 width = len(self.chunk[self.offset:])
             i = int(self.chunk[self.offset:self.offset+width], 2)
             setattr(self, name, i)
-            self.fields.append(R1kSegField(self.offset, width, name, i))
+            self.fields.append(R1kSegField(self, self.offset, width, name, i))
             self.offset += width
         return self.offset
 
@@ -205,7 +225,7 @@ def make_one(self, attr, cls, func=None, **kwargs):
             return func(self.seg, a, **kwargs)
         return cls(self.seg, a, **kwargs)
     except MisFit as err:
-        print(self.seg.this, "MISFIT 0x%x" % a, self, attr, err)
+        print(self.seg.this, "MISFIT at 0x%x" % a, "%s.%s:" % (str(self), attr), err)
 
 class BitPointer(R1kSegBase):
     ''' A pointer of some width '''
@@ -216,7 +236,9 @@ class BitPointer(R1kSegBase):
             title="POINTER",
             **kwargs,
         )
-        self.get_fields(("destination", 32))
+        self.get_fields(
+            ("ptr_p", 32)
+        )
         self.compact = True
 
 class BitPointerArray(R1kSegBase):
