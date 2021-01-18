@@ -105,8 +105,6 @@ class R1kBackupObject():
             yield from IndirBlock(self.vol, block1)
 
     def resolve(self):
-        if self.space_info[8] != 0x97:
-            return
         i = 0
         blocks = []
         sparse = False

@@ -249,7 +249,7 @@ class R1kBackup():
                 bits |= 8
             if i[:21] == "HDR3Space Info Vol 1 ":
                 bits |= 16
-            print("%02x" % bits, i)
+            # print("%02x" % bits, i)
         if bits != 0x1f:
             return
         this.parents[0].by_class[R1kBackup] = self

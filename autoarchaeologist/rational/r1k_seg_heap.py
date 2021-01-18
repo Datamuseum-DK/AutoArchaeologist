@@ -244,7 +244,7 @@ class R1kSegHeap():
         self.render_chunks(self.tfile)
         self.tfile.close()
 
-        self.dot.enable()
+        # self.dot.enable()
         self.dot.finish()
 
         del self.starts
@@ -274,7 +274,7 @@ class R1kSegHeap():
                 LinkPack.R1kSegLinkPack(self, self.mkcut(0x80))
             except bittools.MisFit as err:
                 print("FAIL LINKPACK", self.this, err)
-                raise
+                # raise
             return # no hunting, dissector is fairly competent.
 
         if self.this.has_note('97_tag'):
@@ -282,6 +282,7 @@ class R1kSegHeap():
                 seg97.R1kSeg97(self)
             except bittools.MisFit as err:
                 print("FAIL SEG97", self.this, err)
+                # raise
             return
 
         # Make copy of chunks list, because it will be modified along the way
@@ -305,12 +306,13 @@ class R1kSegHeap():
             for chunk2, offset, address in cuts:
                 if chunk2.owner is not None:
                     continue
+                val = int(chunk.bits[:17], 2)
                 if verbose:
                     print(
                         "Orphan ptr from %s+0x%x" % (str(chunk2), offset),
-                        "to", chunk
+                        "to", chunk, "val 0x%x" % val
                     )
-                bittools.BitPointer(self, address, size=width, ident="orphan")
+                bittools.BitPointer(self, address, size=width, ident="orphan→0x%x" % val)
 
     def hunt(self, pattern):
         ''' hunt for particular pattern '''

@@ -35,6 +35,65 @@ class Dummy(bittools.R1kSegBase):
         self.compact = True
         seg.dot.node(self, "shape=ellipse,fillcolor=red,style=filled")
 
+#######################################################################
+
+class DianaChain(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        c = seg.cut(address, -1)
+        super().__init__(seg, c)
+        self.compact = DIANA_COMPACT
+        self.get_fields(
+            ("chain_type", 1),
+            ("next_p", 26),
+        )
+        if self.chain_type == 1:
+            self.get_fields(
+                ("chain_2_p", 26),
+            )
+            self.truncate()
+            bittools.make_one(self, 'chain_2_p', bittools.R1kSegBase, someclass)
+        else:
+            self.truncate()
+            bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
+
+class DianaChain2(bittools.R1kSegBase):
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, -1))
+        self.compact = True
+        self.get_fields(
+            ("chain2_type", 9),
+            ("chain2_1_p", 26),
+            ("next_p", 26),
+        )
+        self.truncate()
+        if not self.chain2_type:
+            bittools.make_one(self, 'chain2_1_p', bittools.R1kSegBase, someclass)
+
+def make_chains(seg, address, func):
+    ''' Follow a chain non-recusively '''
+    reval = None
+    last = None
+    while address:
+        y = func(seg, address)
+        address = y.next_p
+        if last:
+            seg.dot.edge(last, y)
+        last = y
+        if reval is None:
+            reval = y
+    return reval
+
+def make_chain(seg, address):
+    ''' Follow a chain non-recusively '''
+    return make_chains(seg, address, DianaChain)
+
+def make_chain2(seg, address):
+    ''' Follow a chain non-recusively '''
+    return make_chains(seg, address, DianaChain2)
+
+#######################################################################
+
 class SomeBlock(bittools.R1kSegBase):
     ''' ... '''
     def __init__(self, seg, address, length):
@@ -97,10 +156,11 @@ class Diana_10c94(bittools.R1kSegBase):
         bittools.make_one(self, 'Diana_10c94_1_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_10c94_2_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_10c94_3_p', DianaChain, func=make_chain)
+        # XXX: Determine length of this sequence of 32 bit numbers
         bittools.make_one(
             self,
             'Diana_10c94_5_p',
-            bittools.BitPointerArray, count=10
+            bittools.BitPointerArray, count=2
         )
 
 
@@ -152,31 +212,34 @@ diana_types = {
     0x1037a: "t p p p",
     0x10381: "t p p p p",
     0x10382: "t p p p p",
+    0x103a9: "t p p p p .",
     0x103aa: "t p p p p",
-    0x10402: "t p p p p",
-    0x10437: "t p p p p",
-    0x1043a: "t p p p p",
-    0x1043c: "t p p p p",
-    0x1043e: "t p p p p",
-    0x1043f: "t p p p p",
-    0x10440: "t p p p p",
-    0x10442: "t p p p p",
-    0x10444: "t p p p p",
-    0x10446: "t p p p p",
+    0x10402: "t p p p p 17",
+    0x10437: "t p p p p 17",
+    0x1043a: "t p p p p 17",
+    0x1043c: "t p p p p 17",
+    0x1043e: "t p p p p 17",
+    0x1043f: "t p p p p 17",
+    0x10440: "t p p p p 17",
+    0x10442: "t p p p p 17",
+    0x10444: "t p p p p 17",
+    0x10446: "t p p p p 17",
     0x10447: "t p p p p 17",
     0x10449: "t p p p p 17",
-    0x1044d: "t p p p p",		# ⟦fd533ba7a⟧
-    0x1044f: "t p p p",
-    0x10450: "t",
-    0x10451: "t p p p p",
-    0x10457: "t p p p p",
-    0x10458: "t p p p p",
-    0x1045e: "t p p p p",
-    0x10460: "t p p p p",
-    0x10479: "t p p p p",
-    0x1047c: "t p p p p",
-    0x1049f: "t p p p p",
-    0x104a1: "t p p p p",
+    0x1044d: "t p p p p 17",		# ⟦fd533ba7a⟧
+    0x1044f: "t p p p p 17",
+    0x10450: "t 8 26 1",		# `26` is sometimes obj-ptr
+    0x10451: "t p p p p 17",
+    0x10457: "t p p p p 17",
+    0x10458: "t p p p p 17",
+    0x1045e: "t p p p p 17",
+    0x10460: "t p p p p 17",
+    0x10479: "t p p p p 17",
+    0x1047c: "t p p p p 17",
+    0x1049e: "t p p p p 17",
+    0x1049f: "t p p p p 17",
+    0x104a1: "t p p p p 17",
+    0x105a0: "t p p p p 17",
     0x10630: "t 8 p 32",
     0x10638: "t p p p p p 17",
     0x10639: "t p p p p p 17",
@@ -191,23 +254,23 @@ diana_types = {
     0x10654: "t p p p p p 17",
     0x1065b: "t p p p p p 17",
     0x10701: "t p p",		# ⟦4c2cac0c5⟧
-    0x10760: "t",		# Followed by [0x32]
+    0x10760: "t 50",
     0x10863: "t p p c",
     0x1086e: "t p p c",
-    0x1088a: "t p p",		# ⟦fd533ba7a⟧
-    0x1088b: "t p p",
+    0x1088a: "t p p c",		# ⟦fd533ba7a⟧
+    0x1088b: "t p p c",
     0x10890: "t p p c",
-    0x10892: "t p p",
-    0x10893: "t p",		# Followed by [0x34]
+    0x10892: "t p p c",
+    0x10893: "t p p c",		# Followed by [0x34]
     0x10899: "t p p c",
-    0x10945: "t p p P 17",
+    0x10945: "t p p c",
     0x10956: "t p p c",
-    0x10980: "t",
+    0x10980: "t 8 p" ,
     0x10984: "t p p c 17",
     0x10985: "t p p c 17",
-    0x10989: "t p p c",
-    0x10995: "t p p",
-    0x10996: "t p p",
+    0x10989: "t p p c 17",
+    0x10995: "t p p c 17",
+    0x10996: "t p p c 17",
     0x10997: "t p p c 17",
     0x10a0d: "t p p p",
     0x10a90: "t",
@@ -217,7 +280,6 @@ diana_types = {
     0x10c8c: "t p p c",
     0x10c8f: "t p p P",
     0x10c91: "t p p c 32 17 .",
-    #0x10c94: "t p p c 6 P",		# Followed by [0x31...]
     0x10c94: Diana_10c94,
     0x10e0e: "t p p p p",
     0x10f05: "t p p p p",
@@ -241,9 +303,9 @@ diana_types = {
     0x11a7e: "t p p p p p 1",	# Followed by [0x1]
     0x11a7f: "t p p p p p",
     0x11a9b: "t p p p p p 1 .",
-    0x11c20: "t p p",
+    0x11c20: "t p p 56",
     0x11b1f: "t p p 24 p",
-    0x11d8d: "t p p p",		# ⟦fd533ba7a⟧ Followed by [0x9]
+    0x11d8d: "t p p p c2",		# ⟦fd533ba7a⟧ Followed by [0x9]
     0x11e64: "t p p p p",	# ⟦24afbc399⟧
     0x11f65: "t p p p p",	# ⟦24afbc399⟧
     0x1ff9c: "t p p",
@@ -286,6 +348,8 @@ diana_types = {
     0x13b17: "t p 76",
     0x13eab: "t p",
     0x13f5a: "t p",
+    0x13f5f: "t p",
+    0x1ffa4: "t p p 12",
     0x1ff74: "t p p 12",
     0x1ff75: "t p p 12",
     0x1ff76: "t p p 12",
@@ -315,12 +379,12 @@ class DianaSkeleton(bittools.R1kSegBase):
                 bittools.R1kSegBase,
                 func=someclass,
             )
-        for i in chains:
+        for field, cls, func in chains:
             y = bittools.make_one(
                 self,
-                i,
-                DianaChain,
-                func=make_chain,
+                field,
+                cls,
+                func=func,
             )
             if y:
                 seg.dot.edge(self, y)
@@ -344,7 +408,10 @@ class PrepareTypes():
             for spec in b.split():
                 if spec == "c":
                     self.add_field(a, "%d_ptr" % self.nbr, 26, False)
-                    self.chains.append(self.fields[-1][0])
+                    self.chains.append((self.fields[-1][0], DianaChain, make_chain))
+                elif spec == "c2":
+                    self.add_field(a, "%d_ptr" % self.nbr, 26, False)
+                    self.chains.append((self.fields[-1][0], DianaChain2, make_chain2))
                 elif spec == "e":
                     self.objs.append('end')
                 elif spec == "P":
@@ -394,41 +461,6 @@ def someclass(seg, address):
     else:
         reval = t(seg, address)
     return reval
-
-class DianaChain(bittools.R1kSegBase):
-    ''' ... '''
-    def __init__(self, seg, address):
-        c = seg.cut(address, -1)
-        super().__init__(seg, c)
-        self.compact = DIANA_COMPACT
-        self.get_fields(
-            ("chain_type", 1),
-            ("chain_next_p", 26),
-        )
-        if self.chain_type == 1:
-            self.get_fields(
-                ("chain_2_p", 26),
-            )
-            self.truncate()
-            bittools.make_one(self, 'chain_2_p', bittools.R1kSegBase, someclass)
-        else:
-            self.truncate()
-            bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
-
-def make_chain(seg, address):
-    ''' Follow a chain non-recusively '''
-    reval = None
-    last = None
-    while address:
-        y = DianaChain(seg, address)
-        address = y.chain_next_p
-        if last:
-            seg.dot.edge(last, y)
-        last = y
-        if reval is None:
-            reval = y
-    return reval
-
 #######################################################################
 # D1xx is header variant 1
 
@@ -960,7 +992,7 @@ class R1kSeg97():
         if self.head.head_stuff1:
             someclass(seg, self.head.head_stuff1)
 
-        #seg.hunt_orphans(26, verbose=False)
+        # seg.hunt_orphans(26, verbose=False)
 
 
         seg.dot.edge(self.head, self.table)
