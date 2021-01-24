@@ -339,7 +339,9 @@ class ArtifactClass():
 
         if self.interpretations:
             for _owner, func in self.interpretations:
+                fo.write('<div>\n')
                 func(fo, self)
+                fo.write('</div>\n')
         else:
             self.html_interpretation_hexdump(fo, self)
 

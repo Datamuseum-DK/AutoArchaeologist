@@ -331,6 +331,7 @@ class Excavation():
         fo.write("<head>\n")
         self.html_prefix_head(fo, this)
         fo.write("</head>\n")
+        fo.write("<body>\n")
         self.html_prefix_banner(fo, this)
         fo.write("<pre>")
         fo.write(self.html_link_to(self, "top"))
@@ -340,6 +341,7 @@ class Excavation():
 
     def html_suffix(self, fo):
         ''' Tail of all the HTML pages '''
+        fo.write("</body>\n")
         fo.write("</html>\n")
 
     def html_derivation(self, _fo):
