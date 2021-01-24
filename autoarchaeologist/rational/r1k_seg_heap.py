@@ -11,6 +11,7 @@ import subprocess
 import autoarchaeologist.rational.r1k_linkpack as LinkPack
 import autoarchaeologist.rational.r1k_bittools as bittools
 import autoarchaeologist.rational.r1k_97seg as seg97
+import autoarchaeologist.rational.r1k_a6seg as sega6
 
 class TreeNode():
     ''' A binary tree of bits (literally) and pieces of an artifact '''
@@ -137,6 +138,9 @@ class DotPlot():
             self.dotf.write("]")
         self.dotf.write("\n")
 
+    def write(self, str):
+        self.dotf.write(str + "\n")
+
     def finish(self):
         ''' run dot(1) '''
         if self.dotf.tell() == self.empty:
@@ -144,7 +148,7 @@ class DotPlot():
         self.dotf.write('}\n')
         self.dotf.close()
         if not self.enabled:
-            os.remove(self.dotfn.filename)
+            # os.remove(self.dotfn.filename)
             return
         subprocess.run(
             [
@@ -158,9 +162,10 @@ class DotPlot():
 
     def render_dot(self, fo, _this):
         ''' inline image '''
+        fo.write("<H3>Dot plot</H3>\n")
+        fo.write('<A href="%s">Dot(1) source file</a>\n' % self.dotfn.link)
         if not self.enabled:
             return
-        fo.write("<H3>Dot plot</H3>\n")
         fo.write('<img src="%s" width="100%%"/>\n' % self.svgfn.link)
 
 class R1kSegHeap():
@@ -235,7 +240,8 @@ class R1kSegHeap():
             self.ponder()
         except Exception as err:
             print("PONDERING FAILED", this, err)
-            raise
+            if "AA_RUN_DOT" in os.environ:
+                raise
 
 	# Render to a temporary file while parsing, so we can delete
 	# all the bitmaps, otherwise the memory footprint roughly
@@ -244,7 +250,8 @@ class R1kSegHeap():
         self.render_chunks(self.tfile)
         self.tfile.close()
 
-        # self.dot.enable()
+        if "AA_RUN_DOT" in os.environ:
+            self.dot.enable()
         self.dot.finish()
 
         del self.starts
@@ -282,7 +289,17 @@ class R1kSegHeap():
                 seg97.R1kSeg97(self)
             except bittools.MisFit as err:
                 print("FAIL SEG97", self.this, err)
-                # raise
+                if "AA_RUN_DOT" in os.environ:
+                    raise
+            return
+
+        if self.this.has_note('a6_tag'):
+            try:
+                sega6.R1kSegA6(self)
+            except bittools.MisFit as err:
+                print("FAIL SEGa6", self.this, err)
+                if "AA_RUN_DOT" in os.environ:
+                    raise
             return
 
         # Make copy of chunks list, because it will be modified along the way
@@ -297,22 +314,30 @@ class R1kSegHeap():
             if not chunk.owner:
                 bittools.hunt_strings(self, chunk)
 
-    def hunt_orphans(self, width=32, verbose=True):
+    def hunt_orphans(self, width=32, target_width=32, verbose=True):
         ''' Hut for `width` bit pointers to start of existing chunks '''
+        rv = False
         for _i, chunk in self.tree:
-            if chunk.begin < 0x1000: # Too many false positives with small numbers
+            if len(bin(chunk.begin).replace('0', '')) < 3:
+                # Too few 1's give too many false positives
                 continue
             cuts = self.hunt(bin((1<<width) + chunk.begin)[3:])
             for chunk2, offset, address in cuts:
                 if chunk2.owner is not None:
                     continue
-                val = int(chunk.bits[:17], 2)
+                val = int(chunk.bits[:target_width], 2)
                 if verbose:
                     print(
                         "Orphan ptr from %s+0x%x" % (str(chunk2), offset),
                         "to", chunk, "val 0x%x" % val
                     )
-                bittools.BitPointer(self, address, size=width, ident="orphan→0x%x" % val)
+                try:
+                    y = bittools.BitPointer(self, address, size=width, ident="orphan→0x%x" % val)
+                    self.dot.node(y, 'style=filled', 'fillcolor="#cccccc"')
+                    rv = True
+                except bittools.MisFit:
+                    pass
+        return rv
 
     def hunt(self, pattern):
         ''' hunt for particular pattern '''

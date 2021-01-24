@@ -51,10 +51,10 @@ class DianaChain(bittools.R1kSegBase):
             self.get_fields(
                 ("chain_2_p", 26),
             )
-            self.truncate()
+            self.finish()
             bittools.make_one(self, 'chain_2_p', bittools.R1kSegBase, someclass)
         else:
-            self.truncate()
+            self.finish()
             bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
 
 class DianaChain2(bittools.R1kSegBase):
@@ -66,7 +66,7 @@ class DianaChain2(bittools.R1kSegBase):
             ("chain2_1_p", 26),
             ("next_p", 26),
         )
-        self.truncate()
+        self.finish()
         if not self.chain2_type:
             bittools.make_one(self, 'chain2_1_p', bittools.R1kSegBase, someclass)
 
@@ -152,7 +152,7 @@ class Diana_10c94(bittools.R1kSegBase):
             ("Diana_10c94_5_p", 26),
             ("Diana_10c94_6_n", 17),
         )
-        self.truncate()
+        self.finish()
         bittools.make_one(self, 'Diana_10c94_1_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_10c94_2_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_10c94_3_p', DianaChain, func=make_chain)
@@ -180,7 +180,7 @@ class Diana_112a8(bittools.R1kSegBase):
             ("Diana_112a8_7", 17),
             #("Diana_112a8_8", 32),
         )
-        self.truncate()
+        self.finish()
         bittools.make_one(self, 'Diana_112a8_1_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_112a8_2_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_112a8_3_p', bittools.R1kSegBase, someclass)
@@ -926,7 +926,7 @@ class HeadVar1(Head):
             ("hv1_z0", 32,),
             ("hv1_d100", 32,),
         )
-        self.truncate()
+        self.finish()
         bittools.make_one(self, 'hv1_d100', D100)
 
 class HeadVar2(Head):
@@ -943,7 +943,7 @@ class HeadVar2(Head):
             ("hv2_u2", 32,),
             ("hv2_u3", 32,),
         )
-        self.truncate()
+        self.finish()
         bittools.make_one(self, 'hv2_u1', bittools.R1kCut)
         bittools.make_one(self, 'hv2_u3', bittools.R1kCut)
 
@@ -959,7 +959,7 @@ class HeadVar3(Head):
             ("hv3_u0", 32,),
             ("hv3_d300", 32,),
         )
-        self.truncate()
+        self.finish()
         bittools.make_one(self, 'hv3_d300', D300)
 
 

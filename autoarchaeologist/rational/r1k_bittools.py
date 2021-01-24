@@ -31,8 +31,9 @@ class R1kSegChunk():
 
     def __str__(self):
         if self.owner:
-            return str(self.owner)
-        return "{R1kSegChunk 0x%x-0x%x/0x%x %s}" % (self.begin, self.end, len(self.bits), str(self.owner))
+            i = self.owner.__class__.__name__
+            return "{%s 0x%x-0x%x/0x%x}" % (i, self.begin, self.end, len(self.bits))
+        return "{R1kSegChunk 0x%x-0x%x/0x%x}" % (self.begin, self.end, len(self.bits))
 
     def __getitem__(self, idx):
         return self.bits[idx]
@@ -96,6 +97,9 @@ class R1kSegField():
         self.fmt = "0x%%0%dx" % (((width-1)>>2)+1)
         self.val = val
 
+    def __str__(self):
+        return self.render()
+
     def render(self):
         ''' ... '''
         if self.name[-2:] == "_p":
@@ -108,9 +112,10 @@ class R1kSegBase():
     Base class for the bit-structures we find.
     '''
 
-    def __init__(self, seg, chunk, title="", ident=""):
+    def __init__(self, seg, chunk, title="", ident="", target=None):
         self.seg = seg
         self.chunk = chunk
+        self.target = target
         if not title:
             title = self.__class__.__name__
         self.title = title
@@ -127,23 +132,50 @@ class R1kSegBase():
         seg.dot.node(
            chunk,
            "shape=box",
-           'label="%s\\n0x%x"' % (title, chunk.begin),
+           'label="%s\\n0x%x"' % (self.title.replace(" ", "\\n"), chunk.begin),
         )
 
     def __str__(self):
         return "{@0x%x: " % self.begin + self.title + "}"
 
-    def truncate(self, offset=None):
+    def __iter__(self):
+        yield from self.fields
+
+    def truncate(self):
+        print("Change .truncate() to .finish()", self)
+        return self.finish()
+        
+    def finish(self):
         '''
         Change the length of our chunk
         '''
-        if offset is None:
-            offset = self.offset
+        offset = self.offset
         self.chunk.owner = None
         self.chunk = self.seg.cut(self.begin, offset)
         self.chunk.owner = self
         self.end = self.chunk.begin + len(self.chunk)
         self.offset = offset
+        for i in self.fields:
+            if i.name[-2:] == "_z":
+                assert not i.val
+                i.fmt = "0x%x"
+                continue
+            if not i.val or i.name[-2:] != "_p":
+                continue
+            if self.target:
+                y = make_one(self, i.name, self.target)
+                if y:
+                    self.seg.dot.edge(self, y)
+            elif not 0x7f < i.val < len(self.seg.this) * 8:
+                pass
+            else:
+                t = self.seg.starts.get(i.val)
+                if t:
+                    self.seg.dot.edge(self, t)
+                else:
+                    p = self.seg.mkcut(i.val)
+                    self.seg.dot.edge(self, p)
+        # self.seg.dot.write('X_0x%x -> X_0x%x [style=dotted]' % (self.begin, self.end))
 
     def get_fields(self, *fields):
         '''
@@ -155,7 +187,7 @@ class R1kSegBase():
                 width = len(self.chunk[self.offset:])
             if self.offset+width > len(self.chunk):
                 print(
-                    "Not enough data",
+                    "Not enough data in",
                     self,
                     self.chunk,
                     "Len",
@@ -188,12 +220,13 @@ class R1kSegBase():
                 fo.write(" +0x%04x:" % fld.offset)
             fo.write(fld.render())
             if not self.compact:
-                fo.write(" [%s]\n" % self.chunk[fld.offset:fld.offset+fld.width])
+                if fld.name[-2:] != "_z":
+                    fo.write(" [%s]" % self.chunk[fld.offset:fld.offset+fld.width])
+                fo.write("\n")
             retval = fld.offset + fld.width
-        if self.compact:
-            fo.write("\n")
         if self.text is not None:
-            fo.write(' "' + self.text + '"\n')
+            fo.write(' "' + self.text + '"')
+        fo.write('\n')
         return retval
 
     def render_bits(self, fo, chunk=None, offset=0):
@@ -224,7 +257,6 @@ def make_one(self, attr, cls, func=None, **kwargs):
     if not a:
         return None
     p = self.seg.mkcut(a)
-    self.seg.dot.edge(self, p)
     if cls is R1kCut:
         return p
     if isinstance(p.owner, cls):
@@ -234,51 +266,65 @@ def make_one(self, attr, cls, func=None, **kwargs):
         return None
     try:
         if func:
-            return func(self.seg, a, **kwargs)
-        return cls(self.seg, a, **kwargs)
+            y = func(self.seg, a, **kwargs)
+        else:
+            y = cls(self.seg, a, **kwargs)
+        return y
     except MisFit as err:
         print(self.seg.this, "MISFIT at 0x%x" % a, "%s.%s:" % (str(self), attr), err)
 
 class BitPointer(R1kSegBase):
     ''' A pointer of some width '''
-    def __init__(self, seg, address, size=32, **kwargs):
+    def __init__(self, seg, address, size=32, target=None, **kwargs):
         super().__init__(
             seg,
             seg.cut(address, size),
             title="POINTER",
             **kwargs,
         )
+        self.compact = True
         self.get_fields(
             ("ptr_p", size)
         )
-        self.compact = True
+        self.finish()
 
 class BitPointerArray(R1kSegBase):
     ''' A pointer of some width '''
-    def __init__(self, seg, address, count, size=32, target=None, **kwargs):
+    def __init__(self, seg, address, count, size=32, **kwargs):
         super().__init__(
             seg,
             seg.cut(address, count * size),
             **kwargs,
         )
-        offset = 0
-        self.count = count
-        self.size = size
-        self.data = []
-        for _n in range(count):
-            i = int(self.chunk[offset:offset + size], 2)
-            self.data.append(i)
-            if i and target:
-                j = target(seg, i)
-                seg.dot.edge(self, j)
-            offset += size
+        for i in range(count):
+            self.get_fields(
+                ("ptr_0x%x_p" % i, size)
+            )
+        self.finish()
 
-    def render(self, _chunk, fo):
+    def _render(self, _chunk, fo):
         ''' Only non-zero entries '''
         fo.write(self.title + "[0x%x×0x%x]\n" % (self.count, self.size))
         for i, j in enumerate(self.data):
             if j:
                 fo.write(("[0x%x]:" % i).rjust(39) + " 0x%x\n" % j)
+
+class Array(R1kSegBase):
+    ''' Array format'''
+    def __init__(self, seg, address, width=8, **kwargs):
+        p = seg.mkcut(address)
+        i = int(p[32:64], 2)
+        p = seg.cut(address, 64 + i * width)
+        super().__init__(seg, p, title="ARRAY", **kwargs)
+        self.get_fields(
+            ("x", 32),
+            ("y", 32)
+        )
+        for j in range(i):
+            self.get_fields(
+                ("a_%x_n" % j, width)
+            )
+        self.finish()
 
 class ArrayString(R1kSegBase):
     ''' String on Array format'''
@@ -313,11 +359,14 @@ class String(R1kSegBase):
             title="STRING",
             **kwargs,
         )
-
         if not text:
             self.length, self.text = to_text(seg, self.chunk, 0, length)
         else:
             self.text = text
+
+        seg.dot.write('T_0x%x [shape=plaintext, label="%s"]' % (self.begin, html.escape(self.text)))
+        seg.dot.write('X_0x%x -> T_0x%x' % (self.begin, self.begin))
+
 
     def render(self, chunk, fo):
         ''' one line '''
@@ -336,6 +385,8 @@ def to_text(seg, chunk, pointer, length, no_fail=False):
     text = ""
     i = 0
     for i in range(length):
+        if no_fail and pointer + 8 > len(chunk):
+            return i, text
         char = int(chunk[pointer:pointer+8], 2)
         if not seg.type_case.valid[char]:
             if no_fail:
@@ -346,27 +397,31 @@ def to_text(seg, chunk, pointer, length, no_fail=False):
     return i + 1, text
 
 def hunt_array_strings(seg, chunk):
+    return
     ''' Find any strings on array format '''
-    offset = 0
+    offset = 0x80
     candidates = []
+    pp = '0' * 31 + '1' + '0' * 20
     while len(chunk) - offset >= 72:
-        c = chunk[offset:]
-        i = c.find('0' * 31 + '1' + '0' * 24)
+        i = chunk.find(pp, offset)
         if i < 0:
             break
-        length = int(c[i+32:i+64], 2)
+        offset = i
+        length = int(chunk[offset+32:offset+64], 2)
         if length < 3 or length > 200:
-            offset += i + 32
+            offset += 32
             continue
-        if i + 64 + length * 8 > len(c):
-            offset += i + 32
+        if offset + 64 + length * 8 > len(chunk):
+            offset += 32
             continue
         try:
-            width, _text = to_text(seg, c, i + 64, length)
-        except NotText:
-            offset += i + 32
+            width, _text = to_text(seg, chunk, offset + 64, length)
+        except NotText as err:
+            offset += 32
             continue
+
         assert width == length
+        print("! 0x%x" % offset, _text)
         candidates.append(chunk.begin + offset + i)
         offset += i + 64 + 8 * length
 
