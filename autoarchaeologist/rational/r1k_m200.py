@@ -20,16 +20,19 @@ class R1kM200File(pyreveng3.PyReveng3):
             return
         sig = this[:6].tobytes().hex()
         if sig == "000400000002":
+            this.add_note("M200_GENERIC")
             super().__init__(
                 this,
                 "examples/R1000_400/example_m200.py"
             )
         elif sig == "000200000001":
+            this.add_note("M200_FS")
             super().__init__(
                 this,
                 "examples/R1000_400/example_ioc_fs.py"
             )
         elif sig == "0000fc000000":
+            this.add_note("M200_KERNEL")
             super().__init__(
                 this,
                 "examples/R1000_400/example_ioc_kernel.py"
