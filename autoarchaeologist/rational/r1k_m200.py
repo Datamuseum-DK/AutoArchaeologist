@@ -35,7 +35,7 @@ class R1kM200File():
                 )
             else:
                 print(this, "Unidentified .M200")
-        elif this.has_type("M400_PROM"):
+        elif this.has_type("M400_PROM") or this.has_type("M200_PROM"):
             i = this[:0x400].tobytes()
             if b'S3F5000700' in i:
                 this.add_note("RESHA_EEPROM")
