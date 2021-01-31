@@ -35,10 +35,15 @@ class Utf8Interpretation():
         self.filename = this.tmpfile_for().filename
         this.add_interpretation(self, self.html_interpretation)
 
-    def html_interpretation(self, fo, _this):
+    def html_interpretation(self, fo, this):
+        try:
+            fi = open(self.filename)
+        except FileNotFoundError as err:
+            print(this, "Could not open output file:", err)
+            return
         fo.write("<H3>" + self.title + "</H3>\n")
         fo.write("<pre>\n")
-        for i in open(self.filename):
+        for i in fi:
             fo.write(html.escape(i))
         os.remove(self.filename)
 
