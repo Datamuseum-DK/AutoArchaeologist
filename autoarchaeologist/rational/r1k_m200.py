@@ -1,6 +1,6 @@
 '''
-   Rational R1000 M200 68K20 Assembly Files
-   ----------------------------------------
+   Rational R1000 M200 68K20 Binary Files
+   --------------------------------------
 
    Call out to PyReveng3 for disassembling assistance
 
@@ -10,36 +10,27 @@
 import sys
 import subprocess
 
-import autoarchaeologist
+import autoarchaeologist.generic.pyreveng3 as pyreveng3
 
-class R1kM200File():
+class R1kM200File(pyreveng3.PyReveng3):
     ''' IOC program '''
 
     def __init__(self, this):
-        if not autoarchaeologist.PYREVENG3:
-            return
         if not this.has_type("M200"):
             return
         sig = this[:6].tobytes().hex()
-        if sig != "000400000002":
-            print("?R1K_M200", this, len(this), sig, this.name)
-            return
-
-        tf1 = this.tmpfile_for()
-        this.writetofile(open(tf1.filename, "wb"))
-
-        tf2 = this.add_utf8_interpretation("Disassembly")
-        sys.stdout.flush()
-        sys.stderr.flush()
-        try:
-            subprocess.run(
-                [
-                    "python3",
-                    autoarchaeologist.PYREVENG3 + "/examples/R1000_400/example_m200.py",
-                    tf1.filename,
-                    tf2.filename,
-                ],
-                check = True,
+        if sig == "000400000002":
+            super().__init__(
+                this,
+                "examples/R1000_400/example_m200.py"
             )
-        except subprocess.CalledProcessError as err:
-            print("Disassmbly failed", this, err)
+        elif sig == "000200000001":
+            super().__init__(
+                this,
+                "examples/R1000_400/example_ioc_fs.py"
+            )
+        elif sig == "0000fc000000":
+            super().__init__(
+                this,
+                "examples/R1000_400/example_ioc_kernel.py"
+            )
