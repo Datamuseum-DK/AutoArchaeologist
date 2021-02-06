@@ -13,7 +13,12 @@ class R1kM200File():
     ''' IOC program '''
 
     def __init__(self, this):
-        if this.has_type("M200"):
+        if this.has_note("M200_DFS_BOOTSTRAP.M200"):
+            pyreveng3.PyReveng3(
+                this,
+                "examples/R1000_400/example_bootstrap.py"
+            )
+        elif this.has_type("M200"):
             sig = this[:6].tobytes().hex()
             if sig == "000400000002":
                 this.add_note("M200_GENERIC")
