@@ -32,7 +32,7 @@ class PyReveng3():
                     "-u",
                     path,
                     "-AutoArchaeologist",
-                    this.digest,
+                    this.digest[:16],
                     tf1.filename,
                     tf2.filename,
                 ],
