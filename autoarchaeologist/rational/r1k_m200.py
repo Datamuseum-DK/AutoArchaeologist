@@ -13,10 +13,10 @@ class R1kM200File():
     ''' IOC program '''
 
     def __init__(self, this):
-        if this.has_note("M200_DFS_BOOTSTRAP.M200"):
+        if len(this) <= 1024 and b'Unknown boot device type' in this.tobytes():
             pyreveng3.PyReveng3(
                 this,
-                "examples/R1000_400/example_bootstrap.py"
+                "examples/R1000_400/example_ioc_dfs_bootstrap.py"
             )
         elif this.has_type("M200"):
             sig = this[:6].tobytes().hex()
@@ -46,7 +46,7 @@ class R1kM200File():
                 this.add_note("RESHA_EEPROM")
                 pyreveng3.PyReveng3(
                     this,
-                    "examples/R1000_400/example_resha_eeprom.py"
+                    "examples/R1000_400/example_ioc_resha_eeprom.py"
                 )
             elif b'S3F5800' in i:
                 this.add_note("IOC_EEPROM")
