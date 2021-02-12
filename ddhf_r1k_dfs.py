@@ -8,6 +8,7 @@ from autoarchaeologist.ddhf.bitstore import FromBitStore
 
 from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
+from autoarchaeologist.generic.sccs_id import SccsId
 from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
 from autoarchaeologist.rational.index_data import R1K_Index_Data
 from autoarchaeologist.rational.dfs_tape import R1K_DFS_Tape
@@ -38,6 +39,7 @@ def r1k_dfs_job(**kwargs):
     ctx.add_examiner(R1K_Ucode_File)
     ctx.add_examiner(R1kM200File)
     ctx.add_examiner(Ascii)
+    ctx.add_examiner(SccsId)
     #ctx.add_examiner(SameSame)
 
     FromBitStore(
