@@ -15,6 +15,7 @@ from autoarchaeologist.rational.dfs_tape import R1K_DFS_Tape
 from autoarchaeologist.rational.r1k_assy import R1kAssyFile
 from autoarchaeologist.rational.r1k_ucode import R1K_Ucode_File
 from autoarchaeologist.rational.r1k_m200 import R1kM200File
+from autoarchaeologist.rational.r1k_experiment import R1kExperiment
 
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.generic.ascii import Ascii
@@ -39,6 +40,7 @@ def r1k_dfs_job(**kwargs):
     ctx.add_examiner(R1K_Ucode_File)
     ctx.add_examiner(R1kM200File)
     ctx.add_examiner(Ascii)
+    ctx.add_examiner(R1kExperiment)
     ctx.add_examiner(SccsId)
     #ctx.add_examiner(SameSame)
 
