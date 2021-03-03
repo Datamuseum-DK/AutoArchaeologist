@@ -7,36 +7,36 @@
    (https://github.com/bsdphk/PyReveng3)
 '''
 
-import autoarchaeologist.generic.pyreveng3 as pyreveng3
+import autoarchaeologist.rational.r1k_disass as r1k_disass
 
 class R1kM200File():
     ''' IOC program '''
 
     def __init__(self, this):
         if len(this) <= 1024 and b'Unknown boot device type' in this.tobytes():
-            pyreveng3.PyReveng3(
+            r1k_disass.R1kDisass(
                 this,
-                "examples/R1000_400/example_ioc_dfs_bootstrap.py"
+                "DFS/disass_dfs.py",
             )
         elif this.has_type("M200"):
-            sig = this[:6].tobytes().hex()
-            if sig == "000400000002":
+            sig = this[:4].tobytes().hex()
+            if sig == "00040000":
                 this.add_note("M200_PROGRAM")
-                pyreveng3.PyReveng3(
+                r1k_disass.R1kDisass(
                     this,
-                    "examples/R1000_400/example_m200.py"
+                    "DFS/disass_dfs.py",
                 )
-            elif sig == "000200000001":
+            elif sig == "00020000":
                 this.add_note("M200_FS")
-                pyreveng3.PyReveng3(
+                r1k_disass.R1kDisass(
                     this,
-                    "examples/R1000_400/example_ioc_fs.py"
+                    "DFS/disass_dfs.py",
                 )
-            elif sig == "0000fc000000":
+            elif sig == "0000fc00":
                 this.add_note("M200_KERNEL")
-                pyreveng3.PyReveng3(
+                r1k_disass.R1kDisass(
                     this,
-                    "examples/R1000_400/example_ioc_kernel.py"
+                    "DFS/disass_dfs.py",
                 )
             else:
                 print(this, "Unidentified .M200")
@@ -44,27 +44,15 @@ class R1kM200File():
             i = this[:0x400].tobytes()
             if b'S3F5000700' in i:
                 this.add_note("M200_PROM_RESHA")
-                pyreveng3.PyReveng3(
+                r1k_disass.R1kDisass(
                     this,
-                    "examples/R1000_400/example_ioc_resha_eeprom.py"
+                    "DFS/disass_dfs.py",
                 )
             elif b'S3F5800' in i:
                 this.add_note("M200_PROM_IOC")
-                pyreveng3.PyReveng3(
+                r1k_disass.R1kDisass(
                     this,
-                    "examples/R1000_400/example_ioc_eeprom_part1.py"
-                )
-                pyreveng3.PyReveng3(
-                    this,
-                    "examples/R1000_400/example_ioc_eeprom_part2.py"
-                )
-                pyreveng3.PyReveng3(
-                    this,
-                    "examples/R1000_400/example_ioc_eeprom_part3.py"
-                )
-                pyreveng3.PyReveng3(
-                    this,
-                    "examples/R1000_400/example_ioc_eeprom_part4.py"
+                    "DFS/disass_dfs.py",
                 )
             else:
                 print(this, "Unidentified .M200_PROM")
@@ -72,27 +60,15 @@ class R1kM200File():
             i = this[:0x400].tobytes()
             if b'S3F5000700' in i:
                 this.add_note("M400_PROM_RESHA")
-                pyreveng3.PyReveng3(
+                r1k_disass.R1kDisass(
                     this,
-                    "examples/R1000_400/example_ioc_resha_eeprom.py"
+                    "DFS/disass_dfs.py",
                 )
             elif b'S3F5800' in i:
                 this.add_note("M400_PROM_IOC")
-                pyreveng3.PyReveng3(
+                r1k_disass.R1kDisass(
                     this,
-                    "examples/R1000_400/example_ioc_eeprom_part1.py"
-                )
-                pyreveng3.PyReveng3(
-                    this,
-                    "examples/R1000_400/example_ioc_eeprom_part2.py"
-                )
-                pyreveng3.PyReveng3(
-                    this,
-                    "examples/R1000_400/example_ioc_eeprom_part3.py"
-                )
-                pyreveng3.PyReveng3(
-                    this,
-                    "examples/R1000_400/example_ioc_eeprom_part4.py"
+                    "DFS/disass_dfs.py",
                 )
             else:
                 print(this, "Unidentified .M400_PROM")
