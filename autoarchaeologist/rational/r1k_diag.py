@@ -15,5 +15,5 @@ class R1kDiagFirmWare():
     def __init__(self, this):
         r1k_disass.R1kDisass(
             this,
-            "DIAG/disass_diag_firmware.py",
+            "EXP/disass_diag_firmware.py",
         )
