@@ -60,23 +60,40 @@ class R1kE3Objects(bitdata.BitRecord):
         assert not pb.get(800)
         assert not len(pb)
         self.done = {}
+        nested_scope = 0
 
         for i in self:
             j = i.split(maxsplit=1)
-            if not len(j) or j[0] not in ("pragma", "package"):
+            if not len(j) or j[0] not in ("pragma", "package", "procedure", "function", "separate", "generic"):
                 continue
             for j in "(),;":
                 i = i.replace(j, " ")
             j = i.split(maxsplit=4)
+            j[0] = j[0].lower()
             try:
                 if len(j) == 2 and j[0] == "package":
-                    self.this.add_note("_".join(j[:2]))
+                    self.this.add_note(" ".join(j[:2]))
+                    nested_scope = 1
                 elif j[0] == "pragma" and j[1] == "Module_Name":
-                    self.this.add_note("_".join(j[:4]))
-                elif j[0] == "package" and j[2] == "is":
-                    self.this.add_note("_".join(j[:2]))
-                elif j[0] == "package" and j[1] == "body" and j[3] == "is":
-                    self.this.add_note("_".join(j[:3]))
+                    self.this.add_note(" ".join(j[:4]))
+                elif j[0] == "pragma" and j[1] == "Subsystem":
+                    self.this.add_note(" ".join(j[:3]))
+                elif nested_scope == 0 and j[0] == "package" and j[2].lower() == "is":
+                    self.this.add_note(" ".join(j[:2]))
+                    nested_scope = 1
+                elif j[0] == "package" and j[1].lower() == "body" and j[3].lower() == "is":
+                    self.this.add_note(" ".join(j[:3]))
+                    nested_scope = 1
+                elif nested_scope == 0 and j[0] == "procedure":
+                    self.this.add_note(" ".join(j[:2]))
+                    nested_scope = 1
+                elif nested_scope == 0 and j[0] == "function":
+                    self.this.add_note(" ".join(j[:2]))
+                    nested_scope = 1
+                elif j[0] == "separate":
+                    self.this.add_note(" ".join(j))
+                elif j[0] == "generic":
+                    self.this.add_note(j[0])
             except Exception as e:
                 print("R1KE3", self.this, j, e)
 
