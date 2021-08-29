@@ -71,6 +71,7 @@ class Excavation():
         html_dir="/tmp/aa",	   # Where to put HTML output
         subdir=None,		   # Subdir under html_dir
         link_prefix=None,	   # Default is file://[…]
+        spill_index=10,           # Spill limit for index lines
     ):
 
         # Sanitize parameters
@@ -101,6 +102,7 @@ class Excavation():
         self.hexdump_limit = hexdump_limit
         self.html_dir = html_dir
         self.link_prefix = link_prefix
+        self.spill_index = spill_index
 
         self.hashes = {}
         self.busy = True
@@ -216,6 +218,8 @@ class Excavation():
         ''' Come up with a suitable filename related to an artifact '''
         if this == self:
             base = "index" + suf
+        elif isinstance(this, str):
+            base = this + suf
         else:
             basedir = this.digest[:2]
             os.makedirs(os.path.join(self.html_dir, basedir), exist_ok=True)
@@ -241,11 +245,11 @@ class Excavation():
             if self.downloads and len(this) < self.download_limit:
                 binfile = self.filename_for(this, suf=".bin")
                 this.writetofile(open(binfile.filename, 'wb'))
-            fn = self.filename_for(this)
-            fo = open(fn.filename, "w")
-            self.html_prefix(fo, this)
-            this.html_page(fo)
-            self.html_suffix(fo)
+            fnt = self.filename_for(this)
+            fot = open(fnt.filename, "w")
+            self.html_prefix(fot, this)
+            this.html_page(fot)
+            self.html_suffix(fot)
 
         return self.filename_for(self).link
 
@@ -285,18 +289,47 @@ class Excavation():
         for idxkey in index_keys:
             fo.write('<H3><A name="IDX_%s">Index: %s</A></H3>\n' % (idxkey, idxkey))
             fo.write("<table>\n")
-            for i, j in sorted(self.index[idxkey].items()):
+            for key, entries in sorted(self.index[idxkey].items()):
                 fo.write('<tr>\n')
                 fo.write('<td style="font-size: 80%; vertical-align: top;">\n')
-                fo.write('<A name="IDX_%s">%s</A>' % (i, i))
+                fo.write('<A name="IDX_%s">%s</A>' % (key, key))
                 fo.write('</td>\n')
                 fo.write('<td style="font-size: 80%;">')
-                for x in sorted(j):
-                    fo.write("   " + x.summary(notes=True) + "<br>\n")
+
+                if len(entries) < self.spill_index:
+                    for i in sorted(entries):
+                        fo.write("   " + i.summary(notes=True) + "<br>\n")
+                else:
+                    for i in sorted(entries)[:self.spill_index // 2]:
+                        fo.write("   " + i.summary(notes=True) + "<br>\n")
+                    link = self.html_index_item(key, entries)
+                    fo.write('   <a href="%s">… full list</a><br>\n' % link)
                 fo.write('</td>\n')
             fo.write("</table>\n")
-
         self.html_suffix(fo)
+
+    def html_index_item(self, key, entries):
+        ''' Spill an index key into a separate HTML file '''
+        safekey = key
+        # XXX: This can cause collisions
+        for c in ''' /<>&*!?'"''':
+            safekey = safekey.replace(c, '_')
+        fnt = self.filename_for(safekey)
+        fot = open(fnt.filename, "w")
+        self.html_prefix(fot, "Index: " + key)
+        fot.write('<H3>Index: %s</H3>\n' % key)
+        fot.write("<table>\n")
+        fot.write('<tr>\n')
+        fot.write('<td style="font-size: 80%; vertical-align: top;">\n')
+        fot.write('<A name="IDX_%s">%s</A>' % (key, key))
+        fot.write('</td>\n')
+        fot.write('<td style="font-size: 80%;">')
+        for x in sorted(entries):
+            fot.write("   " + x.summary(notes=True) + "<br>\n")
+        fot.write('</td>\n')
+        fot.write("</table>\n")
+        self.html_suffix(fot)
+        return fnt.link
 
     def html_link_to(self, this, link_text=None, anchor=None, **kwargs):
         ''' Return a HTML link to an artifact '''
@@ -317,6 +350,8 @@ class Excavation():
         fo.write('<meta charset="utf-8">\n')
         if isinstance(this, Excavation):
             fo.write('<title>AutoArchaeologist</title>\n')
+        elif isinstance(this, str):
+            fo.write('<title>' + this + '</title>\n')
         else:
             fo.write('<title>' + this.name() + '</title>\n')
 
