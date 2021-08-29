@@ -29,7 +29,7 @@ class A6String(bittools.R1kSegBase):
         )
         self.offset += self.p2_n * 8
         self.finish()
-        seg.dot.write('T_0x%x [shape=plaintext, label="%s"]' % (self.begin, html.escape(self.text)))
+        seg.dot.write('T_0x%x [shape=plaintext, label="%s"]' % (self.begin, html.escape(self.text).replace('.', '.\\l')))
 
     def render(self, _chunk, fo):
         ''' Dont dump the text as bits because of missing field '''
