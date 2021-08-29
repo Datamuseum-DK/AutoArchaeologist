@@ -656,7 +656,8 @@ class A6Head(bittools.R1kSegBase):
         )
         self.finish()
 
-        bittools.make_one(self, 'a6head_19_p', A6String, ident="head_19")
+        y = bittools.make_one(self, 'a6head_19_p', A6String, ident="head_19")
+        seg.this.set_name(y.text)
         bittools.make_one(self, 'a6head_20_p', A6Record00)
         bittools.make_one(self, 'a6head_21_p', A6Record27, count=0xcb)
         bittools.make_one(self, 'a6head_23_p', A6Record00)
