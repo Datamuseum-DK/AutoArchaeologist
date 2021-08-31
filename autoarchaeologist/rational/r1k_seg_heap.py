@@ -231,9 +231,6 @@ class R1kSegHeap():
         self.starts = {}
         self.starts[0] = chunk
 
-        self.tfn = this.add_utf8_interpretation("Segmented Heap")
-        self.tfile = open(self.tfn.filename, "w")
-
         self.head = HeapHead(self, self.cut(0x0, 0x80))
 
         try:
@@ -246,6 +243,9 @@ class R1kSegHeap():
 	# Render to a temporary file while parsing, so we can delete
 	# all the bitmaps, otherwise the memory footprint roughly
 	# doubles.
+
+        self.tfn = this.add_utf8_interpretation("Segmented Heap")
+        self.tfile = open(self.tfn.filename, "w")
 
         self.render_chunks(self.tfile)
         self.tfile.close()
