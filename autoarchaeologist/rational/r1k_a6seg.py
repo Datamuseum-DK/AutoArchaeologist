@@ -2,6 +2,8 @@
    R1000 'A6' segments
    ===================
 
+   These seem to represent a `WORLD`
+
 '''
 
 import os
@@ -102,13 +104,21 @@ class A6Record00(bittools.R1kSegBase):
         seg.dot.node(self, 'shape=circle')
 
 
-        bittools.make_one(self, 'rec00_0_p', A6String, ident="rec00")
+        self.string = bittools.make_one(self, 'rec00_0_p', A6String, ident="rec00")
 
-        bittools.make_one(self, 'rec00_1_p', A6Record01)
-        bittools.make_one(self, 'rec00_2_p', A6Record00)
+        self.ptr = bittools.make_one(self, 'rec00_1_p', A6Record01)
+        self.left = bittools.make_one(self, 'rec00_2_p', A6Record00)
+        self.right = bittools.make_one(self, 'rec00_3_p', A6Record00)
+
         bittools.make_one(self, 'rec00_3_p', A6Record00)
 
-        bittools.make_one(self, 'rec00_3_p', A6Record00)
+    def __iter__(self):
+        if self.left is not None:
+            yield from self.left
+        yield self
+        if self.right is not None:
+            yield from self.right
+
 
 class A6Record01(bittools.R1kSegBase):
     ''' ... '''
@@ -154,7 +164,7 @@ class A6Record01(bittools.R1kSegBase):
         y = bittools.make_one(self, 'rec01_21_p', A6Record24, ident="r01_21")
         if y:
             self.rec01_21_part2_p = y.end
-            z = bittools.make_one(self, 'rec01_21_part2_p', A6Record21, ident="r01_21")
+            bittools.make_one(self, 'rec01_21_part2_p', A6Record21, ident="r01_21")
         bittools.make_one(self, 'rec01_22_p', A6Record25)
         bittools.make_one(self, 'rec01_24_p', A6Record14)
         make_chain2(seg, self.rec01_03_p, target=A6Record01, ident="rec01")
@@ -188,10 +198,17 @@ class A6Record04(bittools.R1kSegBase):
             ("rec04_04_n", 1),
         )
         self.finish()
-        bittools.make_one(self, 'rec04_00_p', A6String, ident="rec04")
-        bittools.make_one(self, 'rec04_01_p', A6Record01)
-        bittools.make_one(self, 'rec04_02_p', A6Record04)
-        bittools.make_one(self, 'rec04_03_p', A6Record04)
+        self.string = bittools.make_one(self, 'rec04_00_p', A6String, ident="rec04")
+        self.ptr = bittools.make_one(self, 'rec04_01_p', A6Record01)
+        self.left = bittools.make_one(self, 'rec04_02_p', A6Record04)
+        self.right = bittools.make_one(self, 'rec04_03_p', A6Record04)
+
+    def __iter__(self):
+        if self.left is not None:
+            yield from self.left
+        yield self
+        if self.right is not None:
+            yield from self.right
 
 class A6Record05(bittools.R1kSegBase):
     ''' ... '''
@@ -656,12 +673,12 @@ class A6Head(bittools.R1kSegBase):
         )
         self.finish()
 
-        y = bittools.make_one(self, 'a6head_19_p', A6String, ident="head_19")
-        seg.this.set_name(y.text)
-        bittools.make_one(self, 'a6head_20_p', A6Record00)
+        self.name = bittools.make_one(self, 'a6head_19_p', A6String, ident="head_19")
+        seg.this.set_name(self.name.text)
+        self.tree_20 = bittools.make_one(self, 'a6head_20_p', A6Record00)
         bittools.make_one(self, 'a6head_21_p', A6Record27, count=0xcb)
         bittools.make_one(self, 'a6head_23_p', A6Record00)
-        bittools.make_one(self, 'a6head_24_p', A6Record04)
+        self.tree_24 = bittools.make_one(self, 'a6head_24_p', A6Record04)
         bittools.make_one(self, 'a6head_27_p', A6Record04)
         bittools.make_one(self, 'a6head_29_p', A6Record05)
         make_chain2(seg, self.a6head_31_p, target=A6Record01, ident="hd31")
@@ -687,7 +704,7 @@ class R1kSegA6():
                     print("HUNT 0x%x" % a, "<- 0x%x" % i[2])
 
         try:
-            A6Head(seg, 0x80)
+            self.head = A6Head(seg, 0x80)
         except:
             #pass
             raise
@@ -700,6 +717,24 @@ class R1kSegA6():
         if "AA_RUN_DOT" in os.environ:
             while 1 and seg.hunt_orphans(verbose=True):
                 continue
+
+        self.seg.this.add_interpretation(self, self.render)
+
+    def render(self, fo, this):
+        fo.write("<H4>World (0xa6 segment) %s</H4>\n" % self.head.name.text)
+        fo.write("<pre>\n")
+
+        if self.head.tree_20:
+            fo.write("Tree.20:\n")
+            for i in self.head.tree_20:
+                fo.write("    " + str(i.string.text) + " - " + str(i) + "\n")
+
+        if self.head.tree_24:
+            fo.write("Tree.24:\n")
+            for i in self.head.tree_24:
+                fo.write("    " + str(i.string.text) + " - " + str(i) + "\n")
+
+        fo.write("</pre>\n")
 
     def hunt_strings(self, seg, chunk):
         a = 0
