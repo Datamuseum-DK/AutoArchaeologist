@@ -61,6 +61,9 @@ class TypeCase():
         for i in self.hexdump(that, **kwargs):
             fo.write(html.escape(i) + "\n")
 
+    def decode(self, octets):
+        return ''.join(self.slugs[x] for x in octets)
+
 class WellKnown(TypeCase):
     '''
        Use pythons built in decoder to do the job
