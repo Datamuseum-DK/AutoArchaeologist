@@ -26,9 +26,17 @@ class StdStat():
 
 def unix_file_mode(mode, stat=None):
     ''' ... '''
-    txt = ""
     if stat is None:
         stat = StdStat()
+    txt = {
+        stat.S_IFPIP: "p",
+        stat.S_IFCHR: "c",
+        stat.S_IFDIR: "d",
+        stat.S_IFBLK: "b",
+        stat.S_IFREG: "-",
+    }.get(mode & stat.S_ISFMT)
+    if txt is None:
+        txt = "?"
     txt += "r" if mode & stat.S_IRUSR else '-'
     txt += "w" if mode & stat.S_IWUSR else '-'
     if mode & stat.S_IXUSR and mode & stat.S_ISUID:
