@@ -22,7 +22,8 @@ class Compress():
         subprocess.run(["uncompress", "-f", tmpfilename + ".Z"])
         self.that = this.create(bits=open(tmpfilename, "rb").read())
         os.remove(tmpfilename)
-        self.that.add_note("Uncompressed file")
+        this.add_type("Compressed file")
+        self.that.add_note("Unompressed file")
         this.add_interpretation(self, self.render)
 
     def render(self, fo, _this):
