@@ -19,12 +19,15 @@ class TarEntry():
         self.filename = that.type_case.decode(self.filename)
         if self.target:
             self.target = that.type_case.decode(self.target)
+        hdrchild = that.create(start=offset, stop=offset + 512)
+        hdrchild.by_class[TarFile] = that
         if self.link == 0 and self.size:
             self.this = that.create(start=offset + 512, stop=offset + 512 + self.size)
             self.this.set_name(self.filename)
-            self.this.by_class[TarFile] = self
         else:
             self.this = None
+        if self.link:
+            self.size = 0
         self.next = offset + 512 * (1 + (self.size + 511) // 512)
 
     def parse_header(self):
@@ -93,21 +96,21 @@ class TarFile():
     def __init__(self, this):
         if len(this) <= 512:
             return
+        if TarFile in this.parents[0].by_class:
+            return
         try:
             entry = TarEntry(this, 0)
         except Invalid as e:
             # print("TAR", this, e)
             return
-        if TarFile in this.parents[0].by_class:
-            return
         self.children = [entry]
         this.type = "Tar_file"
         this.add_note("Tar_file")
-        this.by_class[TarFile] = self
         while entry.next < len(this) and this[entry.next]:
             entry = TarEntry(this, entry.next)
             self.children.append(entry)
         this.add_interpretation(self, self.render)
+        this.taken = True
 
     def render(self, fo, _this):
         ''' ... '''
