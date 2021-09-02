@@ -21,6 +21,7 @@ if PROTOCOL is None:
 BITSTORE_FORMATS = {
     "PDF": False,
     "MP4": False,
+    "TAR": True,
     "SIMH-TAP": True,
     "ASCII": True,
     "ASCII_EVEN": True,
