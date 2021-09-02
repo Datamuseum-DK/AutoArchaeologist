@@ -59,6 +59,8 @@ class TarEntry():
             retval = self.hdr[offset:offset + width]
             retval = retval.split(b'\x00')[0]
             retval = retval.decode('ascii')
+            if len(retval) == 0:
+                return 0
             retval = int(retval, 8)
             return retval
         except:
@@ -93,7 +95,8 @@ class TarFile():
             return
         try:
             entry = TarEntry(this, 0)
-        except Invalid:
+        except Invalid as e:
+            # print("TAR", this, e)
             return
         if TarFile in this.parents[0].by_class:
             return
