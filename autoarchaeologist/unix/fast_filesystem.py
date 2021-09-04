@@ -161,6 +161,11 @@ class FFS(ufs.UnixFileSystem):
 
     INODE_SIZE = 0x80
 
+    MAGICS = (
+        0x11954,	# Kirks birthday
+        0x95014,	# Seen on HP-UX (30002742)
+    )
+
     def get_superblock(self):
         ''' Get SuperBlock '''
         for sb_off in (65536, 8192, 0, 262144):
@@ -178,9 +183,9 @@ class FFS(ufs.UnixFileSystem):
         i = self.this[offset + 0x55c:offset + 0x560]
         magic_be = struct.unpack(">1L", i)[0]
         magic_le = struct.unpack("<1L", i)[0]
-        if magic_be == 0x11954:
+        if magic_be in self.MAGICS:
             self.ENDIAN = ">"
-        elif magic_le == 0x11954:
+        elif magic_le == self.MAGICS:
             self.ENDIAN = "<"
         else:
             if 0x19540119 in (magic_be, magic_le):
