@@ -14,7 +14,7 @@ class SunOsDiskLabel():
             return
 
         w = struct.unpack(">10H", this[0x1a4:0x1b8])
-        print(w)
+        print(this, w)
         self.sl_rpm = w[0]
         self.sl_pcyl = w[1]
         self.sl_sparecyl = w[2]
@@ -25,7 +25,6 @@ class SunOsDiskLabel():
         self.sl_nsectors = w[9]
 
         csize = self.sl_ntracks * self.sl_nsectors
-        this.taken = self
         for i in range(8):
             if i == 2:
                 continue
@@ -36,6 +35,7 @@ class SunOsDiskLabel():
                 continue
             start = (w[0] * csize) << 9
             stop = start + (w[1] << 9)
-            print(w, "0x%x" % start, "0x%x" % stop)
+            print(this, w, "0x%x" % start, "0x%x" % stop)
             y = this.create(start=start, stop=stop)
             y.add_type("SunOS Partition") 
+            this.taken = self
