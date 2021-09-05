@@ -36,6 +36,59 @@ import time
 
 import autoarchaeologist
 
+CSS = '''
+<style>
+ul, #myUL { /* Remove default bullets */
+  list-style-type: none;
+  padding: 0;
+}
+#myUL { /* Remove margins and padding from the parent ul */
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+pre {
+  margin: 0;
+}
+.b { /* Style the caret/arrow */
+  cursor: pointer;
+  user-select: none; /* Prevent text selection */
+}
+.b::before { /* Create the caret/arrow with a unicode, and style it */
+  color: black;
+  display: inline-block;
+  margin-right: 0px;
+}
+.a::before {
+  color: black;
+  display: inline-block;
+  margin-right: 0px;
+}
+.nested { /* Hide the nested list */
+  display: none;
+}
+.active { /* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
+  display: block;
+}
+</style>
+'''
+
+JS = '''
+<script>
+
+var toggler = document.getElementsByClassName("b");
+var i;
+  
+for (i = 0; i < toggler.length; i++) {
+  toggler[i].addEventListener("click", function() {
+    this.parentElement.parentElement.querySelector(".nested").classList.toggle("active");
+  });
+}
+  
+</script>
+'''
+
+
 class Inode(autoarchaeologist.Record):
     ''' Inode in a UNIX filesystem '''
 
@@ -273,18 +326,23 @@ class Directory():
     def html_as_lsl(self, fo):
         ''' Recursively render as ls -l output '''
         for dirent in sorted(self.dirents):
+            txt = ""
             if dirent.inode:
                 lead = str(dirent.inode)
             elif dirent.inum:
                 lead = "BAD INODE# 0x%x" % dirent.inum
             else:
                 lead = "DELETED"
-            fo.write(lead.ljust(64) + " " + "/".join(dirent.path))
+            txt += lead.ljust(64) + " " + "/".join(dirent.path)
             if dirent.artifact:
-                fo.write("     // " + dirent.artifact.summary())
-            fo.write("\n")
+                txt += "     // " + dirent.artifact.summary()
             if dirent.directory:
+                fo.write('<li><pre><span class="b"><b>' + txt + '</b></span></pre>\n')
+                fo.write('<ul class="nested">\n')
                 dirent.directory.html_as_lsl(fo)
+                fo.write('</ul></li>\n')
+            else:
+                fo.write('<li><pre><span class="a">' + txt + '</span></pre></li>\n')
 
     def parse(self):
         ''' Parse classical unix directory: 16bit inode + 14 char name '''
@@ -447,8 +505,13 @@ class UnixFileSystem():
     def html_as_lsl(self, fo, _this):
         ''' Render as recursive ls -l '''
         fo.write("<H3>ls -l</H3>\n")
-        fo.write("<pre>\n")
+        fo.write("<div>\n")
+        fo.write(CSS)
+        fo.write('<ul id="myUL">\n')
         self.rootdir.html_as_lsl(fo)
+        fo.write('</ul>\n')
+        fo.write(JS)
+        fo.write("</div>\n")
 
     def get_superblock(self):
         '''

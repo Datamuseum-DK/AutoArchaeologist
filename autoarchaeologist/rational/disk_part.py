@@ -1,7 +1,24 @@
 
+#
+# See:
+#    file:///critter/aa/r1k_dfs/34/344289524.html
+
 import struct
 
 import autoarchaeologist.generic.hexdump as hexdump
+
+class R1K_DFS():
+
+    def __init__(self, this, sb):
+        self.this = this
+        self.sb = sb
+        print("SB", sb)
+
+        for i in range(2, len(self.sb), 2):
+            j = int.from_bytes(self.sb[i:i+2], 'big')
+            if j in (0x00, 0x0d,):
+                break
+            print("SBF", i, j)
 
 class R1K_Disk_Partition():
 
@@ -41,6 +58,14 @@ class R1K_Disk_Partition():
             y = this.create(start=start, stop=stop)
             y.add_type("R1K_Partition_%d" % (i // 2))
             self.partitions.append((g_start, g_stop,y))
+
+        R1K_DFS(this, self.dfs_sb)
+        if False:
+            for i in (0x2be8, 0x2984, 0x2884, 0x2784, 0x2684, 0x2584, 0x2484, 0x2384, 0x2284, 0x1801, 0x3dd6):
+                y = this.create(start = i<<10, stop = (i+1)<<10)
+                y.add_type("FSB")
+                y.add_note("at 0x%x" % i)
+                R1K_DFS(this, y)
 
     def calc_lba(self, g):
         rv = g[0] * self.nhead * self.nsect * self.secsize

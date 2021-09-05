@@ -38,7 +38,7 @@ underlines and the "10" glyph.
 GIER is of course the computer Peter Naur of Backus-Naur-Notatation
 fame worked on, and his demonstration program is a good example of the output:
 
-http://datamuseum.dk/aa/gier/9cb418c94.html
+http://datamuseum.dk/aa/gier/9c/9cb418c94.html
 
 # Third Example: Regnecentralen RC3600/RC7000
 
