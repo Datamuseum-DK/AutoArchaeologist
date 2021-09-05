@@ -55,4 +55,135 @@ solve second degree equations, written by a high-school student in 1981:
 
 http://datamuseum.dk/aa/rc3600/7b/7b059e3b3.html
 
+# Inventory of examiners
+
+This list is current as of september 2021
+
+## Generic
+
+* `ansi_tape_labels - ANSI tape header/trailer records
+
+* `ascii` - ASCII text files, with or without parity
+
+* `bigdigits` - 5x7 fonts - often punched into paper tape
+
+* `bitdata` - Base-class for dealing with bit-aligned data
+
+* `hexdump` - Sometimes that's all you can do
+
+* `iso8632_gcm` - ISO 8632-3 Computer Graphics Metafiles
+
+* `pyreveng3` - Calls on https://github.com/bsdphk/PyReveng3 for disassembly
+
+* `samesame` - summarizes artifacts with a single byte value
+  so they dont pointlessly generate a lot of hexdump
+
+* `sccs_id` - `@(#)` "what" markers from sccs(1)
+
+* `tap_file` - SIMH magtape files
+
+* `textfiles` - Recognize specific types of ASCII files, presently only Postscript.
+
+## Data General
+
+* `absbin` - Absolute Binary Format
+
+* `relbin` - Relative Binary Format
+
+* `papertapechecksum` - Product identification marker on paper tapes
+
+## UNIX
+
+* `cbm900_ar` - Commodore CBM 900 ar(1) files
+
+* `cbm900_l_out` - Commodore CBM 900 l_out(4) files
+
+* `cbm900_partition` - Commodore CBM 900 disk partitioning
+
+* `compress` - compress(1) (bla.Z) files
+
+* `fast_filesystem` - Kirk McKusick's BSD4 FFS
+
+* `hpux_disklabel` - HPUX disk partitioning
+
+* `sunos_disklabel` - SunOS 4 etc.
+
+* `sysv_filesystem` - AT&T System V filesystem
+
+* `tar_file` - tar(1) archives
+
+* `unix_fs` - Filesystem base-class
+
+* `v7_filesystem` - As Ken wrote it
+
+* `xenix286_fs` - How SCO botched it
+
+* `xenix286_partition` - As found on the PC platform
+
+## RegneCentralen
+
+* `gier_text` - GIER text files
+
+* `domus_fs` - DOMUS filesystem
+
+* `rc3600_fdtape` - 8" Floppies emulating ½" tapes
+
+* `rc7000_comal` - COMAL save files
+
+* `rc8000_save_tape` - SAVE tapes from RC8000
+
+* `rcsl` - RCSL markers
+
+## Dansk Data Elektronik
+
+* `subdisk2` - Disk Partitioning
+
+* `gks` - Graphical Kernel System
+
+## Rational R1000/s400
+
+* `dfs_tape.py`	- DFS tape files
+
+* `disk_part.py` - Disk partitioning
+
+* `index_data.py` - Archive filesets
+
+* `r1k_6zero.py` - Very often ASCII files
+
+* `r1k_97seg.py` - Possibly DIANA trees
+
+* `r1k_a6seg.py` - Environment WORLDs
+
+* `r1k_assy.py` - Code segments
+
+* `r1k_backup.py` - Backup tape, tape aspects
+
+* `r1k_backup_objects.py` - Backup tape, object aspects
+
+* `r1k_bittools.py` - R1K specific bit tools
+
+* `r1k_diag.py` - DIAG processor firmware disassembly
+
+* `r1k_disass.py` - Call out to https://github.com/Datamuseum-DK/R1000.Disassembly
+
+* `r1k_e3_objects.py` - Ada program editor objects
+
+* `r1k_experiment.py` - Diagnostic experiment DFS files
+
+* `r1k_linkpack.py` - LinkPack object
+
+* `r1k_m200.py` - DFS executables
+
+* `r1k_seg_heap.py` - Baseclass for heap segments
+
+* `r1k_ucode.py` - Microcode DFS files
+
+* `tape_blocks.py` - R1K logical tape blocks
+
+## DDHF specific
+
+* `bitstore` - Get artifacts from the bitarchive
+
+* `decorated_context` - Standard HTML decoration
+
 /phk
