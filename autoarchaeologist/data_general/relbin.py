@@ -63,7 +63,7 @@ class RelBinRec():
             raise Invalid("Too Short")
         words = struct.unpack("<Hh", this[i:i+4])
         if words[0] not in REC_MAX_LEN:
-            raise Invalid("RELBIN Bad Recno (0x%x) w1=%d" % (words[0],words[1]))
+            raise Invalid("RELBIN Bad Recno @0x%x (0x%x) w1=%d" % (i, words[0],words[1]))
         if words[1] > -1:
             raise Invalid("RELBIN Invalid Length w0=0x%x (%d)" % (words[0], words[1]))
         if REC_MAX_LEN[words[0]] > words[1]:
@@ -230,7 +230,7 @@ class RelBin():
             except Invalid as error:
                 if r:
                     print("RELBIN", self.this, error)
-                return 0, 0, None
+                break
             # print("RELBIN", self.this, j)
             r.append(j)
             i += j.length()
