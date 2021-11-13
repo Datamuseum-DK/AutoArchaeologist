@@ -129,7 +129,7 @@ class Inode(autoarchaeologist.Record):
             block_no += 1
 
     def __str__(self):
-        txt = "%5d" % self.di_inum
+        txt = "%6d" % self.di_inum
 
         typ = {
             self.ufs.S_IFPIP: "p",
