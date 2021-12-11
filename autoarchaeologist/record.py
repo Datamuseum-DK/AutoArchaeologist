@@ -31,6 +31,9 @@ class Record():
         self.__v[name] = val
         setattr(self, name, val)
 
+    def __iter__(self):
+        yield from self.__v.items()
+
     def dump(self, fo=sys.stdout):
         ''' One element per line & hexadecimal for debugging '''
         fo.write("struct %s {\n" % self.name)
