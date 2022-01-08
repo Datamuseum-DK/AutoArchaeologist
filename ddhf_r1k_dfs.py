@@ -41,8 +41,8 @@ def r1k_dfs_job(**kwargs):
     ctx.add_examiner(R1kAssyFile)
     ctx.add_examiner(R1K_Ucode_File)
     ctx.add_examiner(R1kM200File)
-    ctx.add_examiner(ascii.Ascii)
     ctx.add_examiner(R1kExperiment)
+    ctx.add_examiner(ascii.Ascii)
     ctx.add_examiner(SccsId)
     #ctx.add_examiner(SameSame)
 
