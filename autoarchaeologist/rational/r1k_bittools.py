@@ -128,6 +128,7 @@ class R1kSegBase():
         self.compact = False
         self.text = None
         self.offset = 0
+        self.supress_zeros = False
 
         seg.dot.node(
            chunk,
@@ -207,17 +208,20 @@ class R1kSegBase():
         ''' Render the fields on a single line'''
         retval = 0
         for fld in self.fields:
-            fo.write(fld.render())
+            if fld.val or not self.supress_zeros:
+                fo.write(fld.render())
             retval = fld.offset + fld.width
         return retval
 
     def render_fields(self, fo):
         ''' Render the fields '''
         retval = 0
-        for fld in self.fields:
+        for idx, fld in enumerate(self.fields):
+            if self.supress_zeros and not fld.val:
+                continue
             if not self.compact:
                 fo.write("    0x%06x" % (fld.offset + self.begin))
-                fo.write(" +0x%04x:" % fld.offset)
+                fo.write(" [0x%02x] +0x%04x:" % (idx, fld.offset))
             fo.write(fld.render())
             if not self.compact:
                 if fld.name[-2:] != "_z":
@@ -296,18 +300,12 @@ class BitPointerArray(R1kSegBase):
             seg.cut(address, count * size),
             **kwargs,
         )
+        self.supress_zeros = True
         for i in range(count):
             self.get_fields(
                 ("ptr_0x%x_p" % i, size)
             )
         self.finish()
-
-    def _render(self, _chunk, fo):
-        ''' Only non-zero entries '''
-        fo.write(self.title + "[0x%x×0x%x]\n" % (self.count, self.size))
-        for i, j in enumerate(self.data):
-            if j:
-                fo.write(("[0x%x]:" % i).rjust(39) + " 0x%x\n" % j)
 
 class Array(R1kSegBase):
     ''' Array format'''

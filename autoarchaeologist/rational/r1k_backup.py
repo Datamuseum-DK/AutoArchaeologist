@@ -97,8 +97,42 @@ class SpaceInfo(MetaTapeFile):
     def render_space_info(self, fo, _this):
         fo.write("<H3>" + self.name + "</H3>\n")
         fo.write("<pre>\n")
+        widths = [2, 4, 2, 6, 14, 2, 4, 2, 2, 10, 2, 2, 2, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+        for i, j in zip(
+            widths, (
+                "?1",
+                "?2",
+                "?3",
+                "?4",
+                "?5",
+                "?6",
+                "NBLK",
+                "?8",
+                "TAG",
+                "CLS+SEG",
+                "?11",
+                "?12",
+                "?13",
+                "BLK0",
+                "BLK1",
+                "BLK2",
+                "BLK3",
+                "BLK4",
+                "BLK5",
+                "BLK6",
+                "BLK7",
+                "BLK8",
+                "BLK9",
+            )
+        ):
+            fo.write(j.rjust(i + 1))
+        fo.write("\n")
         for i in self.space:
-            fo.write(i.render_space_info() + "\n")
+            t = ""
+            for j, w in zip(i.space_info, widths):
+                t += ("%x" % j).rjust(w+1)
+            t += i.render_space_info() + "\n"
+            fo.write(t)
         fo.write("</pre>\n")
 
 class BlockInfo(MetaTapeFile):

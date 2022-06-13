@@ -827,7 +827,7 @@ class Thing3(bittools.R1kSegBase):
         self.render_fields_compact(fo)
         fo.write("\n")
         for n, i in enumerate(self.a):
-            fo.write("    [0x%x] = " % n + str(i) + "\n")
+            fo.write("    [0x%x] = " % n + " 0x%x" % i[1] + " 0x%x" % i[2] + " " + i[3][1] + "\n")
 
 class Thing2(bittools.R1kSegBase):
     '''
@@ -898,8 +898,8 @@ class Head(bittools.R1kSegBase):
         #self.compact = True
         self.get_fields(
             ("head_z_000", 32,),           # 0x80000001
-            ("head_unknown_020", 32,),     # Unique except for two cases
-            ("head_c_040", 31,),           # 0x1
+            ("head_segment", 31,),         # Segment#
+            ("head_c_03f", 32,),           # 0x1
             ("head_chains", 32,),          # 0x231a, one case 0x0
             ("head_z_07f", 1,),            # 0x0
             ("head_z_80", 31,),            # 0x0

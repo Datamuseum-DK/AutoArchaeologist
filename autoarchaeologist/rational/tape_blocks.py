@@ -1,4 +1,17 @@
+'''
+   Blocked rational tapes
+   ----------------------
 
+   Blockheader is "#####\n".
+
+   Last four digits are record length, typically 3072.
+
+   First digit is:
+       0: File is single record
+       1: First record in file
+       2: Middle record(s) in file
+       3: Last record in file
+'''
 import autoarchaeologist
 import autoarchaeologist.scattergather as scattergather
 

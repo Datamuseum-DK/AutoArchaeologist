@@ -3,7 +3,7 @@
    ----------------
 
    This file contains the "object-aspects" of taking a backup apart.
-   The "tape-aspects" are handled in `r1k_bakcup.py`
+   The "tape-aspects" are handled in `r1k_backup.py`
 '''
 
 import tempfile
@@ -123,15 +123,13 @@ class R1kBackupObject():
             self.obj.add_note("Sparse_R1k_Segment")
         self.obj.add_note("R1k_Segment")
         self.obj.add_note("%02x_tag" % self.space_info[8])
+        self.obj.add_note("%02x_class" % (self.space_info[9] >> 32))
         self.obj.add_interpretation(self, self.render_obj)
 
     def render_space_info(self):
         t = ""
-        for j, w in zip(self.space_info, [2, 4, 2, 6, 14, 2, 4, 2, 2, 10, 2, 2, 2, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]):
-            t += ("%x" % j).rjust(w+1)
         if self.obj:
-            t += " [" + self.obj[:20].tobytes().hex()
-            t += "] // " + self.obj.summary()
+            t += " // " + self.obj.summary()
         return t
 
     def render_obj(self, fo, this):

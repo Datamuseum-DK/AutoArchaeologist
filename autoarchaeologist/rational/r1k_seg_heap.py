@@ -293,6 +293,8 @@ class R1kSegHeap():
                     raise
             return
 
+        return
+
         if self.this.has_note('a6_tag'):
             try:
                 sega6.R1kSegA6(self)
