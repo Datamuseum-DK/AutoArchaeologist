@@ -25,6 +25,7 @@ def r1k_diag_job(**kwargs):
         ctx,
         "_ddhf_bitstore_cache",
         "30002517",
+        "30003041",
     )
 
     return ctx
