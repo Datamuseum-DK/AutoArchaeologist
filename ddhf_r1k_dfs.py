@@ -13,6 +13,7 @@ from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
 from autoarchaeologist.rational.index_data import R1K_Index_Data
 from autoarchaeologist.rational.dfs_tape import R1K_DFS_Tape
 from autoarchaeologist.rational.r1k_assy import R1kAssyFile
+from autoarchaeologist.rational.r1k_configuration import R1kM200ConfigFile
 from autoarchaeologist.rational.r1k_ucode import R1K_Ucode_File
 from autoarchaeologist.rational.r1k_m200 import R1kM200File
 from autoarchaeologist.rational.r1k_experiment import R1kExperiment
@@ -38,6 +39,7 @@ def r1k_dfs_job(**kwargs):
     ctx.add_examiner(R1K_Tape_blocks)
     ctx.add_examiner(R1K_Index_Data)
     ctx.add_examiner(R1K_DFS_Tape)
+    ctx.add_examiner(R1kM200ConfigFile)
     ctx.add_examiner(R1kAssyFile)
     ctx.add_examiner(R1K_Ucode_File)
     ctx.add_examiner(R1kM200File)
