@@ -2,14 +2,14 @@
    Hexdumping functions
 '''
 
-def hexdump(this, html=True, width=16, prefix=""):
+def hexdump(this, html=True, width=16, prefix="", offset=0):
     ''' Hexdump an artifact '''
     txt1 = ""
     txt2 = ""
     for n, x in enumerate(this):
         i = n % width
         if not i:
-            txt1 = prefix + "%04x " % n
+            txt1 = prefix + "%04x " % (n + offset)
             txt2 = "  ┆"
         txt1 += " %02x" % x
         if html and x == 0x3c:
