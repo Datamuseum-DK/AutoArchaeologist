@@ -216,6 +216,7 @@ class R1kSegHeap():
         self.end = x + 0x7f
         self.type_case = this.type_case
         self.fdot = None
+        self.txttab = {}
         print("?R1SH", this)
 
         self.dot = DotPlot(self)
