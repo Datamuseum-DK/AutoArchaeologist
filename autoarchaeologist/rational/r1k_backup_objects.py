@@ -123,8 +123,32 @@ class R1kBackupObject():
             self.obj.add_note("Sparse_R1k_Segment")
         self.obj.add_note("R1k_Segment")
         self.obj.add_note("%02x_tag" % self.space_info[8])
-        self.obj.add_note("%02x_class" % (self.space_info[9] >> 32))
+        self.mgr = self.space_info[9] >> 32
+        self.segment = self.space_info[9] & 0xffffffff
+        self.obj.add_note("%02x_class" % self.mgr)
+        self.obj.add_note("segment_%d" % self.segment)
+        mgr = {
+            0: "NULL",
+            1: "ADA",
+            2: "DDB",
+            3: "FILE",
+            4: "USER",
+            5: "GROUP",
+            6: "SESSION",
+            7: "TAPE",
+            8: "TERMINAL",
+            9: "DIRECTORY",
+            10: "CONFIGURATION",
+            11: "CODE_SEGMENT",
+            12: "LINK",
+            13: "NULL_DEVICE",
+            14: "PIPE",
+            15: "ARCHIVED_CODE",
+        }.get(self.mgr)
+        if mgr:
+            self.obj.add_note(mgr)
         self.obj.add_interpretation(self, self.render_obj)
+        # print("MAP", self.obj, "MGR", mgr, "SEG", self.segment)
 
     def render_space_info(self):
         t = ""
