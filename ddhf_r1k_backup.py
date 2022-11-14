@@ -13,9 +13,11 @@ from autoarchaeologist.rational.r1k_e3_objects import R1kE3Objects
 from autoarchaeologist.rational.r1k_assy import R1kAssyFile
 from autoarchaeologist.rational.r1k_6zero import R1k6ZeroSegment
 from autoarchaeologist.rational.r1k_seg_heap import R1kSegHeap
-from autoarchaeologist.generic.ascii import Ascii
+from autoarchaeologist.generic.ascii import Ascii,CHARSET
 from autoarchaeologist.generic.textfiles import TextFiles
 from autoarchaeologist.generic.samesame import SameSame
+
+CHARSET[0][0] = 16
 
 def r1k_backup_job(**kwargs):
 
