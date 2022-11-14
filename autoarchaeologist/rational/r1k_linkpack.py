@@ -136,7 +136,7 @@ class Thing2C(bittools.R1kSegBase):
         )
         self.compact = True
         self.get_fields(
-            ("t2c_h0_p", 0x20),
+            ("t2c_h0_n", 0x20),
             ("t2c_h1_p", 0x20),
             ("t2c_h2_p", 0x20),
             ("t2c_h3_p", 0x20),
@@ -219,7 +219,8 @@ class R1kSegLinkPack():
 
         bittools.make_one(self.hdr, 'hdr_f5_p', Thing3)
 
-        for n, i in self.root:
-            i.dump(seg.tfile)
-        seg.tfile.write("\n")
+        if False:
+            for n, i in self.root:
+                i.dump(seg.tfile)
+            seg.tfile.write("\n")
 
