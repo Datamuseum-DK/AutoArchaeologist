@@ -10,6 +10,7 @@ import subprocess
 
 import autoarchaeologist.rational.r1k_linkpack as LinkPack
 import autoarchaeologist.rational.r1k_bittools as bittools
+import autoarchaeologist.rational.r1k_81seg as seg81
 import autoarchaeologist.rational.r1k_97seg as seg97
 import autoarchaeologist.rational.r1k_a6seg as sega6
 
@@ -173,14 +174,13 @@ class R1kSegHeap():
     ''' A '97' segment from the backup tape '''
 
     def __init__(self, this):
-        if len(this) > (1<<20):
-            return
+        #if len(this) > (1<<20):
+        #    return
         if not this.has_note("R1k_Segment"):
             return
         for i in (
             "74_tag",        # CODE
             "75_tag",        # CODE
-            "81_tag",        # 12MB, some strings incl TRIG_LIB
             "83_tag",        # 2.7MB, no strings
             "84_tag",        # 300KB, no strings
             "e3_tag",        # sources
@@ -235,6 +235,7 @@ class R1kSegHeap():
 
         try:
             self.ponder()
+        #except IndexError as err:
         except Exception as err:
             print("PONDERING FAILED", this, err)
             if "AA_RUN_DOT" in os.environ:
@@ -289,6 +290,15 @@ class R1kSegHeap():
                 seg97.R1kSeg97(self)
             except bittools.MisFit as err:
                 print("FAIL SEG97", self.this, err)
+                if "AA_RUN_DOT" in os.environ:
+                    raise
+            return
+
+        if self.this.has_note('81_tag'):
+            try:
+                seg81.R1kSeg81(self)
+            except bittools.MisFit as err:
+                print("FAIL SEG81", self.this, err)
                 if "AA_RUN_DOT" in os.environ:
                     raise
             return

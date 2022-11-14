@@ -52,10 +52,12 @@ class DianaChain(bittools.R1kSegBase):
                 ("chain_2_p", 26),
             )
             self.finish()
-            bittools.make_one(self, 'chain_2_p', bittools.R1kSegBase, someclass)
+            y = bittools.make_one(self, 'chain_2_p', bittools.R1kSegBase, someclass)
         else:
             self.finish()
-            bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
+            y = bittools.make_one(self, 'end', bittools.R1kSegBase, someclass)
+            if y:
+                seg.dot.edge(self, y, "color=green")
 
 class DianaChain2(bittools.R1kSegBase):
     def __init__(self, seg, address):
@@ -138,6 +140,36 @@ class SomeList(bittools.R1kSegBase):
             fo.write("    0x%x bytes free at 0x%06x\n" % (length, address))
         return len(self.chunk)
 
+class Diana_10c91(bittools.R1kSegBase):
+    "t p p c 6 P 17 ."
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, -1))
+        self.compact = False
+        self.get_fields(
+            ("Diana_10c91_type", 17),
+            ("Diana_10c91_1_p", 26),
+            ("Diana_10c91_2_p", 26),
+            ("Diana_10c91_3_p", 26),
+            ("Diana_10c91_4_p", 32),
+            ("Diana_10c91_5_n", 17),
+        )
+        self.finish()
+        bittools.make_one(self, 'Diana_10c91_4_p', bittools.R1kSegBase, Diana_10c91dst)
+        bittools.make_one(self, 'Diana_10c91_1_p', bittools.R1kSegBase, someclass)
+        bittools.make_one(self, 'Diana_10c91_2_p', bittools.R1kSegBase, someclass)
+        bittools.make_one(self, 'Diana_10c91_3_p', DianaChain, func=make_chain)
+
+class Diana_10c91dst(bittools.R1kSegBase):
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, -1))
+        self.compact = False
+        self.get_fields(
+            ("f1_n", 32),
+            ("f2_p", 32),
+        )
+        self.finish()
+        bittools.PointerArray(seg, self.f2_p, target=FooBar)
+
 class Diana_10c94(bittools.R1kSegBase):
     ''' 0x10c94: "t p p c 6 P",		# Followed by [0x31...] '''
     def __init__(self, seg, address):
@@ -163,6 +195,34 @@ class Diana_10c94(bittools.R1kSegBase):
             bittools.BitPointerArray, count=2
         )
 
+class FooBar(bittools.R1kSegBase):
+    ''' ... '''
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, 0x9d))
+        self.compact = True
+        self.get_fields(
+            ("p1_p", 32),
+            ("p2_p", 32),
+            ("p3_p", 32),
+            ("p4", 3),
+            ("p5_p", 32),
+            ("p6_p", 26),
+        )
+        y = bittools.make_one(self, 'p1_p', bittools.R1kSegBase, FooBar)
+        if y:
+            seg.dot.edge(self, y)
+        if not self.p4:
+            y = bittools.make_one(self, 'p5_p', bittools.R1kSegBase, someclass)
+            if y:
+                seg.dot.edge(self, y)
+        #seg.mkcut(self.p2_p)
+        ##seg.mkcut(self.p3_p)
+
+class Snafu(bittools.PointerArray):
+    ''' ... '''
+    def __init__(self, seg, address):
+        super().__init__(seg, address, width=32, target=FooBar)
+        self.supress_zeros = True
 
 class Diana_112a8(bittools.R1kSegBase):
     ''' ... '''
@@ -176,9 +236,9 @@ class Diana_112a8(bittools.R1kSegBase):
             ("Diana_112a8_3_p", 26),
             ("Diana_112a8_4_p", 26),
             ("Diana_112a8_5_p", 26),
-            ("Diana_112a8_6_p", 32),
+            ("Diana_112a8_6_x", 6),
+            ("Diana_112a8_6_p", 26),
             ("Diana_112a8_7", 17),
-            #("Diana_112a8_8", 32),
         )
         self.finish()
         bittools.make_one(self, 'Diana_112a8_1_p', bittools.R1kSegBase, someclass)
@@ -186,13 +246,50 @@ class Diana_112a8(bittools.R1kSegBase):
         bittools.make_one(self, 'Diana_112a8_3_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_112a8_4_p', bittools.R1kSegBase, someclass)
         bittools.make_one(self, 'Diana_112a8_5_p', bittools.R1kSegBase, someclass)
+        bittools.make_one(self, 'Diana_112a8_6_p', bittools.R1kSegBase, Diana_112a8dst)
 
+class Diana_112a8dst(bittools.R1kSegBase):
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, -1))
+        self.compact = False
+        self.get_fields(
+            ("f1_n", 32),
+            ("f2_p", 32),
+        )
+        self.finish()
+        y = bittools.PointerArray(seg, self.f2_p, width=32, target=Diana_112a8d2)
+        y.supress_zeros = True
+        seg.dot.edge(self, y)
+
+class Diana_112a8d2(bittools.R1kSegBase):
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, -1))
+        self.compact = False
+        self.get_fields(
+            ("f1_n", 32),
+            ("f2_n", 32),
+            ("f3_p", 32),
+        )
+        self.finish()
+        bittools.make_one(self, 'f3_p', bittools.R1kSegBase, Diana_112a8d3)
+
+class Diana_112a8d3(bittools.R1kSegBase):
+    def __init__(self, seg, address):
+        super().__init__(seg, seg.cut(address, -1))
+        self.compact = False
+        self.get_fields(
+            ("f1_n", 9),
+            ("f2_p", 26),
+            ("f3_n", 26),
+        )
+        self.finish()
+        bittools.make_one(self, 'f2_p', bittools.R1kSegBase, someclass)
 
 diana_types = {
     0x10079: "t",
     0x100ab: "t",
     0x100be: "t",
-    0x10100: "t 69",		# followed by [0x2b|0x45] (disk-address?)
+    0x10100: "t 43 26",		# followed by [0x2b|0x45] (disk-address?)
     0x10135: "t",
     0x1015e: "t",
     0x1015f: "t",
@@ -267,7 +364,8 @@ diana_types = {
     0x10956: "t p p c",
     0x10980: "t 8 p" ,
     0x10984: "t p p c 17",
-    0x10985: "t p p c 17",
+    #0x10985: "t p p c 17",
+    0x10985: "t p p 8",
     0x10989: "t p p c 17",
     0x10995: "t p p c 17",
     0x10996: "t p p c 17",
@@ -279,7 +377,8 @@ diana_types = {
     0x10cc0: "t",
     0x10c8c: "t p p c",
     0x10c8f: "t p p P",
-    0x10c91: "t p p c 32 17 .",
+    # 0x10c91: "t p p c 6 P 17 .",
+    0x10c91: Diana_10c91,
     0x10c94: Diana_10c94,
     0x10e0e: "t p p p p",
     0x10f05: "t p p p p",
@@ -287,15 +386,16 @@ diana_types = {
     0x10f0f: "t p p p p",
     0x11004: "t p p p p p",
     0x112a8: Diana_112a8,
-    0x1131d: "t p p",
+    0x1131d: "t p p 117",
     0x11423: "t p p",		# ⟦a51d6cbb0⟧ Followed by [0x18/0x55/0x7e]
     0x1151e: "t p p",
-    0x11666: "t p p p p",	# Followed by [0x4f|0x69]
+    0x11666: "t p p p p 105",	# Followed by [0x4f|0x69]
     0x11731: "t p p",		# ⟦b8f057163⟧
     0x11732: "t p p",		# ⟦9f223cbfc⟧
     0x11821: "t p p",		# ⟦fd533ba7a⟧
-    0x11829: "t p p",		# ⟦f36b33fe3⟧
-    0x1182c: "t p p",		# ⟦929481dbc⟧
+    #0x11829: "t p p 170",
+    0x11829: "t p p 59 p",
+    0x1182c: "t p p 59 p 9 26 9 26 15",		# ⟦929481dbc⟧
     0x1182e: "t p p",
     0x11833: "t p p 24",	# ⟦d765ea804⟧
     0x11962: "t p p",
@@ -305,7 +405,7 @@ diana_types = {
     0x11a9b: "t p p p p p 1 .",
     0x11c20: "t p p 56",
     0x11b1f: "t p p 24 p",
-    0x11d8d: "t p p p c2",		# ⟦fd533ba7a⟧ Followed by [0x9]
+    0x11d8d: "t p p p P",		# ⟦fd533ba7a⟧ Followed by [0x9]
     0x11e64: "t p p p p",	# ⟦24afbc399⟧
     0x11f65: "t p p p p",	# ⟦24afbc399⟧
     0x1ff9c: "t p p",
@@ -328,9 +428,9 @@ diana_types = {
     0x12a4a: "t p p p p",
     0x12b06: "t p p",
     0x12c07: "t p p",
-    0x12d30: "t p p 50 p 15",
+    0x12d30: "t p p 7 x 9 p p 15",
     0x12d28: "t p p",
-    0x12e08: "t p",
+    0x12e08: "t p 84",
     0x12f09: "t p",
     0x13101: "t p 1",
     0x13161: "t p p p p",
@@ -338,14 +438,14 @@ diana_types = {
     0x13312: "t p p p p 43",
     0x13413: "t p p p p",
     0x1350b: "t p p",		# ⟦f7592710e⟧
-    0x13677: "t p p",
+    0x13677: "t p p 1",
     0x13773: "t p p p",
     0x1382f: "t p p 16 34 34 16",
     0x13915: "t p",
     0x13a0c: "t p p",
     0x13a16: "t p",		# always followed by [0x32...]
     0x13b14: "t p p",
-    0x13b17: "t p 76",
+    0x13b17: "t p 32 1 x 35",
     0x13eab: "t p",
     0x13f5a: "t p",
     0x13f5f: "t p",
@@ -373,12 +473,14 @@ class DianaSkeleton(bittools.R1kSegBase):
         self.compact = DIANA_COMPACT
         self.get_fields(*flds)
         for i in objs:
-            bittools.make_one(
+            y = bittools.make_one(
                 self,
                 i,
                 bittools.R1kSegBase,
                 func=someclass,
             )
+            if y:
+                seg.dot.edge(self, y)
         for field, cls, func in chains:
             y = bittools.make_one(
                 self,
@@ -407,20 +509,22 @@ class PrepareTypes():
 
             for spec in b.split():
                 if spec == "c":
-                    self.add_field(a, "%d_ptr" % self.nbr, 26, False)
+                    self.add_field(a, "%d_p" % self.nbr, 26, False)
                     self.chains.append((self.fields[-1][0], DianaChain, make_chain))
                 elif spec == "c2":
-                    self.add_field(a, "%d_ptr" % self.nbr, 26, False)
+                    self.add_field(a, "%d_p" % self.nbr, 26, False)
                     self.chains.append((self.fields[-1][0], DianaChain2, make_chain2))
                 elif spec == "e":
                     self.objs.append('end')
                 elif spec == "P":
-                    self.add_field(a, "%d_ptr" % self.nbr, 26, False)
+                    self.add_field(a, "%d_p" % self.nbr, 26, False)
                     self.cuts.append(self.fields[-1][0])
                 elif spec == "p":
-                    self.add_field(a, "%d_ptr" % self.nbr, 26, True)
+                    self.add_field(a, "%d_p" % self.nbr, 26, True)
                 elif spec == "t":
                     self.add_field(a, "type", 17, False)
+                elif spec == "x":
+                    self.add_field(a, "txt", 8, False)
                 elif spec.isnumeric():
                     self.add_field(a, "%d_n" % self.nbr, int(spec), False)
                 elif spec == ".":
@@ -461,6 +565,7 @@ def someclass(seg, address):
     else:
         reval = t(seg, address)
     return reval
+
 #######################################################################
 # D1xx is header variant 1
 
@@ -537,13 +642,13 @@ class D302(bittools.R1kSegBase):
         self.compact = True
         self.get_fields(
             ("d302_0", 32),
-            ("d302_d302", 32),
-            ("d302_d303", 32),
+            ("d302_d302_p", 32),
+            ("d302_d303_p", 32),
             ("d302_3", 32),
             ("d302_4", 32),
         )
-        bittools.make_one(self, 'd302_d302', D302)
-        bittools.make_one(self, 'd302_d303', D303)
+        bittools.make_one(self, 'd302_d302_p', D302)
+        bittools.make_one(self, 'd302_d303_p', D303)
         bittools.make_one(self, 'end', bittools.ArrayString)
 
 class D303(bittools.R1kSegBase):
@@ -554,11 +659,11 @@ class D303(bittools.R1kSegBase):
         self.compact = True
         self.get_fields(
             ("d303_0", 37),
-            ("d303_1", 32),
+            ("d303_1_p", 32),
             ("d303_2", 15),
             ("d303_3", 76),
         )
-        bittools.make_one(self, 'd303_1', D304)
+        bittools.make_one(self, 'd303_1_p', D304)
 
 class D304(bittools.R1kSegBase):
     ''' ...  '''
@@ -584,15 +689,21 @@ class D306(bittools.R1kSegBase):
         super().__init__(seg, c)
         self.compact = True
         self.get_fields(
-            ("d306_d303", 32),
+            ("d306_d303_p", 32),
             ("d306_1", 32),
             ("d306_2", 3),
-            ("d306_d307", 32),
-            ("d306_d308", 32),
+            ("d306_d307_p", 32),
+            ("d306_d308_p", 32),
         )
-        bittools.make_one(self, 'd306_d303', D303)
-        bittools.make_one(self, 'd306_d307', D307)
-        bittools.make_one(self, 'd306_d308', D308)
+        i = bittools.make_one(self, 'd306_d303_p', D303)
+        if i:
+            seg.dot.edge(self.chunk, i.chunk)
+        i = bittools.make_one(self, 'd306_d307_p', D307)
+        if i:
+            seg.dot.edge(self.chunk, i.chunk)
+        i = bittools.make_one(self, 'd306_d308_p', D308)
+        if i:
+            seg.dot.edge(self.chunk, i.chunk)
 
 class D307(bittools.R1kSegBase):
     ''' ...  '''
@@ -605,9 +716,11 @@ class D307(bittools.R1kSegBase):
             ("d307_1", 25),
             ("d307_2", 32),
             ("d307_3", 32),
-            ("d307_d307", 31),
+            ("d307_d307_p", 31),
         )
-        bittools.make_one(self, 'd307_d307', D307)
+        i = bittools.make_one(self, 'd307_d307_p', D307)
+        if i:
+            seg.dot.edge(self.chunk, i.chunk)
 
 class D308(bittools.R1kSegBase):
     ''' ...  '''
@@ -616,15 +729,15 @@ class D308(bittools.R1kSegBase):
         super().__init__(seg, c)
         self.compact = True
         self.get_fields(
-            ("d308_d303", 32),
+            ("d308_d303_p", 32),
             ("d308_1", 3),
             ("d308_2", 32),
-            ("d308_d307", 32),
-            ("d308_d308", 32),
+            ("d308_d307_p", 32),
+            ("d308_d308_p", 32),
         )
-        bittools.make_one(self, 'd308_d303', D303)
-        bittools.make_one(self, 'd308_d307', D307)
-        bittools.make_one(self, 'd308_d308', D308)
+        bittools.make_one(self, 'd308_d303_p', D303)
+        bittools.make_one(self, 'd308_d307_p', D307)
+        bittools.make_one(self, 'd308_d308_p', D308)
 
 #######################################################################
 
@@ -635,15 +748,15 @@ class Thing13(bittools.R1kSegBase):
         super().__init__(seg, c, **kwargs)
         self.compact = True
         self.get_fields(
-            ("t13_0", 32),
+            ("t13_0_p", 32),
             ("t13_1", 32),
             ("t13_3",  3),
-            ("t13_4", 32),
-            ("t13_5", 32),
+            ("t13_4_p", 32),
+            ("t13_5_p", 32),
         )
-        bittools.make_one(self, "t13_0", Thing9)
-        bittools.make_one(self, "t13_4", Thing12)
-        bittools.make_one(self, "t13_5", Thing7)
+        bittools.make_one(self, "t13_0_p", Thing9)
+        bittools.make_one(self, "t13_4_p", Thing12)
+        bittools.make_one(self, "t13_5_p", Thing7)
 
 class Thing12(bittools.R1kSegBase):
     ''' Something #12 '''
@@ -763,7 +876,7 @@ class Thing5(bittools.R1kSegBase):
             if val:
                 bittools.make_one(self, name, Thing6)
 
-class Thing4(bittools.R1kSegBase):
+class StringIndex(bittools.R1kSegBase):
     ''' Something #4 '''
     def __init__(self, seg, address, **kwargs):
         p = seg.mkcut(address)
@@ -775,29 +888,48 @@ class Thing4(bittools.R1kSegBase):
             ("x", 32),
             ("y", 32),
         )
-        self.a = []
-        for i in range(offset, len(c), 38):
-            j = int(c[i:i+38], 2)
-            self.a.append((j >> 15, j & 0x7fff))
-            if not j & 0x7fff:
-                break
 
     def render(self, _chunk, fo):
         ''' ... '''
         fo.write(self.title)
         self.render_fields_compact(fo)
         fo.write("\n")
-        for n, i in enumerate(self.a):
-            if i:
-                fo.write("  [0x%x] = 0x%x, 0x%x\n" % (n, i[0], i[1]))
+        for n, off in enumerate(range(64, len(self.chunk), 38)):
+            txt = self.seg.txttab.get(n+1)
+            if not txt:
+                continue
+            j = int(self.chunk[off:off+38], 2)
+            a = j >> 15
+            # A * 8 + t1_c1_head_p seem to point to string
+            b = j & 0x7fff
+            # B is zero or a serial number
+            fo.write("  [$0x%04x] " % (n + 1))
+            fo.write(" 0x%05x %03x" % (a * 8, b))
+            fo.write(" »%s«" % txt.txt)
+            fo.write("\n")
+
+class TxtTab():
+    def __init__(self, offset, idx0, idx1, idx2, txt):
+        self.offset = offset
+        self.idx0 = idx0
+        self.idx1 = idx1
+        self.idx2 = idx2
+        self.txt = txt
+
+    def render(self):
+        t = "    @0x%05x " % self.offset
+        t += "[0x%02x] = " % self.idx0
+        t += " $0x%04x" % self.idx1
+        #t += " 0x%x" % self.idx2
+        t += " »" + self.txt + "«"
+        return t
 
 
-class Thing3(bittools.R1kSegBase):
+class StringStore(bittools.R1kSegBase):
     ''' Something #3 '''
     def __init__(self, seg, address, **kwargs):
         p = seg.mkcut(address)
         y = int(p[32:64], 2)
-        # y = 0
         c = seg.cut(address, 0x40 + y * 8)
         super().__init__(seg, c, **kwargs)
         self.compact = True
@@ -808,17 +940,28 @@ class Thing3(bittools.R1kSegBase):
         self.pad = (14 - (self.begin + offset) % 8) % 8
         offset += self.pad
         self.a = []
+        n = 0
         while offset < len(self.chunk) - 24:
-            i = int(self.chunk.bits[offset:offset+16], 2)
-            j = int(self.chunk.bits[offset+16:offset+24], 2)
-            if i == 0 or j == 0 or i > 0x100 or offset + 24 + j * 8 > len(self.chunk):
+            strno = int(self.chunk.bits[offset:offset+16], 2)
+            if strno == 0:
                 break
+            strlen = int(self.chunk.bits[offset+16:offset+24], 2)
+            if offset + 24 + strlen * 8 >= len(self.chunk):
+                #print("Text overflow $0x%04x" % strno, "0x%x" % strlen, p, "at 0x%x" % offset)
+                break
+            # print("Text $0x%04x" % strno, "0x%x" % strlen, p, "at 0x%x" % offset, c, "0x%x" % (len(self.chunk) - 24))
             try:
-                text = bittools.to_text(seg, self.chunk, offset + 24, j)
-            except bittools.NotText:
-                break
-            offset += 24 + 8 * j
-            self.a.append((offset, i, j, text))
+                text = bittools.to_text(seg, self.chunk, offset + 24, strlen)
+                txt = TxtTab(self.chunk.begin + offset, n, strno, strlen, text[1])
+            except bittools.NotText as err:
+                tt = []
+                for i in range(offset+24, offset+24 + strlen*8, 8):
+                    tt.append(int(self.chunk[i:i+8],2))
+                txt = TxtTab(self.chunk.begin + offset, n, strno, strlen, "".join("\\x%02x" % x for x in tt))
+            self.a.append(txt)
+            seg.txttab[strno] = txt
+            offset += 24 + 8 * strlen
+            n += 1
         self.tail = offset
 
     def render(self, _chunk, fo):
@@ -827,7 +970,7 @@ class Thing3(bittools.R1kSegBase):
         self.render_fields_compact(fo)
         fo.write("\n")
         for n, i in enumerate(self.a):
-            fo.write("    [0x%x] = " % n + " 0x%x" % i[1] + " 0x%x" % i[2] + " " + i[3][1] + "\n")
+            fo.write(i.render() + "\n")
 
 class Thing2(bittools.R1kSegBase):
     '''
@@ -838,12 +981,12 @@ class Thing2(bittools.R1kSegBase):
         super().__init__(seg, seg.cut(address, 0x40), **kwargs)
         self.compact = True
         self.get_fields(
-            ("payload", 32),
-            ("next", 32),
+            ("payload_p", 32),
+            ("next_p", 32),
         )
-        if self.payload:
-            #payload_handler(seg, self.payload)
-            bittools.make_one(self, "payload", payload_handler)
+        if self.payload_p:
+            #payload_handler(seg, self.payload_p)
+            bittools.make_one(self, "payload_p", payload_handler)
 
 class Thing1(bittools.R1kSegBase):
     '''
@@ -857,36 +1000,46 @@ class Thing1(bittools.R1kSegBase):
     def __init__(self, seg, address, **kwargs):
         super().__init__(seg, seg.cut(address, 0x10c), **kwargs)
         self.get_fields(
-            ("t1_unknown0", 0x20),
-            ("t1_unknown1", 0x4c),
-            ("t1_c1_head", 0x20),
-            ("t1_c2_last", 0x20),
-            ("t1_array1", 0x20),
-            ("t1_c2_tail", 0x20),
-            ("t1_c1_tail", 0x20),
+            ("t1_00_n", 0x6c),
+            ("t1_c1_head_p", 0x20),
+            ("t1_c2_last_p", 0x20),
+            ("t1_array1_p", 0x20),
+            ("t1_c2_tail_p", 0x20),
+            ("t1_c1_tail_p", 0x20),
         )
 
-        i = self.t1_c1_tail
+        i = self.t1_c2_tail_p
         prev = self
         while i:
-            follow = Thing2(seg, i, payload_handler=Thing4, ident="Chain1")
+            follow = Thing2(seg, i, payload_handler=StringStore, ident="Chain2")
             seg.dot.edge(prev.chunk, follow.chunk)
-            i = follow.next
+            i = follow.next_p
             prev = follow
 
-        i = self.t1_c2_tail
+        if self.t1_c2_last_p:
+            t3 = bittools.make_one(self, "t1_c2_last_p", StringStore)
+
+        i = self.t1_c1_tail_p
         prev = self
         while i:
-            follow = Thing2(seg, i, payload_handler=Thing3, ident="Chain2")
+            follow = Thing2(seg, i, payload_handler=StringIndex, ident="Chain1")
             seg.dot.edge(prev.chunk, follow.chunk)
-            i = follow.next
+            i = follow.next_p
             prev = follow
 
-        if self.t1_c2_last:
-            bittools.make_one(self, "t1_c2_last", Thing3)
+        if 1 and self.t1_array1_p:
+            bittools.make_one(self, "t1_array1_p", StringIndex)
+            #bittools.Array(seg, self.t1_array1_p, 38)
 
-        if self.t1_array1:
-            bittools.make_one(self, "t1_array1", Thing4)
+class From31a(bittools.R1kSegBase):
+    def __init__(self, seg, address, **kwargs):
+        c = seg.cut(address, 0x11c)
+        super().__init__(seg, c, **kwargs)
+        self.compact = True
+        self.get_fields(
+            ("x0_n", 284),
+        )
+        # bittools.make_one(self, "t9_1", Thing10)
 
 class Head(bittools.R1kSegBase):
     '''
@@ -900,19 +1053,21 @@ class Head(bittools.R1kSegBase):
             ("head_z_000", 32,),           # 0x80000001
             ("head_segment", 31,),         # Segment#
             ("head_c_03f", 32,),           # 0x1
-            ("head_chains", 32,),          # 0x231a, one case 0x0
-            ("head_z_07f", 1,),            # 0x0
-            ("head_z_80", 31,),            # 0x0
-            ("head_stuff1", 32,),          # bit-address
+            ("head_chains_p", 32,),        # 0x231a, one case 0x0
+            ("head_07f_z", 1,),            # 0x0
+            ("head_080_z", 31,),           # 0x0
+            ("head_stuff1_p", 32,),        # bit-address
             ("head_c_bf", 33,),            # 0x12, one case 0x0
-            ("head_unknown_e0", 32,),      # looks like addres, most invalid
-            ("head_c_100", 32,),           # 0x4
-            ("head_z_120", 32,),           # 0
-            ("head_z_140", 32,),           # 0
-            ("head_z_160", 32,),           # 0
-            ("head_z_180", 32,),           # 0
-            ("head_z_1a0", 32,),           # 0
-            ("head_z_1c0", 32,),           # 0
+            ("head_object", 30,),          # for instance library number
+            ("head_c_fe", 32,),            # 0x4
+            ("head_11e_z", 32,),           # 0
+            ("head_13e_z", 32,),           # 0
+            ("head_15e_z", 32,),           # 0
+            ("head_17e_z", 32,),           # 0
+            ("head_19e_z", 32,),           # 0
+            ("head_1be_z", 32,),           # 0
+            ("head_1de_z", 7,),            # 0
+            ("head_variant", 2,),          # 01/10/11
         )
 
 class HeadVar1(Head):
@@ -921,13 +1076,17 @@ class HeadVar1(Head):
         seg.this.add_note("VAR1")
         super().__init__(seg, address, **kwargs)
         self.get_fields(
-            ("hv1_v", 7,),
-            ("hv1_d", 3,),
-            ("hv1_z0", 32,),
-            ("hv1_d100", 32,),
+            ("hv1_1e7_n", 3,),
+            ("hv1_1ea_z", 32,),
+            ("hv1_20a_p", 32,),
+            ("hv1_22a_d", 52,),		   # World-ID ?
+            ("hv1_25e_z", 48,),
+            ("hv1_28e_n", 48,),
         )
         self.finish()
-        bittools.make_one(self, 'hv1_d100', D100)
+        y = bittools.make_one(self, 'hv1_20a_p', D100)
+        if y:
+            seg.dot.edge(self, y)
 
 class HeadVar2(Head):
     ''' Second variant of Head '''
@@ -936,16 +1095,17 @@ class HeadVar2(Head):
         super().__init__(seg, address, **kwargs)
         #self.compact = True
         self.get_fields(
-            ("hv2_v", 7,),
-            ("hv2_d", 3,),
-            ("hv2_u0", 32,),
-            ("hv2_u1", 32,),
-            ("hv2_u2", 32,),
-            ("hv2_u3", 32,),
+            ("hv2_1e7_n", 3,),
+            ("hv2_1ea_z", 32,),
+            ("hv2_20a_p", 32,),
+            ("hv2_22a", 32,),
+            ("hv2_24a_p", 32,),
+            ("hv2_26a_z", 32,),
+            ("hv2_28a_n", 160,),
         )
         self.finish()
-        bittools.make_one(self, 'hv2_u1', bittools.R1kCut)
-        bittools.make_one(self, 'hv2_u3', bittools.R1kCut)
+        bittools.make_one(self, 'hv2_20a_p', bittools.R1kCut)
+        bittools.make_one(self, 'hv2_24a_p', bittools.R1kCut)
 
 class HeadVar3(Head):
     ''' Third variant of Head '''
@@ -954,13 +1114,14 @@ class HeadVar3(Head):
         super().__init__(seg, address, **kwargs)
         #self.compact = True
         self.get_fields(
-            ("hv3_v", 7,),
-            ("hv3_d", 3,),
-            ("hv3_u0", 32,),
-            ("hv3_d300", 32,),
+            ("hv3_1e7_n", 3,),
+            ("hv3_1ea_z", 32,),
+            ("hv3_20a_p", 32,),
+            ("hv3_22a_z", 64,),
+            ("hv3_26a_n", 64,),
         )
         self.finish()
-        bittools.make_one(self, 'hv3_d300', D300)
+        bittools.make_one(self, 'hv3_20a_p', D300)
 
 
 class R1kSeg97():
@@ -970,7 +1131,6 @@ class R1kSeg97():
         if len(p) <= 0x400:
             return
         self.seg = seg
-
 
         variant = int(p[0x1e0:0x1e7], 2)
 
@@ -982,17 +1142,22 @@ class R1kSeg97():
         elif variant == 3:
             self.head = HeadVar3(seg, 0x80)
         else:
-            self.head = Head(seg, 0x80)
             print("97SEG", seg.this, "Unknown head variant", variant)
-        seg.dot.edge(seg.mkcut(0), self.head)
-        self.table = bittools.BitPointerArray(seg, 0x31a, 256)
-        seg.dot.edge(seg.mkcut(0), self.table)
+            return
+        # print("MAP", seg.this, "OBJ", self.head.head_object, "VAR", variant)
 
-        bittools.make_one(self.head, "head_chains", Thing1)
-        if self.head.head_stuff1:
-            someclass(seg, self.head.head_stuff1)
+        seg.dot.edge(seg.mkcut(0), self.head)
+        #self.table = bittools.BitPointerArray(seg, 0x31a, 160)
+        #self.table = bittools.BitPointerArray(seg, 0x31a, 160)
+        #seg.dot.edge(seg.mkcut(0), self.table)
+
+        y = bittools.make_one(self.head, "head_chains_p", Thing1)
+        if y:
+            seg.dot.edge(self.head, y)
+        if self.head.head_stuff1_p:
+            y = someclass(seg, self.head.head_stuff1_p)
+            seg.dot.edge(self.head, y)
 
         # seg.hunt_orphans(26, verbose=False)
 
 
-        seg.dot.edge(self.head, self.table)

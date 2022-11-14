@@ -32,8 +32,8 @@ class R1kSegChunk():
     def __str__(self):
         if self.owner:
             i = self.owner.__class__.__name__
-            return "{%s 0x%x-0x%x/0x%x}" % (i, self.begin, self.end, len(self.bits))
-        return "{R1kSegChunk 0x%x-0x%x/0x%x}" % (self.begin, self.end, len(self.bits))
+            return "{%s 0x%05x/0x%x}" % (i, self.begin, len(self.bits))
+        return "{R1kSegChunk 0x%05x/0x%x}" % (self.begin, len(self.bits))
 
     def __getitem__(self, idx):
         return self.bits[idx]
@@ -102,7 +102,15 @@ class R1kSegField():
 
     def render(self):
         ''' ... '''
-        if self.name[-2:] == "_p":
+        if self.name[-4:] == "_txt":
+            i = " " + self.name + " $0x%04x" % self.val
+            tt = self.up.seg.txttab.get(self.val)
+            if tt:
+                i += " »" + tt.txt + "«"
+            elif self.val:
+                print("TXT miss", self.up, self.name, "$0x%04x" % self.val)
+            return i
+        elif self.name[-2:] == "_p":
             return " " + self.name + " → " + self.up.seg.label(self.val)
         return " " + self.name + " = " + self.fmt % self.val
 
@@ -129,6 +137,7 @@ class R1kSegBase():
         self.text = None
         self.offset = 0
         self.supress_zeros = False
+        self.txttab = {}
 
         seg.dot.node(
            chunk,
@@ -158,7 +167,8 @@ class R1kSegBase():
         self.offset = offset
         for i in self.fields:
             if i.name[-2:] == "_z":
-                assert not i.val
+                if i.val:
+                    print(self, "Zero field", i.name, "Has value", hex(i.val))
                 i.fmt = "0x%x"
                 continue
             if not i.val or i.name[-2:] != "_p":
@@ -273,9 +283,12 @@ def make_one(self, attr, cls, func=None, **kwargs):
             y = func(self.seg, a, **kwargs)
         else:
             y = cls(self.seg, a, **kwargs)
+        if y:
+            self.seg.dot.edge(self.chunk, y.chunk)
         return y
     except MisFit as err:
         print(self.seg.this, "MISFIT at 0x%x" % a, "%s.%s:" % (str(self), attr), err)
+        return False
 
 class BitPointer(R1kSegBase):
     ''' A pointer of some width '''
@@ -304,6 +317,24 @@ class BitPointerArray(R1kSegBase):
         for i in range(count):
             self.get_fields(
                 ("ptr_0x%x_p" % i, size)
+            )
+        self.finish()
+
+class PointerArray(R1kSegBase):
+    ''' Array format'''
+    def __init__(self, seg, address, width=32, **kwargs):
+        p = seg.mkcut(address)
+        i = int(p[32:64], 2)
+        p = seg.cut(address, 64 + i * width)
+        super().__init__(seg, p, title="PointerArray", **kwargs)
+        self.supress_zeros = True
+        self.get_fields(
+            ("x", 32),
+            ("y", 32)
+        )
+        for j in range(i):
+            self.get_fields(
+                ("a_%x_p" % j, width)
             )
         self.finish()
 
@@ -379,7 +410,7 @@ def to_text(seg, chunk, pointer, length, no_fail=False):
        Return number of bytes consumed and text
        no_fail=True can be used to discover length of text
     '''
-    assert length > 0
+    assert length >= 0
     text = ""
     i = 0
     for i in range(length):
@@ -395,17 +426,21 @@ def to_text(seg, chunk, pointer, length, no_fail=False):
     return i + 1, text
 
 def hunt_array_strings(seg, chunk):
-    return
     ''' Find any strings on array format '''
     offset = 0x80
     candidates = []
-    pp = '0' * 31 + '1' + '0' * 20
+    pattern = '0' * 31 + '1' + '0' * 20
+    print("LC", len(chunk))
     while len(chunk) - offset >= 72:
-        i = chunk.find(pp, offset)
+        i = chunk.find(pattern, offset)
         if i < 0:
             break
         offset = i
-        length = int(chunk[offset+32:offset+64], 2)
+        p = chunk[i:i+64]
+        length = int(p[32:], 2)
+        if not length:
+            offset += 32
+            continue
         if length < 3 or length > 200:
             offset += 32
             continue
@@ -420,10 +455,10 @@ def hunt_array_strings(seg, chunk):
 
         assert width == length
         print("! 0x%x" % offset, _text)
-        candidates.append(chunk.begin + offset + i)
-        offset += i + 64 + 8 * length
+        candidates.append(chunk.begin + offset)
+        offset += 64 + 8 * length
 
-    for offset in candidates:
+    for offset in sorted(candidates, reverse=True):
         ArrayString(seg, offset, ident="hunted")
 
 class StringCandidate():
