@@ -76,6 +76,8 @@ class R1kE3Objects(bitdata.BitRecord):
                     nested_scope = 1
                 elif j[0] == "pragma" and j[1] == "Cache_Register":
                     self.this.add_note(" ".join(j[:5]))
+                elif j[0] == "pragma" and j[1] == "Segmented_Heap":
+                    self.this.add_note(" ".join(j[:5]))
                 elif j[0] == "pragma" and j[1] == "Module_Name":
                     self.this.add_note(" ".join(j[:4]))
                 elif j[0] == "pragma" and j[1] == "Subsystem":
