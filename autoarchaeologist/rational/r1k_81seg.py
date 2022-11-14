@@ -10,49 +10,71 @@ import sys
 
 import autoarchaeologist.rational.r1k_bittools as bittools
 
-class Bla1(bittools.R1kSegBase):
+class NameChain(bittools.R1kSegBase):
+
+    ''' Chains of names from the same hash-bucket '''
 
     def __init__(self, seg, address, **kwargs):
         super().__init__(seg, seg.cut(address, -1), **kwargs)
         self.compact = True
         self.get_fields(
-            ("b1_000_z", 32),
-            ("b1_001_p", 32),
-            ("b1_002_p", 32),
+            ("nc_00_z", 32),
+            ("nc_01_p", 32),
+            ("nc_02_p", 32),
         )
         self.finish()
-        bittools.make_one(self, "b1_002_p", Bla1)
-        y = bittools.make_one(self, "b1_001_p", bittools.ArrayString)
-        if False:
-            if y != False:
-                self.bla2 = y.end
-                bittools.make_one(self, "bla2", Bla2)
+        bittools.make_one(self, "nc_02_p", NameChain)
+        y = bittools.make_one(self, "nc_01_p", bittools.ArrayString)
+
+class Directory(bittools.R1kSegBase):
+
+    ''' Directory node '''
+
+    def __init__(self, seg, address, **kwargs):
+        super().__init__(seg, seg.cut(address, -1), **kwargs)
+        self.compact = True
+        self.get_fields(
+            ("dir_00_n", 32),
+            ("dir_nbr_n", 32),
+        )
+        self.fields[-1].fmt = "[DIRECTORY,%d,1]"
+        self.get_fields(
+            ("dir_02_p", 32),
+            ("dir_03_p", 32),
+            ("dir_04_p", 32),
+            ("dir_05_n", 1),
+        )
+        self.finish()
+        seg.directories[self.dir_nbr_n] = self
+        self.b3 = bittools.make_one(self, "dir_02_p", Bla3)
+        bittools.make_one(self, "dir_03_p", Directory)
+        bittools.make_one(self, "dir_04_p", Directory)
+
+    def recurse(self, **kwargs):
+        yield from self.b3.recurse(pfx="", **kwargs)
+
+    def dump(self, pfx=""):
+        dirents = {}
+        for side, dirent in self.recurse():
+            e = dirents.setdefault(dirent.name.text, [dirent, ""])
+            e[1] += side
+        for name, i in sorted(dirents.items()):
+            dirent, side = i
+            if "L" in side:
+                side = " "
             else:
-                print("YY", hex(self.begin))
-
-class Bla2(bittools.R1kSegBase):
-
-    def __init__(self, seg, address, **kwargs):
-        super().__init__(seg, seg.cut(address, -1), **kwargs)
-        self.compact = True
-        self.get_fields(
-            ("b2_000_n", 32),
-            ("b2_dobj_n", 32),
-        )
-        self.fields[-1].fmt = "<DIRECTORY,%d,1>"
-        self.get_fields(
-            ("b2_002_p", 32),
-            ("b2_003_p", 32),
-            ("b2_004_p", 32),
-            ("b2_005_n", 1),
-            #("b2_006_p", 32),
-            #("b2_007_n", 32),
-            #("b2_008_n", 3),
-        )
-        self.finish()
-        bittools.make_one(self, "b2_002_p", Bla3)
-        bittools.make_one(self, "b2_003_p", Bla2)
-        bittools.make_one(self, "b2_004_p", Bla2)
+                side = "#"
+            txt = (pfx + name).ljust(64) + " " + side
+            if dirent.de_nbr_n:
+                txt += " [DIRECTORY,%d,1]" % dirent.de_nbr_n
+            txt += " " + str(dirent)
+            yield txt
+            if dirent.de_nbr_n:
+                dir = self.seg.directories.get(dirent.de_nbr_n)
+                if dir:
+                    yield from dir.dump(pfx + "┆ ")
+                else:
+                    yield pfx + "┆ [DIRECTORY,%d,1] not found" % dirent.de_nbr_n
 
 class Bla3(bittools.R1kSegBase):
 
@@ -64,8 +86,11 @@ class Bla3(bittools.R1kSegBase):
             ("b3_001_n", 35),
         )
         self.finish()
-        bittools.make_one(self, "b3_000_p", Bla4)
+        self.b4 = bittools.make_one(self, "b3_000_p", Bla4)
 
+    def recurse(self, **kwargs):
+        yield from self.b4.recurse(**kwargs)
+        
 class Bla4(bittools.R1kSegBase):
 
     def __init__(self, seg, address, **kwargs):
@@ -76,9 +101,15 @@ class Bla4(bittools.R1kSegBase):
             ("b4_001_p", 32),
         )
         self.finish()
-        bittools.make_one(self, "b4_000_p", Bla5)
-        bittools.make_one(self, "b4_001_p", Bla5)
+        self.b5_1 = bittools.make_one(self, "b4_000_p", Bla5)
+        self.b5_2 = bittools.make_one(self, "b4_001_p", Bla5)
 
+    def recurse(self, pfx, **kwargs):
+        if self.b5_1:
+            yield from self.b5_1.recurse(pfx=pfx + "L", **kwargs)
+        if self.b5_2:
+            yield from self.b5_2.recurse(pfx=pfx + "R", **kwargs)
+        
 class Bla5(bittools.R1kSegBase):
 
     def __init__(self, seg, address, **kwargs):
@@ -87,7 +118,7 @@ class Bla5(bittools.R1kSegBase):
         self.get_fields(
             ("b5_dobj_n", 31),
         )
-        self.fields[-1].fmt = "<DIRECTORY,%d,1>"
+        self.fields[-1].fmt = "[DIRECTORY,%d,1]"
         self.get_fields(
             ("b5_001_p", 32),
             ("b5_002_z", 32),
@@ -102,10 +133,14 @@ class Bla5(bittools.R1kSegBase):
         )
         self.finish()
         bittools.make_one(self, "b5_003_p", Bla6)
-        bittools.make_one(self, "b5_005_p", Bla9)
+        self.b9 = bittools.make_one(self, "b5_005_p", Bla9)
         if self.b5_007_n == 0x280:
             bittools.make_one(self, "b5_010_n", Bla13)
 
+    def recurse(self, **kwargs):
+        if self.b9:
+            yield from self.b9.recurse(**kwargs)
+        
 class Bla6(bittools.R1kSegBase):
 
     def __init__(self, seg, address, **kwargs):
@@ -164,26 +199,40 @@ class Bla9(bittools.R1kSegBase):
             ("b9_004_z", 1),
         )
         self.finish()
-        bittools.make_one(self, "b9_000_p", Bla10)
+        self.b10 = bittools.make_one(self, "b9_000_p", DirEnt)
 
-class Bla10(bittools.R1kSegBase):
+    def recurse(self, **kwargs):
+        yield from self.b10.recurse(**kwargs)
+
+class DirEnt(bittools.R1kSegBase):
+
+    ''' A directory entry '''
 
     def __init__(self, seg, address, **kwargs):
         super().__init__(seg, seg.cut(address, -1), **kwargs)
         self.compact = True
         self.get_fields(
-            ("ba_000_p", 32),
-            ("ba_dobj_n", 31),
+            ("de_nam_p", 32),
+            ("de_nbr_n", 31),
         )
-        self.fields[-1].fmt = "<DIRECTORY,%d,1>"
+        self.fields[-1].fmt = "[DIRECTORY,%d,1]"
         self.get_fields(
-            ("ba_002_p", 32),
-            ("ba_003_p", 32),
-            ("ba_004_n", 1),
+            ("de_l_p", 32),
+            ("de_r_p", 32),
+            ("de_04_n", 1),
         )
         self.finish()
-        bittools.make_one(self, "ba_002_p", Bla10)
-        bittools.make_one(self, "ba_003_p", Bla10)
+        self.name = bittools.make_one(self, "de_nam_p", bittools.ArrayString)
+        self.left = bittools.make_one(self, "de_l_p", DirEnt)
+        self.right = bittools.make_one(self, "de_r_p", DirEnt)
+
+    def recurse(self, pfx, **kwargs):
+        yield (pfx, self)
+        if self.left:
+            yield from self.left.recurse(pfx, **kwargs)
+        if self.right:
+            yield from self.right.recurse(pfx, **kwargs)
+
 
 class Bla11(bittools.R1kSegBase):
 
@@ -270,15 +319,8 @@ class R1kSeg81():
     ''' A Diana Tree Segmented Heap '''
     def __init__(self, seg):
         p = seg.mkcut(0x80)
-        if False:
-            p = seg.mkcut(0x1cc1fd4)
-            p = seg.mkcut(0x1cc20d4)
-            p = seg.mkcut(0x1cc1ff4)
-            p = seg.mkcut(0x1cc21d4)
-            p = seg.mkcut(0x1cc20f4)
-            p = seg.mkcut(0x1cc21f4)
         self.seg = seg
-        if True:
+        if False:
             for i in (
                 0x378f6e0,
             ):
@@ -287,5 +329,19 @@ class R1kSeg81():
                     print("  ", j, hex(j[1]), hex(j[2]))
 
         self.hd = Head(seg, 0x80)
-        bittools.PointerArray(seg, self.hd.hd_017_p, target=Bla1)
-        bittools.BitPointerArray(seg, self.hd.hd_011_p, 0x2717, target=Bla2)
+
+        # Hash-table of names
+        self.namehash = bittools.PointerArray(seg, self.hd.hd_017_p, target=NameChain)
+
+        seg.directories = {}
+        bittools.BitPointerArray(seg, self.hd.hd_011_p, 0x2717, target=Directory)
+
+        self.seg.this.add_interpretation(self, self.render)
+
+    def render(self, fo, this):
+        fo.write("<H4>Directory Tree</H4>\n")
+        fo.write("<pre>\n")
+        fo.write("!\n")
+        for i in self.seg.directories[1].dump("┆ "):
+            fo.write(i + "\n")
+        fo.write("</pre>\n")
