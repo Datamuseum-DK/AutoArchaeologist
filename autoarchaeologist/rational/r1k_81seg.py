@@ -10,6 +10,44 @@ import sys
 
 import autoarchaeologist.rational.r1k_bittools as bittools
 
+class AclEntry(bittools.R1kSegField):
+
+    def __init__(self, up, name):
+        val = int(up.chunk[up.offset:up.offset+14], 2)
+        super().__init__(up, up.offset, 14, name, val)
+        up.offset += 14
+
+    def render(self):
+        if not self.val:
+            return ""
+        t = " " + self.name + " " + bin((1<<14)|self.val)[3:] + " "
+        t = " "
+        subj = self.val >> 4
+        if subj == 0:
+            subj = "PUBLIC"
+        elif subj == 1:
+            subj = "NETWORK_PUBLIC"
+        else:
+            subj = "[0x%x]" % subj
+        t += subj + "=>"
+        mode = self.val & 0xf
+        if mode == 0x1:
+            t += "R"
+        elif mode == 0x3:
+            t += "RW"
+        elif mode == 0xf:
+            t += "RCOD"
+        else:
+            if mode & 0x1:
+                t += "R"
+            if mode & 0x2:
+                t += "W"
+            if mode & 0x4:
+                t += "C"
+            if mode & 0x8:
+                t += "O"
+        return t
+
 class NameChain(bittools.R1kSegBase):
 
     ''' Chains of names from the same hash-bucket '''
@@ -125,17 +163,36 @@ class Bla5(bittools.R1kSegBase):
             ("b5_003_p", 32),
             ("b5_004_z", 32),
             ("b5_005_p", 32),
-            ("b5_006_n", 32),
-            ("b5_007_n", 16),
-            ("b5_008_n", 52),
-            ("b5_009_n", 16),
-            ("b5_010_n", 32),
+            ("b5_006_n", 31),
+	)
+        self.fields[-1].fmt = "[,%d,]"
+        self.get_fields(
+            ("b5_007_n", 9),
+            ("b5_007a_n", 1),
+            ("b5_008_n", 31),
+	)
+        self.fields[-1].fmt = "[DIRECTORY,%d,1]"
+        self.get_fields(
+            ("b5_cls_n", 6),
+            ("b5_subcls_n", 10),
+            ("b5_008z_n", 12),
+            ("b5_retn_cnt_n", 10),
+            ("b5_009_n", 6),
         )
+        if self.b5_007_n == 0x2:
+            self.get_fields(
+                ("b5_012_p", 32),
+            )
+        else:
+            self.get_fields(
+                ("b5_013_n", 30),
+                ("b5_014_n", 2),
+            )
         self.finish()
         bittools.make_one(self, "b5_003_p", Bla6)
         self.b9 = bittools.make_one(self, "b5_005_p", Bla9)
-        if self.b5_007_n == 0x280:
-            bittools.make_one(self, "b5_010_n", Bla13)
+        if self.b5_007_n == 0x2:
+            bittools.make_one(self, "b5_012_p", Acl)
 
     def recurse(self, **kwargs):
         if self.b9:
@@ -149,29 +206,33 @@ class Bla6(bittools.R1kSegBase):
         self.get_fields(
             ("b6_000_p", 32),
             ("b6_001_z", 32),
-            ("b6_002_n", 32),
-            ("b6_003_n", 1),
+            ("b6_nver_n", 31),
+            ("b6_003_n", 2),
             ("b6_004_p", 32),
         )
         self.finish()
-        bittools.make_one(self, "b6_000_p", Bla7)
+        bittools.make_one(self, "b6_000_p", VerEnt)
         bittools.make_one(self, "b6_004_p", Bla11)
 
-class Bla7(bittools.R1kSegBase):
+class VerEnt(bittools.R1kSegBase):
+
+    ''' Version Entry '''
 
     def __init__(self, seg, address, **kwargs):
         super().__init__(seg, seg.cut(address, -1), **kwargs)
         self.compact = True
         self.get_fields(
-            ("b7_000_n", 32),
-            ("b7_001_n", 32),
-            ("b7_002_p", 30),
-            ("b7_003_p", 32),
-            ("b7_004_n", 1),
+            ("ve_ver_n", 31),
+            ("ve_obj_n", 31),
+            ("ve_left_p", 32),
+            ("ve_right_p", 32),
+            ("ve_004_n", 1),
         )
+        self.fields[0].fmt = "%d"
+        self.fields[1].fmt = "[?,%d,?]"
         self.finish()
-        bittools.make_one(self, "b7_002_p", Bla7)
-        bittools.make_one(self, "b7_003_p", Bla7)
+        bittools.make_one(self, "ve_left_p", VerEnt)
+        bittools.make_one(self, "ve_right_p", VerEnt)
 
 class Bla8(bittools.R1kSegBase):
 
@@ -268,19 +329,24 @@ class Bla12(bittools.R1kSegBase):
         bittools.make_one(self, "bc_102_p", Bla12)
         bittools.make_one(self, "bc_103_p", Bla12)
 
-class Bla13(bittools.R1kSegBase):
+
+class Acl(bittools.R1kSegBase):
 
     def __init__(self, seg, address, **kwargs):
         super().__init__(seg, seg.cut(address, -1), **kwargs)
         self.compact = True
         self.get_fields(
-            ("bd_000_n", 0x8),
-            ("bd_001_n", 0x20),
-            ("bd_002_n", 0x20),
+            ("bd_000_n", 10),
+            ("bd_001_n", 31),
+            ("bd_switches_n", 31),
         )
+        self.fields[1].fmt = "[DIRECTORY,%d,1]"
+        self.fields[2].fmt = "[DIRECTORY,%d,1]"
         if int(self.chunk[:8], 2) == 0x80:
+            for i in range(9):
+                self.fields.append(AclEntry(self, "acl%d" % i))
             self.get_fields(
-                ("bd_003_n", 229),
+                ("bd_012_n", 5),
             )
         self.finish()
 

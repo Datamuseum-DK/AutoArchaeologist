@@ -110,6 +110,10 @@ class R1kSegField():
             elif self.val:
                 print("TXT miss", self.up, self.name, "$0x%04x" % self.val)
             return i
+        elif self.name[-2:] == "_z" and not self.val:
+            return ""
+        elif self.name[-2:] == "_p" and not self.val:
+            return ""
         elif self.name[-2:] == "_p":
             return " " + self.name + " → " + self.up.seg.label(self.val)
         return " " + self.name + " = " + self.fmt % self.val
