@@ -124,6 +124,21 @@ class ArtifactClass():
     def __iter__(self):
         yield from self.bdx
 
+    def bits(self, lo, width=None, hi=None):
+        ''' Get a slice as a bitstring '''
+        if hi is None:
+            assert width is not None
+            hi = lo + width
+        retval = []
+        i = self.bdx[lo >> 3 : (hi + 7) >> 3]
+        for j in i:
+            retval.append(bin(256 | j)[-8:])
+        return("".join(retval)[lo & 7:hi - (lo & ~7)])
+
+    def bitint(self, *args, **kwargs):
+        ''' A bitslice as integer '''
+        return int(self.bits(*args, **kwargs), 2)
+
     def get_unique(self):
         ''' Return a unique (increasing) number '''
         rv = self.unique
