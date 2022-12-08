@@ -30,6 +30,7 @@ magic = open("/critter/R1K/DiskHack/_magic", "w")
 
 class OurStruct(bv.Struct):
     def __init__(self, up, lo, **kwargs):
+        assert lo != 0 
         self.lo = lo
         self.ident = self.__class__.__name__
         super().__init__(up, lo, **kwargs)
@@ -42,8 +43,13 @@ class OurStruct(bv.Struct):
             else:
                 yield i
 
+class Probe(OurStruct):
+    def __init__(self, up, lo, **kwargs):
+        super().__init__(up, lo=lo, pr_kind_=23, pr_word_=42, pr_vol_=5, pr_sect_=24, **kwargs)
+
 class ObjSect(OurStruct):
     def __init__(self, up, lo, **kwargs):
+        assert lo != 0 
         self.lo = lo
         self.ident = self.__class__.__name__
         self.color = COLORS[2]
@@ -85,6 +91,7 @@ class DoubleObjSect(ObjSect):
 
 class DataSect():
     def __init__(self, up, lo, **kwargs):
+        assert lo != 0 
         self.lo = lo
         self.ident = "DataSect"
         t = up.sectors.get(lo)
@@ -208,8 +215,8 @@ class SuperBlock(OurStruct):
             lo,
             name="SuperBlock",
             vertical=True,
-            magic_=32,
-            at0020_const_=32,
+            magic_=32,				# 0x00007fed
+            at0020_const_=32,			# 0x00030000
             geometry_=DiskAddress,
             part0_=Partition,
             part1_=Partition,
@@ -218,12 +225,14 @@ class SuperBlock(OurStruct):
             part4_=Partition,
             at01a0_=16,
             volserial_=VolSerial,
-            at0200_const_=128,
-            at0280_const_=120,
+            at0200_const_=128,			# 0
+            at0280_const_=120,			# 0x0000000000a4c70f07c00000000000
             at0300_=Lba,
             volname_=VolName,
-            at0428_=-39,
-            at044f_=-24,
+            volnbr_=5,
+            at042d_const_=10,			# 3
+            at0437_part3_lba_first_=24,
+            at044f_part3_lba_last_=24,
             freehead1_=FreeHead,
             freehead2_=FreeHead,
             at0573_=23,
@@ -244,8 +253,10 @@ class SuperBlock(OurStruct):
         self.addfield("snapshot1", 28)
         self.addfield(None, -32)
         self.addfield("snapshot2", 28)
-        self.addfield(None, -369)
-        self.addfield("at15d5_magic", -32)
+        self.addfield(None, -305)
+        self.addfield(None, -16)
+        self.addfield(None, 48)			# Maybe: system-id
+        self.addfield("sbmagic", -32)		# 11010011000111000011110000011111
         self.hide_the_rest(SECTBITS)
         self.done()
         self.up.sectors[lo] = self
@@ -272,6 +283,7 @@ class BadSectList(OurStruct):
         if len(self.map) > 1:
             self.vertical = True
         self.done()
+        assert lo != 0 
         up.sectors[lo] = self
         double_up(self)
         self.color = COLORS[6]
@@ -289,6 +301,7 @@ class BadSect():
                 self.map[i.lba()] = i
 
         for j in self.map:
+            assert j != 0 
             up.sectors[j << SECTSHIFT] = BadSector()
 
 #################################################################################################
@@ -311,6 +324,7 @@ class Part1Sect(OurStruct):
         if len(self.map) > 1:
             self.vertical = True
         self.done()
+        assert lo != 0 
         up.sectors[lo] = self
         self.color = COLORS[7]
 
@@ -326,7 +340,6 @@ class Part1():
             )
             self.map += self.sectors[-1].map
             break
-
 
 #################################################################################################
 
@@ -464,10 +477,7 @@ class WorldList(DoubleObjSect):
             name="WorldList",
             f1_=18,
             used_=5,
-            pad1_=32,
-            pad2_=32,
-            pad3_=32,
-            alloc_=32
+            wlst_=ArrayHead,
         )
         self.worlds = {}
         self.map = []
@@ -488,7 +498,7 @@ class WorldPtr(OurStruct):
             lo,
             name="WorldPtr",
             f1_=-34,
-            f2_=31,
+            snapshot_=31,
             sector_=24,
         )
 
@@ -517,7 +527,8 @@ class World(ObjSect):
                 self.map.append(j)
             self.hide_the_rest(SECTBITS)
             for i in self.map:
-                World(up, i.sector << SECTSHIFT, nbr=self.world, name=name)
+                if i.snapshot and i.snapshot <= 0x0013a5a:
+                    World(up, i.sector << SECTSHIFT, nbr=self.world, name=name)
         elif self.world_kind == 0x2:
             self.addfield(None, 3)
             self.addfield("used", 7)
@@ -531,7 +542,7 @@ class World(ObjSect):
             
         self.done()
 
-        if self.world > 7:
+        if self.id_kind == 0x92 and self.world > 7:
             for i in self.segments:
                 i.dive()
 
@@ -559,6 +570,30 @@ class Lba(OurStruct):
                 i.append(t.ident)
         yield " ".join(i)
 
+
+class Extent(OurStruct):
+    ''' ... '''
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            flg_=2,
+            span_=22,
+            sector_=24,
+        )
+        self.dst = self.up.sectors.get(self.sector << SECTSHIFT)
+        if self.dst:
+            self.ident += "_Occupied"
+
+    def xrender(self):
+        i = list(super().render())
+        if self.sector:
+            t = self.up.sectors.get(self.sector << SECTSHIFT)
+            if t:
+                i.append(t.ident)
+        yield " ".join(i)
+
+
 class Segment(OurStruct):
     ''' ... '''
     def __init__(self, up, lo):
@@ -582,61 +617,40 @@ class Segment(OurStruct):
             multiplier_=32,
             lba_array_=ArrayHead,
         )
+        assert self.lba_array.dim2 == 10
         self.lba = []
-        for i in range(10):
+        for i in range(self.lba_array.dim2):
             self.lba.append(
-                self.addfield("lba%d" % i, Lba)
+                self.addfield("lba%d" % i, Extent)
             )
-        self.addfield("tail", 915 + self.lo - self.hi)
+        self.addfield("tail", -40)
+        assert 915 + self.lo == self.hi
         self.done()
 
     def dive(self):
 
-        if self.col7 < 9 and self.multiplier > 1:
-            self.ident += "_Bogus_blk_mult"
-            self.bad = True
-            print(hex(self.lo>>SECTSHIFT), self.ident, self.col7, self.multiplier)
-        elif self.col7 > 10 and self.multiplier == 1:
-            self.ident += "_Bogus_blk_mult"
-            self.bad = True
-            print(hex(self.lo>>SECTSHIFT), self.ident, self.col7, self.multiplier)
-        elif self.col7 < 0xa2 and self.multiplier > 0xa2:
-            self.ident += "_Bogus_blk_mult"
-            self.bad = True
-            print(hex(self.lo>>SECTSHIFT), self.ident, self.col7, self.multiplier)
-
-        if self.lba_array.dim2 != 10:
-            self.ident += "_Bogus_array"
-            self.bad = True
-            self.vertical = False
-            print(hex(self.lo>>SECTSHIFT), self.ident, self.lba_array.dim2)
+        s = set(x.span for x in self.lba)
+        if max(s) > 1:
+            return
+            if 0 in s:
+                s.remove(0)
+            print(self.up, hex(self.lo >> SECTSHIFT), "Spans", s)
+            for i in self.lba:
+                if i.flg:
+                    Probe(self.up, i.sector << SECTSHIFT)
+            return
 
         self.map = []
-        if self.multiplier != 1:
-            j = []
+        if self.multiplier == 1:
             for i in self.lba:
-                if i.flg and i.volume == 1:
-                    j.append("%x %x" % (i.flg, i.sector))
-                    indir = self.up.sectors.get(i.sector << SECTSHIFT)
-                    if not indir:
-                        indir = Indir(self.up, i.sector << SECTSHIFT, name="Indir_%x" % self.multiplier)
-                    elif indir.name != "Indir_%x" % self.multiplier:
-                        print("Indir mismatch", indir.name, hex(self.multiplier))
-                    self.map.append(indir)
-                else:
-                    j.append("-")
-            while j and j[-1] == "-":
-                j.pop(-1)
-            if 0 and "-" in j:
-                print("JJ", self, ", ".join(j))
-        else:
-            j = []
-            for i in self.lba:
-                if i.flg and i.volume == 1:
-                    j.append("%x %x" % (i.flg, i.sector))
+                if i.flg and i.span == 1:
                     DataSect(self.up, i.sector << SECTSHIFT)
-            # assert len(j) == self.col7
-
+ 
+        elif self.multiplier > 1:
+            for i in self.lba:
+                if i.flg and i.span == 1:
+                    indir = Indir(self.up, i.sector << SECTSHIFT, name="Indir_%x" % self.multiplier)
+                    self.map.append(indir)
 
 #################################################################################################
 
@@ -658,32 +672,47 @@ class Indir(ObjSect):
         )
         self.bad = False
         self.map = []
-        if self.good:
-            if self.indirhead.dim2 > 0x289:
-                print("INDIR", hex(lo>>SECTSHIFT), ", ".join(self.indirhead.render()))
-            else:
-                for n in range(self.indirhead.dim2):
-                    j = self.addfield("n%02x" % n, Lba)
-                    self.map.append(j)
-                    if j.dst:
-                        self.ident += "_Occupied"
-        self.hide_the_rest(SECTBITS)
+
+        if self.good and self.indirhead.dim2 != 0xa2:
+            print("INDIR", self, "bad dim2", self.indirhed.dim2)
+            self.good = False
+        if self.good: 
+            for n in range(min(self.indirhead.dim2, 0xa2)):
+                j = self.addfield("ind%02x" % n, Extent)
+                self.map.append(j)
+            self.hide_the_rest(SECTBITS)
         self.done()
+
         if self.multiplier == 1:
-            for i in self.map:
-                if i.sector and i.volume == 1:
-                    DataSect(up, i.sector << SECTSHIFT)
+            for j in self.map:
+                if j.flg:
+                    assert j.span == 1
+                    assert j.sector
+                    DataSect(up, j.sector << SECTSHIFT)
+                else:
+                    assert j.span == 0
         elif self.multiplier == 0xa2:
-            for i in self.map:
-                if i.sector and i.volume == 1:
-                    Indir(up, i.sector << SECTSHIFT)
+            for j in self.map:
+                if j.flg:
+                    assert j.span == 1
+                    assert j.sector
+                    Indir(up, j.sector << SECTSHIFT)
+                else:
+                    assert j.span == 0
 
 #################################################################################################
-
 class R1K_Disk(bv.BitView):
 
     def __init__(self, this):
         super().__init__(this)
+        self.r1ksys = None
+
+        # Test superblock magic values
+        if this.bitint(2<<SECTSHIFT, width=32) != 0x7fed:
+            return
+        if this.bits((2<<SECTSHIFT) + 0x15d5, width=32) != "11010011000111000011110000011111":
+            return
+
         self.this = this
         self.sectors = {}
         self.freemap = []
@@ -707,10 +736,6 @@ class R1K_Disk(bv.BitView):
             for i in self.worldidx.map:
                 j = WorldList(self, i.sector << SECTSHIFT)
                 self.worlds |= j.worlds
-            for i, j in self.worlds.items():
-                if j.volume != 1:
-                    continue
-                World(self, j.sector << SECTSHIFT, nbr=i, name="World_%04d" % i)
 
         if self.sb.at0300.sector:
             Etwas213(self, self.sb.at0300.sector<<SECTSHIFT)
@@ -730,10 +755,16 @@ class R1K_Disk(bv.BitView):
         if self.sb.at1331:
             Etwas383(self, self.sb.at1331<<SECTSHIFT)
 
-        # self.brute_force()
-        print(this, "render")
-        super().render()
-        self.make_image()
+        found_disk(self)
+
+    def __repr__(self):
+        return "<R1KDisk %s>" % str(self.this)
+
+    def need_volumes(self):
+        vols = set()
+        for i, j in self.worlds.items():
+            vols.add(j.volume)
+        return vols
 
     def brute_force(self):
         rng = self.sb.part3.lba()
@@ -756,7 +787,7 @@ class R1K_Disk(bv.BitView):
     def prefix(self, lo, hi):
         return "0x%06x" % (lo >> SECTSHIFT)
 
-    def make_image(self):
+    def picture(self):
         freemap = self.this.filename_for(suf=".map")
         cyl = self.sb.geometry.cyl
         hd = self.sb.geometry.hd
@@ -795,3 +826,56 @@ class R1K_Disk(bv.BitView):
                                 col = c1[used]
                                 break
                     file.write(bytes(col))
+
+#################################################################################################
+
+
+class R1K_System():
+    def __init__(self, ident):
+        self.ident = ident
+        self.disks = [None, None, None, None, None]
+
+    def __str__(self):
+        return "Sys_%x" % self.ident
+
+    def __getitem__(self, idx):
+        return self.disks[idx]
+
+    def add_disk(self, disk):
+        assert isinstance(disk, R1K_Disk)
+        vol = disk.sb.volnbr
+        assert not self.disks[vol]
+        self.disks[vol] = disk
+        disk.r1ksys = self
+        print(self, "Got Vol", vol, disk)
+        self.complete()
+
+    def complete(self):
+        if not self.disks[1]:
+            print(self, "Waiting for Vol", 1)
+            return
+        vols = self[1].need_volumes()
+        for i in vols:
+            if not self[i]:
+                print(self, "Waiting for Vol", i)
+                return
+        print(self, "Got all volumes")
+        self.spelunk()
+
+        for i in self.disks:
+            if i:
+                i.render()
+                i.picture()
+
+    def spelunk(self):
+        print(self, "Spelunking")
+        for i, j in self[1].worlds.items():
+            # print("doing World", i, j.volume, hex(j.sector))
+            World(self[j.volume], j.sector << SECTSHIFT, nbr=i, name="World_%04d" % i)
+
+systems = {}
+
+def found_disk(disk):
+    ident = disk.sb.at15a5
+    r1ksys = systems.setdefault(ident, R1K_System(ident))
+    r1ksys.add_disk(disk)
