@@ -11,15 +11,17 @@ import autoarchaeologist.generic.tree as tree
 class Bits(tree.TreeLeaf):
     ''' ... '''
 
-    def __init__(self, up, lo, width=None, hi=None, name=""):
+    def __init__(self, up, lo, width=None, hi=None, name=None):
         if hi is None:
             assert width is not None
             hi = lo + width
-        if hi - lo > 1>>16:
-            assert hi - lo < 1<<16, "Too big 0x%x-0x%x" % (lo, hi)
+        if hi - lo > (1>>13):
+            assert hi - lo <= (1<<13), "Too big 0x%x-0x%x" % (lo, hi)
         self.up = up
         self.this = up.this
         self.hidden = False
+        if name is None:
+            name = self.__class__.__name__
         self.name = name
         super().__init__(lo, hi)
         up.insert(self)
@@ -41,7 +43,7 @@ class Bits(tree.TreeLeaf):
 class Ignore(Bits):
     ''' ... '''
 
-    def __init__(self, *args, name="ignored", **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = name
 
@@ -99,8 +101,8 @@ class String(Bits):
 class Struct(Bits):
     ''' ... '''
 
-    def __init__(self, up, lo, vertical=False, more=False, **kwargs):
-        self.fields = {}
+    def __init__(self, up, lo, vertical=False, more=False, pad=0, **kwargs):
+        self.fields = []
         self.vertical = vertical
         self.lo = lo
         self.hi = lo
@@ -112,8 +114,14 @@ class Struct(Bits):
             else:
                 self.args[name] = width
 
+        if pad:
+            self.hide_the_rest(pad)
+
         if not more:
             self.done()
+
+    def done(self):
+        super().__init__(self.up, self.lo, hi = self.hi, **self.args)
 
     def addfield(self, name, what):
         if name is None:
@@ -130,7 +138,7 @@ class Struct(Bits):
             setattr(self, name, y)
         self.hi = y.hi
         y.hidden = True
-        self.fields[name] = y
+        self.fields.append((name, y))
         return y
 
     def hide_the_rest(self, size):
@@ -138,20 +146,17 @@ class Struct(Bits):
         if self.lo + size != self.hi:
             self.addfield("at%x_" % self.hi, self.lo + size - self.hi)
 
-    def done(self):
-        super().__init__(self.up, self.lo, hi = self.hi, **self.args)
-
     def render(self):
         if not self.vertical:
             i = []
-            for name, obj in self.fields.items():
+            for name, obj in self.fields:
                 if name[-1] == "_":
                     continue
                 i.append(name + "=" + "|".join(obj.render()))
             yield self.name + " {" + ", ".join(i) + "}"
         else:
             yield self.name + " {"
-            for name, obj in self.fields.items():
+            for name, obj in self.fields:
                 if name[-1] == "_":
                     continue
                 j = list(obj.render())
@@ -167,10 +172,16 @@ class BitView(tree.Tree):
 
     def __init__(self, this):
         self.this = this
-        super().__init__(0, len(this) * 8)
-
-    def x__len__(self):
-        return len(self.this) * 8
+        hi = len(this) * 8
+        i = 1
+        while i < hi:
+            i += i
+        hi = i
+        super().__init__(
+            lo = 0,
+            hi = hi,
+            limit = 1<<16,
+        )
 
     def pad(self, lo, hi):
         width = 128
