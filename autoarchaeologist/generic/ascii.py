@@ -49,6 +49,23 @@ def DK_Tegn():
     CHARSET[0x7c][1] = 'ø'
     CHARSET[0x7d][1] = 'å'
 
+def Str2Html(octets):
+    ''' Render as HTML '''
+    t = []
+    after_cr = False
+    after_ht = False
+    for byte in octets:
+        byte &= 0x7f
+        if CHARSET[byte][0] & 16:
+            continue
+        if after_cr and byte != 0x0a:
+            t.append(CHARSET[0x0a][1])
+        if byte != 0x7f or not after_ht:
+            t.append(CHARSET[byte][1])
+        after_cr = byte == 0x0d
+        after_ht = byte == 0x09
+    return ''.join(t)
+
 class Ascii():
     ''' Recognize ASCII texts '''
     def __init__(self, this):
