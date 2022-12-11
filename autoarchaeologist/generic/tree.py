@@ -96,11 +96,11 @@ class Tree():
             self.cuts.append(leaf)
         elif leaf.hi <= self.mid:
             if self.less is None:
-                self.less = Tree(self.lo, self.mid)
+                self.less = Tree(self.lo, self.mid, self.limit)
             self.less.insert(leaf)
         elif leaf.lo >= self.mid:
             if self.more is None:
-                self.more = Tree(self.mid, self.hi)
+                self.more = Tree(self.mid, self.hi, self.limit)
             self.more.insert(leaf)
         else:
             self.cuts.append(leaf)
