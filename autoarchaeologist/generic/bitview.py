@@ -19,12 +19,12 @@ class Bits(tree.TreeLeaf):
             assert hi - lo <= (1<<13), "Too big 0x%x-0x%x" % (lo, hi)
         self.up = up
         self.this = up.this
-        self.hidden = False
         if name is None:
             name = self.__class__.__name__
         self.name = name
         super().__init__(lo, hi)
-        up.insert(self)
+        if not up.interior:
+            up.insert(self)
 
     def __len__(self):
         return self.hi - self.lo
@@ -38,14 +38,13 @@ class Bits(tree.TreeLeaf):
             yield "1[0x%x]" % len(bits)
             return
         fmt = "(0x%%0%dx)" % ((3 + self.hi - self.lo) >> 2)
-        yield fmt % self.this.bitint(self.lo, hi=self.hi) + " " + bits
+        yield fmt % int(bits, 2) + " " + bits
 
 class Ignore(Bits):
     ''' ... '''
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.name = name
 
     def render(self):
         yield "[" + self.name + "]"
@@ -74,25 +73,25 @@ class Char(Bits):
 class String(Bits):
     ''' ... '''
 
-    def __init__(self, up, lo, length = None):
-        self.val = []
+    def __init__(self, up, lo, length = None, term=0, **kwargs):
+        val = []
         if length is None:
             hi = lo
             while True:
                 j = up.this.bitint(hi, 8)
-                self.val.append(j)
+                val.append(j)
                 hi += 8
-                if not j:
+                if j == term:
                     break
         else:
             hi = lo
             for _i in range(length):
                 j = up.this.bitint(hi, 8)
-                self.val.append(j)
+                val.append(j)
                 hi += 8
 
-        super().__init__(up, lo, hi = hi)
-        self.txt = Str2Html(self.val)
+        super().__init__(up, lo, hi = hi, **kwargs)
+        self.txt = Str2Html(val)
 
     def render(self):
         yield '"' + self.txt + '"'
@@ -108,63 +107,69 @@ class Struct(Bits):
         self.hi = lo
         self.up = up
         self.args = {}
+        self.up.interior += 1
         for name, width in kwargs.items():
             if name[-1] == "_":
                 self.addfield(name[:-1], width)
             else:
                 self.args[name] = width
+        if not more:
+            self.done(pad=pad)
 
+    def done(self, pad=0):
         if pad:
             self.hide_the_rest(pad)
-
-        if not more:
-            self.done()
-
-    def done(self):
+        self.up.interior -= 1
         super().__init__(self.up, self.lo, hi = self.hi, **self.args)
+        del self.args
 
     def addfield(self, name, what):
+        assert hasattr(self, "args")
         if name is None:
             name = "at%04x" % (self.hi - self.lo)
         if isinstance(what, int):
             if what > 0:
                 y = Int(self.up, self.hi, width=what)
-                setattr(self, name, y.val)
+                z = y.val
             else:
                 y = Bits(self.up, self.hi, width=-what)
-                setattr(self, name, y)
+                z = y
         else:
             y = what(self.up, self.hi)
-            setattr(self, name, y)
+            z = y
         self.hi = y.hi
-        y.hidden = True
+        setattr(self, name, z)
         self.fields.append((name, y))
         return y
 
     def hide_the_rest(self, size):
+        assert hasattr(self, "args")
         assert self.lo + size >= self.hi
         if self.lo + size != self.hi:
             self.addfield("at%x_" % self.hi, self.lo + size - self.hi)
 
+    def suffix(self, adr):
+        return "\t// @0x%x" % (adr - self.lo)
+
     def render(self):
+        assert not hasattr(self, "args")
         if not self.vertical:
             i = []
             for name, obj in self.fields:
-                if name[-1] == "_":
-                    continue
-                i.append(name + "=" + "|".join(obj.render()))
+                if name[-1] != "_":
+                    i.append(name + "=" + "|".join(obj.render()))
             yield self.name + " {" + ", ".join(i) + "}"
         else:
             yield self.name + " {"
             for name, obj in self.fields:
-                if name[-1] == "_":
-                    continue
-                j = list(obj.render())
-                yield "  " + name + " = " + j[0] + "\t// @0x%x" % (obj.lo - self.lo)
-                if len(j) > 1:
-                    for i in j[1:-1]:
-                        yield "    " + i
-                    yield "  " + j[-1]
+                if name[-1] != "_":
+                    j = list(obj.render())
+                    j[0] += self.suffix(obj.lo)
+                    yield "  " + name + " = " + j[0]
+                    if len(j) > 1:
+                        for i in j[1:-1]:
+                            yield "    " + i
+                        yield "  " + j[-1]
             yield "}"
 
 class BitView(tree.Tree):
@@ -172,6 +177,7 @@ class BitView(tree.Tree):
 
     def __init__(self, this):
         self.this = this
+        self.interior = 0
         hi = len(this) * 8
         i = 1
         while i < hi:
@@ -200,26 +206,24 @@ class BitView(tree.Tree):
         fmt = "%%0%dx" % len("%x" % self.hi)
         return "0x" + fmt % lo + "…" + fmt % hi
 
+    def pad_out(self):
+        lo = 0
+        prev = None
+        for i in sorted(self):
+            if i.lo < lo:
+                print("Overlap", hex(i.lo>>13), i, prev)
+            if i.lo > lo:
+                yield from self.pad(lo, i.lo)
+            yield i
+            lo = i.hi
+            prev = i
+        if lo < self.hi:
+            yield from self.pad(lo, self.hi)
+
     def render(self, title="BitView"):
+        print(self.this, "Rendering", self.gauge, "bitview-leaves")
         self.tfn = self.this.add_utf8_interpretation(title)
-
-        def pad_out():
-            lo = 0
-            last = None
-            for i in sorted(self):
-                if i.hidden:
-                    continue
-                if i.lo < lo:
-                    print("Overlap", hex(i.lo>>13), i, last)
-                if i.lo > lo:
-                    yield from self.pad(lo, i.lo)
-                yield i
-                lo = i.hi
-                last = i
-            if lo < self.hi:
-                yield from self.pad(lo, self.hi)
-
         with open(self.tfn.filename, "w") as file:
-            for i in pad_out():
+            for i in self.pad_out():
                 for j in i.render():
                     file.write(self.prefix(i.lo, i.hi) + " " + j + "\n")

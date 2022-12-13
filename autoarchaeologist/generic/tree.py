@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 
 
-"""
+'''
 This class implements a basic recursive split-in-the-middle-interval-tree
 
 An interval-tree is a tree of intervals (duh!) which is useful here
@@ -40,14 +40,13 @@ create subtrees for.  If it ever needs changing, we should probably
 change the algorithm to split trees based on actual number of nodes,
 rather than the interval they cover, but for now it seems to work
 pretty ok.
-"""
+'''
 
 class TreeLeaf():
-    """
-    These are the leaves we hang into the tree class.
-
-    Many datatypes will sub-type this class and add functionality
-    """
+    '''
+    Leaves of the tree
+    ------------------
+    '''
     def __init__(self, lo, hi):
         assert isinstance(lo, int)
         assert isinstance(hi, int)
@@ -66,10 +65,12 @@ class TreeLeaf():
     def __eq__(self, other):
         return self.lo == other.lo and self.hi == other.hi
 
-    def __contains__(self, a):
-        return self.lo <= a < self.hi
-
 class Tree():
+
+    '''
+    Root/branch class of the tree
+    -----------------------------
+    '''
 
     def __init__(self, lo, hi, limit=128):
         # limit is only a performance parameter, it does not change
@@ -80,19 +81,18 @@ class Tree():
         self.limit = limit
         self.less = None
         self.more = None
-        self.cuts = list()
-        self.isbranch = (hi - lo) > self.limit
+        self.cuts = []
+        self.gauge = 0
 
     def __repr__(self):
         return "<Tree 0x%x-0x%x-0x%x>" % (self.lo, self.mid, self.hi)
 
     def insert(self, leaf):
-        """
-        You guessed it...
-        """
+        ''' You guessed it... '''
         assert isinstance(leaf, TreeLeaf)
         assert leaf.lo < leaf.hi
-        if not self.isbranch:
+        self.gauge += 1
+        if self.hi - self.lo <= self.limit:
             self.cuts.append(leaf)
         elif leaf.hi <= self.mid:
             if self.less is None:
@@ -121,9 +121,7 @@ class Tree():
             yield from self.more.find(lo, hi)
 
     def __iter__(self):
-        """
-        Iterate in order of .lo and narrow before wider.
-        """
+        ''' Iterate in order of .lo and narrow before wider. '''
         stk = [self]
         lst = []
         while stk:
@@ -142,39 +140,39 @@ class Tree():
         yield from lst
 
 def test_tree():
-    # Minimal test cases
+    ''' Minimal test cases '''
 
     print("Testing tree class")
-    it = Tree(0, 0x500)
+    oak = Tree(0, 0x500)
 
     # Super items
-    it.insert(TreeLeaf(0x100, 0x400))
-    it.insert(TreeLeaf(0x100, 0x300))
-    it.insert(TreeLeaf(0x200, 0x400))
+    oak.insert(TreeLeaf(0x100, 0x400))
+    oak.insert(TreeLeaf(0x100, 0x300))
+    oak.insert(TreeLeaf(0x200, 0x400))
 
     # Same items
-    it.insert(TreeLeaf(0x200, 0x300))
+    oak.insert(TreeLeaf(0x200, 0x300))
 
     # Sub items
-    it.insert(TreeLeaf(0x210, 0x290))
-    it.insert(TreeLeaf(0x200, 0x299))
-    it.insert(TreeLeaf(0x201, 0x300))
+    oak.insert(TreeLeaf(0x210, 0x290))
+    oak.insert(TreeLeaf(0x200, 0x299))
+    oak.insert(TreeLeaf(0x201, 0x300))
 
     # Skew items
-    it.insert(TreeLeaf(0x100, 0x299))
-    it.insert(TreeLeaf(0x201, 0x400))
+    oak.insert(TreeLeaf(0x100, 0x299))
+    oak.insert(TreeLeaf(0x201, 0x400))
 
-    la = 0
-    ll = 0
+    low = 0
+    length = 0
     slo = set()
     shi = set()
-    dlo = dict()
-    dhi = dict()
+    dlo = {}
+    dhi = {}
 
-    for i in it:
-        assert i.lo > la or i.hi - i.lo >= ll
-        la = i.lo
-        ll = i.hi - i.lo
+    for i in oak:
+        assert i.lo > low or i.hi - i.lo >= length
+        low = i.lo
+        length = i.hi - i.lo
         slo.add(i.lo)
         shi.add(i.hi)
         if i.lo not in dlo:
@@ -188,7 +186,7 @@ def test_tree():
 
     print("  .__iter__() OK")
 
-    for j in it.find(0x200, 0x299):
+    for j in oak.find(0x200, 0x299):
         assert j.lo < 0x299
         assert j.hi > 0x200
     print("  .find() OK")

@@ -6,6 +6,7 @@ from pympler import summary
 from pympler import muppy
 
 import autoarchaeologist.generic.bitview as bv
+import autoarchaeologist.scattergather as scattergather
 
 COLORS = [
    # https://iamkate.com/data/12-bit-rainbow/
@@ -52,25 +53,31 @@ class OurStruct(bv.Struct):
         # Set these early for diags, .done() may happen much later
         self.lo = lo
         self.name = self.__class__.__name__
-
         super().__init__(up, lo, name=self.name, **kwargs)
 
     def used_array(self, name, what):
+        setattr(self, name, [])
         lo = self.hi - self.lo
         for w in range(2,10):
-            if self.up.this.bitint(self.hi + w, width=32) == 0x40:
+            if self.up.this.bitint(self.hi + w, width=32) != 0x40:
+                continue
+            if self.up.this.bitint(self.hi + w + 64, width=32) == 0x1:
                 break
         fmt = name + '[0x%%0%dx]' % ((w+3) >> 2)
         used = self.addfield(name + "_used", w)
         self.addfield(name + "_mark", 32)
         sze = self.addfield(name + "_size", 32)
         dim1 = self.addfield(name + "_dim1", 32)
+        dim2 = self.addfield(name + "_dim2", 32)
         if dim1.val != 1:
             print(self, "bad", name+ ".dim1", hex(dim1.val))
             return
+        width = (sze.val - 64) // dim2.val
+        ww = len(bin(dim2.val)[2:])
+        # print("UA", "W", w, "WIDTH", width, "WW", ww, "USED", used.val, "SZE", sze.val, "DIM1", dim1.val, "DIM2", dim2.val, self, what)
         assert dim1.val == 1
-        dim2 = self.addfield(name + "_dim2", 32)
-        width = (sze.val - 64) / dim2.val
+        if w != ww:
+            print(hex(self.lo >> SECTSHIFT), self, "bad start, w=", w, "width=", ww)
         lst = list()
         for i in range(used.val):
             before = self.hi
@@ -81,11 +88,11 @@ class OurStruct(bv.Struct):
                     j = bv.Bits(self.up, self.hi, width=-what)
             else:
                 j = what(self.up, self.hi)
-            j.hidden = True
-            assert j.hi == before + width
-            self.hi = j.hi
             self.fields.append((fmt % i, j))
             lst.append(j)
+            if j.hi != before + width:
+                print(hex(self.lo >> SECTSHIFT), "Bad element width", before + width - j.hi, what)
+            self.hi = before + width
         setattr(self, name, lst)
         self.hide_the_rest(lo + w + 64 + sze.val)
 
@@ -212,6 +219,27 @@ class Etwas(OurStruct):
     def __init__(self, up, lo):
         super().__init__(up, lo, f0_=45, lba_=Lba)
 
+class Etwas45datarec(OurStruct):
+    def __init__(self, up, lo):
+        super().__init__(up, lo, f0_=6, f10_=16, f50_=8, f60_=4, f70_=32, f75_=32, f80_=8, f90_=64, f99_=64)
+
+class Etwas45data(DoubleObjSect):
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            color=COLOR_METADATA,
+            vertical=True,
+            f0_=-17,
+            more=True,
+        )
+        self.used_array("ew45d", Etwas45datarec)
+        self.done(pad=SECTBITS)
+
+class Etwas45rec(OurStruct):
+    def __init__(self, up, lo):
+        super().__init__(up, lo, f0_=-21, sector_=24)
+
 class Etwas45(DoubleObjSect):
     def __init__(self, up, lo):
         super().__init__(
@@ -219,12 +247,14 @@ class Etwas45(DoubleObjSect):
             lo,
             color=COLOR_METADATA,
             vertical=True,
-            f0_=-20,
+            f0_=-19,
             more=True,
         )
-        self.used_array("ew45", -45)
-        self.hide_the_rest(SECTBITS)
-        self.done()
+        self.used_array("ew45", Etwas45rec)
+        self.done(pad=SECTBITS)
+
+        for i in self.ew45:
+            Etwas45data(up, i.sector << SECTSHIFT)
 
 class LogString(bv.String):
     def __init__(self, up, lo):
@@ -246,17 +276,28 @@ class LogSect(DoubleObjSect):
             lo,
             color=COLOR_METADATA,
             vertical=True,
-            f0_=-15,
+            f0_=15,
             more=True,
         )
-        self.used_array("entry", LogEntry)
-        self.hide_the_rest(SECTBITS)
-        self.done()
+        if self.f0 == 0x48:
+            self.addfield(None, 4)
+            self.used_array("logrec", LogRec)
+        else:
+            self.used_array("entry", LogEntry)
+            self.logrec = []
+        self.done(pad=SECTBITS)
+
+    def spelunk(self):
+        for j in self.logrec:
+            j.spelunk()
 
 class LogRec(OurStruct):
     def __init__(self, up, lo):
         super().__init__(up, lo, f0_=32, sector_=24)
-        LogSect(up, self.sector << SECTSHIFT)
+
+    def spelunk(self):
+        y = LogSect(self.up, self.sector << SECTSHIFT)
+        y.spelunk()
 
 class SysLog(DoubleObjSect):
     def __init__(self, up, lo):
@@ -265,38 +306,17 @@ class SysLog(DoubleObjSect):
             lo,
             color=COLOR_METADATA,
             vertical=True,
-            f0_=-21,
+            f0_=-19,
             more=True,
         )
         self.used_array("logrec", LogRec)
-        self.hide_the_rest(SECTBITS)
-        self.done()
+        self.done(pad=SECTBITS)
+        for i in self.logrec:
+            i.spelunk()
 
-class Etwas209rec(OurStruct):
+class Etwas213rec(OurStruct):
     def __init__(self, up, lo):
-        super().__init__(
-            up,
-            lo,
-            f0_=13,
-            snapshot_=28,
-            more=True,
-        )
-        self.addfield(None, 209 + self.lo - self.hi)
-        self.done()
-
-class Etwas209(DoubleObjSect):
-    def __init__(self, up, lo):
-        super().__init__(
-            up,
-            lo,
-            color=COLOR_METADATA,
-            vertical=True,
-            f0_=-17,
-            more=True,
-        )
-        self.used_array("ew209", Etwas209rec)
-        self.hide_the_rest(SECTBITS)
-        self.done()
+        super().__init__(up, lo, f0_=8, f1_=8, f2_=32, f3_=32, f99_=-133)
 
 class Etwas213(DoubleObjSect):
     def __init__(self, up, lo):
@@ -305,10 +325,13 @@ class Etwas213(DoubleObjSect):
             lo,
             color=COLOR_METADATA,
             vertical=True,
+            f0_=32,
+            f1_=32,
+            f2_=32,
             more=True,
         )
         while self.hi < lo + SECTBITS - 213:
-            self.addfield(None, -213)
+            self.addfield(None, Etwas213rec)
         self.done()
 
 class Etwas383(DoubleObjSect):
@@ -318,12 +341,11 @@ class Etwas383(DoubleObjSect):
             lo,
             color=COLOR_METADATA,
             vertical=True,
-            f0_=-15,
+            f0_=-16,
             more=True,
         )
         self.used_array("ew383", -383)
-        self.hide_the_rest(SECTBITS)
-        self.done()
+        self.done(pad=SECTBITS)
 
 class SuperBlock(OurStruct):
 
@@ -547,7 +569,7 @@ class WorldIdx(DoubleObjSect):
             lo,
             color=COLOR_WORLD_META,
             vertical=True,
-            s2f_=20,
+            s2f_=18,
             more=True,
         )
         self.used_array("worldidx", WorldIdxRec)
@@ -563,7 +585,7 @@ class WorldListRec(OurStruct):
             up,
             lo,
             world_=10,
-            f2_=106,
+            f2_=-106,
             f6_=20,
             f5_=44,
             volume_=4,
@@ -579,7 +601,7 @@ class WorldList(DoubleObjSect):
             lo,
             color=COLOR_WORLD_META,
             vertical=True,
-            f1_=18,
+            f1_=17,
             more=True,
         )
         self.used_array("worldlist", WorldListRec)
@@ -613,25 +635,28 @@ class World(ObjSect):
             more=True,
         )
         self.world = nbr
+        self.worldptr = []
+        self.segment = []
         magic_fd.write(self.name + " 0x%x" % (lo >> SECTSHIFT) + "\n")
         magic_fd.flush()
         self.addfield("world_kind", 9)
+        # self.addfield("f0", 3)
         self.segments = []
         if self.world_kind == 0x1:
             self.addfield(None, 9)
             self.used_array("worldptr", WorldPtr)
             self.hide_the_rest(SECTBITS)
-            for i in self.worldptr:
-                if i.snapshot and i.snapshot <= 0x0013a5a:
-                    World(up, i.sector << SECTSHIFT, nbr=self.world)
         elif self.world_kind == 0x2:
-            self.addfield(None, 3)
+            self.addfield(None, 6)
             self.used_array("segment", Segment)
             self.hide_the_rest(SECTBITS)
         else:
             print("TODO", up.this, "WORLD_KIND 0x%x" % self.world_kind, self)
 
         self.done()
+        for i in self.worldptr:
+            if i.snapshot and i.snapshot <= 0x0013a5a:
+                World(up, i.sector << SECTSHIFT, nbr=self.world)
 
 #################################################################################################
 
@@ -679,6 +704,7 @@ class Segment(OurStruct):
             multiplier_=32,
             lba_array_=ArrayHead,
         )
+        self.indir = []
         assert self.lba_array.dim2 == 10
         self.lba = []
         for i in range(self.lba_array.dim2):
@@ -693,9 +719,27 @@ class Segment(OurStruct):
         if not t or t.other2a < self.other2a:
             up.segments[self.col5] = self
 
-    def dive(self):
+    def __iter__(self):
+        n = self.col7
+        if self.multiplier == 1:
+            for i in self.lba:
+                if not n:
+                    return
+                if i:
+                    yield i
+                    n -= 1
+        else:
+            for i in self.indir:
+                for j in i:
+                    if not n:
+                        return
+                    if j:
+                        yield j
+                        n -= 1
 
-        self.map = []
+    def dive(self, world):
+        self.world = world
+
         if self.multiplier == 1:
             for i in self.lba:
                 if i.flg:
@@ -705,7 +749,7 @@ class Segment(OurStruct):
             for i in self.lba:
                 if i.flg:
                     indir = Indir(self.up, i.sector << SECTSHIFT)
-                    self.map.append(indir)
+                    self.indir.append(indir)
 
     def render(self):
         if self.up.segments[self.col5] != self:
@@ -718,7 +762,8 @@ class Segment(OurStruct):
 class Indir(ObjSect):
 
     def __init__(self, up, lo):
-        self.map = []
+        self.lba = []
+        self.obj = []
         super().__init__(
             up,
             lo,
@@ -731,14 +776,13 @@ class Indir(ObjSect):
             multiplier_=30,
             indirhead_=ArrayHead,
         )
-        if not self.good or self.indirhead.dim2 != 0xa2:
+        if not self.good or self.indirhead.dim2 not in (1, 0xa2):
             print(up.this, hex(self.lo >> SECTSHIFT), self, "Bad Indir", self.indirhead.dim2)
         elif self.good:
             for n in range(self.indirhead.dim2):
                 j = self.addfield("ind%02x" % n, Extent)
-                self.map.append(j)
-            self.hide_the_rest(SECTBITS)
-        self.done()
+                self.lba.append(j)
+        self.done(pad=SECTBITS)
 
         if self.multiplier == 1:
             dowhat=DataSect
@@ -747,19 +791,29 @@ class Indir(ObjSect):
         else:
             print(up.this, hex(self.lo >> SECTSHIFT), self, "Bad multiplier", self.multiplier)
 
-        for j in self.map:
+        for j in self.lba:
             if j.flg:
                 assert j.sector
-                dowhat(up, j.sector << SECTSHIFT)
+                j = dowhat(up, j.sector << SECTSHIFT)
+                self.obj.append(j)
             else:
                 assert j.span == 0
                 assert j.sector == 0
+
+    def __iter__(self):
+        if self.multiplier == 1:
+            yield from self.lba
+        else:
+            for i in self.obj:
+                yield from i
 
 #################################################################################################
 
 class R1K_Disk(bv.BitView):
 
     def __init__(self, this):
+        if not this.top in this.parents:
+            return
         super().__init__(this)
         self.r1ksys = None
 
@@ -768,6 +822,15 @@ class R1K_Disk(bv.BitView):
             return
         if this.bits((2<<SECTSHIFT) + 0x15d5, width=32) != "11010011000111000011110000011111":
             return
+
+        if False:
+            for i in range(0, 8 * len(this), SECTBITS):
+                if not (i & 0x01fff000):
+                    print("...", hex(i >> SECTSHIFT))
+                j = this.bits(i, width=SECTBITS).find("000100001111011011000110")
+                if j > -1:
+                    print("Found", hex(i >> SECTSHIFT), hex(j))
+                
 
         self.this = this
         self.color = bytearray(len(this)>>10)
@@ -822,7 +885,8 @@ class R1K_Disk(bv.BitView):
             Etwas383(self, self.sb.at1331<<SECTSHIFT)
 
         if self.sb.at13f0:
-            Etwas209(self, self.sb.at13f0<<SECTSHIFT)
+            j = WorldList(self, self.sb.at13f0<<SECTSHIFT)
+            # self.worlds |= j.worlds
 
         if self.sb.syslog:
             SysLog(self, self.sb.syslog<<SECTSHIFT)
@@ -912,30 +976,50 @@ class R1K_System():
                 i.picture()
 
     def spelunk(self):
-        print(self, "Spelunking worlds")
-        #sum = summary.summarize(muppy.get_objects())
-        #summary.print_(sum)
-        for i, j in self[1].worlds.items():
-            # print("doing World", i, j.volume, hex(j.sector))
-            World(self[j.volume], j.sector << SECTSHIFT, nbr=i)
-        # return
-        print(self, "Spelunking segments")
-        #sum = summary.summarize(muppy.get_objects())
-        #summary.print_(sum)
         for i in self.disks:
-            if not i:
-                continue
-            print(i, len(i.segments), "Segments")
-            for j in i.segments.values():
-                j.dive()
-            i.brute_force()
+            if i:
+                print("Interior", i, i.interior)
+                i.interior = 0
+        if True:
+            print(self, "Spelunking worlds")
+            for i, j in self[1].worlds.items():
+                # print("doing World", i, j.volume, hex(j.sector))
+                World(self[j.volume], j.sector << SECTSHIFT, nbr=i)
+            if True:
+                print(self, "Spelunking segments")
+                for i in self.disks:
+                    if not i:
+                        continue
+                    print(i, len(i.segments), "Segments")
+                    for j in i.segments.values():
+                        j.dive(i)
+            if True:
+                for i in self.disks:
+                    if not i:
+                        continue
+                    print(i, "Spelunking segment data")
+                    for j in i.segments.values():
+                        l = []
+                        for x in j:
+                            l.append(i.this[x.sector<<10:(x.sector+1)<<10])
+                        if False and l:
+                            y = i.this.create(start=0, stop=len(i.this), records=l)
+                            y.add_note("segment")
+                            y.r1k_segment = j
+        if True:
+            for i in self.disks:
+                if not i:
+                    continue
+                print(i, "Brute Force")
+                i.brute_force()
         print(self, "Spelunking done")
         #sum = summary.summarize(muppy.get_objects())
         #summary.print_(sum)
 
-systems = {}
-
 def found_disk(disk):
     ident = disk.sb.at15a5
-    r1ksys = systems.setdefault(ident, R1K_System(ident))
+    top = disk.this.top
+    if not hasattr(top, "r1k_disk_system"):
+        top.r1k_disk_system = {}
+    r1ksys = top.r1k_disk_system.setdefault(ident, R1K_System(ident))
     r1ksys.add_disk(disk)
