@@ -117,6 +117,7 @@ class Probe(OurStruct):
             b = up.this.bitint(lo + SECTBITS, width=SECTBITS)
             if a == b:
                 print("Is Dup", hex(lo >> SECTSHIFT), self)
+            self.insert()
 
 class ObjSect(OurStruct):
     def __init__(self, up, lo, color, **kwargs):
@@ -296,7 +297,7 @@ class LogRec(OurStruct):
         super().__init__(up, lo, f0_=32, sector_=24)
 
     def spelunk(self):
-        y = LogSect(self.up, self.sector << SECTSHIFT)
+        y = LogSect(self.up, self.sector << SECTSHIFT).insert()
         y.spelunk()
 
 class SysLog(DoubleObjSect):
@@ -430,7 +431,7 @@ class BadSect():
     def __init__(self, up):
         rng = up.sb.part0.lba()
         for sect in range(rng[0], rng[1] + 1, 2):
-            BadSectList(up, sect << SECTSHIFT)
+            BadSectList(up, sect << SECTSHIFT).insert()
 
 #################################################################################################
 # Unknown purpose
@@ -462,7 +463,7 @@ class Part1():
         self.map = []
         for sect in range(rng[0], rng[1] + 1, 2):
             self.sectors.append(
-                Part1Sect(up, sect << SECTSHIFT)
+                Part1Sect(up, sect << SECTSHIFT).insert()
             )
             self.map += self.sectors[-1].map
 
@@ -543,7 +544,7 @@ class FreeMapSect(DoubleObjSect):
         self.map = []
         sect = 0
         for i in self.map_sector:
-            j = BitMapSect(up, i.sector << SECTSHIFT)
+            j = BitMapSect(up, i.sector << SECTSHIFT).insert()
             self.map.append(j)
             if primary:
                 sect = j.claim(sect)
@@ -656,7 +657,7 @@ class World(ObjSect):
         self.done()
         for i in self.worldptr:
             if i.snapshot and i.snapshot <= 0x0013a5a:
-                World(up, i.sector << SECTSHIFT, nbr=self.world)
+                World(up, i.sector << SECTSHIFT, nbr=self.world).insert()
 
 #################################################################################################
 
@@ -849,11 +850,11 @@ class R1K_Disk(bv.BitView):
         self.color[sect] = color
 
     def probe(self):
-        self.sb = SuperBlock(self, 2<<SECTSHIFT)
+        self.sb = SuperBlock(self, 2<<SECTSHIFT).insert()
 
         self.freemap = [
-            FreeMapSect(self, (self.sb.freehead1.sector) << SECTSHIFT, True),
-            FreeMapSect(self, (self.sb.freehead2.sector) << SECTSHIFT, False),
+            FreeMapSect(self, (self.sb.freehead1.sector) << SECTSHIFT, True).insert(),
+            FreeMapSect(self, (self.sb.freehead2.sector) << SECTSHIFT, False).insert(),
         ]
 
         self.part0 = BadSect(self)
@@ -863,33 +864,33 @@ class R1K_Disk(bv.BitView):
         if self.sb.worldidx:
             self.worldidx = WorldIdx(self, self.sb.worldidx << SECTSHIFT)
             for i in self.worldidx.worldidx:
-                j = WorldList(self, i.sector << SECTSHIFT)
+                j = WorldList(self, i.sector << SECTSHIFT).insert()
                 self.worlds |= j.worlds
 
         if self.sb.at0300.sector:
-            Etwas213(self, self.sb.at0300.sector<<SECTSHIFT)
+            Etwas213(self, self.sb.at0300.sector<<SECTSHIFT).insert()
 
         if self.sb.at058a.lba.sector:
-            Etwas213(self, self.sb.at058a.lba.sector<<SECTSHIFT)
+            Etwas213(self, self.sb.at058a.lba.sector<<SECTSHIFT).insert()
 
         if self.sb.at05e7.lba.sector:
-            Etwas213(self, self.sb.at05e7.lba.sector<<SECTSHIFT)
+            Etwas213(self, self.sb.at05e7.lba.sector<<SECTSHIFT).insert()
 
         if self.sb.at0644.lba.sector:
-            Etwas213(self, self.sb.at0644.lba.sector<<SECTSHIFT)
+            Etwas213(self, self.sb.at0644.lba.sector<<SECTSHIFT).insert()
 
         if self.sb.at06a1.lba.sector:
-            Etwas45(self, self.sb.at06a1.lba.sector<<SECTSHIFT)
+            Etwas45(self, self.sb.at06a1.lba.sector<<SECTSHIFT).insert()
 
         if self.sb.at1331:
-            Etwas383(self, self.sb.at1331<<SECTSHIFT)
+            Etwas383(self, self.sb.at1331<<SECTSHIFT).insert()
 
         if self.sb.at13f0:
-            j = WorldList(self, self.sb.at13f0<<SECTSHIFT)
+            j = WorldList(self, self.sb.at13f0<<SECTSHIFT).insert()
             # self.worlds |= j.worlds
 
         if self.sb.syslog:
-            SysLog(self, self.sb.syslog<<SECTSHIFT)
+            SysLog(self, self.sb.syslog<<SECTSHIFT).insert()
 
         found_disk(self)
 
@@ -976,15 +977,11 @@ class R1K_System():
                 i.picture()
 
     def spelunk(self):
-        for i in self.disks:
-            if i:
-                print("Interior", i, i.interior)
-                i.interior = 0
         if True:
             print(self, "Spelunking worlds")
             for i, j in self[1].worlds.items():
                 # print("doing World", i, j.volume, hex(j.sector))
-                World(self[j.volume], j.sector << SECTSHIFT, nbr=i)
+                World(self[j.volume], j.sector << SECTSHIFT, nbr=i).insert()
             if True:
                 print(self, "Spelunking segments")
                 for i in self.disks:
@@ -1002,11 +999,11 @@ class R1K_System():
                         l = []
                         for x in j:
                             l.append(i.this[x.sector<<10:(x.sector+1)<<10])
-                        if False and l:
+                        if True and l:
                             y = i.this.create(start=0, stop=len(i.this), records=l)
                             y.add_note("segment")
                             y.r1k_segment = j
-        if True:
+        if False:
             for i in self.disks:
                 if not i:
                     continue

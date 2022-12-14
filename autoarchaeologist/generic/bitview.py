@@ -23,11 +23,13 @@ class Bits(tree.TreeLeaf):
             name = self.__class__.__name__
         self.name = name
         super().__init__(lo, hi)
-        if not up.interior:
-            up.insert(self)
 
     def __len__(self):
         return self.hi - self.lo
+
+    def insert(self):
+        self.up.insert(self)
+        return self
 
     def render(self):
         bits = self.this.bits(self.lo, hi = self.hi)
@@ -107,7 +109,6 @@ class Struct(Bits):
         self.hi = lo
         self.up = up
         self.args = {}
-        self.up.interior += 1
         for name, width in kwargs.items():
             if name[-1] == "_":
                 self.addfield(name[:-1], width)
@@ -119,7 +120,6 @@ class Struct(Bits):
     def done(self, pad=0):
         if pad:
             self.hide_the_rest(pad)
-        self.up.interior -= 1
         super().__init__(self.up, self.lo, hi = self.hi, **self.args)
         del self.args
 
@@ -177,7 +177,6 @@ class BitView(tree.Tree):
 
     def __init__(self, this):
         self.this = this
-        self.interior = 0
         hi = len(this) * 8
         i = 1
         while i < hi:
