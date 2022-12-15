@@ -5,6 +5,7 @@
 from pympler import summary
 from pympler import muppy
 
+import autoarchaeologist.rational.r1k_defs as r1k_defs
 import autoarchaeologist.generic.bitview as bv
 import autoarchaeologist.scattergather as scattergather
 
@@ -656,7 +657,7 @@ class World(ObjSect):
 
         self.done()
         for i in self.worldptr:
-            if i.snapshot and i.snapshot <= 0x0013a5a:
+            if i.snapshot:
                 World(up, i.sector << SECTSHIFT, nbr=self.world).insert()
 
 #################################################################################################
@@ -757,6 +758,9 @@ class Segment(OurStruct):
             yield "Superseeded_Segment"
         else:
             yield from super().render()
+            t = getattr(self, "r1k_segment", None)
+            if t:
+                yield self.up.this.top.html_link_to(t)
 
 #################################################################################################
 
@@ -999,10 +1003,15 @@ class R1K_System():
                         l = []
                         for x in j:
                             l.append(i.this[x.sector<<10:(x.sector+1)<<10])
-                        if True and l:
-                            y = i.this.create(start=0, stop=len(i.this), records=l)
-                            y.add_note("segment")
-                            y.r1k_segment = j
+                        if not l:
+                            continue
+                        y = i.this.create(start=0, stop=len(i.this), records=l)
+                        z = r1k_defs.R1KSegment()
+                        z.tag = j.col9
+                        y.r1ksegment = z
+                        if z.tag == 0x81:
+                            y.add_note("%02x_tag" % z.tag)
+                        j.r1k_segment = y
         if False:
             for i in self.disks:
                 if not i:
