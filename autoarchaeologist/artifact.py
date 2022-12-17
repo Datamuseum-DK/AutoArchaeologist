@@ -135,9 +135,21 @@ class ArtifactClass():
             retval.append(bin(256 | j)[-8:])
         return("".join(retval)[lo & 7:hi - (lo & ~7)])
 
-    def bitint(self, *args, **kwargs):
-        ''' A bitslice as integer '''
-        return int(self.bits(*args, **kwargs), 2)
+    def bitint(self, lo, width=None, hi=None):
+        ''' Get a slice as integer '''
+        if hi is None:
+            assert width is not None
+            hi = lo + width
+        a = (lo) >> 3
+        b = (hi + 7) >> 3
+        c = self.bdx[a:b]
+        d = int.from_bytes(c, 'big')
+        if hi & 7:
+            e = d >> (8 - (hi & 7))
+        else:
+            e = d
+        f = e & ((1 << (hi - lo)) - 1)
+        return f
 
     def get_unique(self):
         ''' Return a unique (increasing) number '''
