@@ -2,12 +2,22 @@
 # See:
 #    file:///critter/aa/r1k_dfs/34/344289524.html
 
+import tempfile
+import mmap
 from pympler import summary
 from pympler import muppy
 
 import autoarchaeologist.rational.r1k_defs as r1k_defs
 import autoarchaeologist.generic.bitview as bv
 import autoarchaeologist.scattergather as scattergather
+
+def make_void():
+    tf = tempfile.TemporaryFile()
+    tf.write(b'\x00' * 1024)
+    tf.flush()
+    return memoryview(mmap.mmap(tf.fileno(), 0, access=mmap.ACCESS_READ))
+void = make_void()
+
 
 COLORS = [
    # https://iamkate.com/data/12-bit-rainbow/
@@ -24,20 +34,23 @@ COLORS = [
    [ 0x00, 0x99, 0xcc],
    [ 0x33, 0x66, 0xbb],
    [ 0x66, 0x33, 0x99],
+   [ 0x33, 0x33, 0x33],
+   [ 0x66, 0x66, 0x66],
 ]
 
 COLOR_BAD_SECT = 1
 COLOR_BAD_META = 2
-COLOR_FREE_SECT = 3
+COLOR_SPARE = 3
 COLOR_FREE_META = 4
 COLOR_PART_1 = 5
 COLOR_PART_2 = 6
 COLOR_WORLD_META = 7
 COLOR_SEGMENT_META = 8
-COLOR_DATA = 9
 COLOR_SUPER_BLOCK = 10
 COLOR_METADATA = 11
 COLOR_PROBE = 12
+COLOR_FREE_SECT = 13
+COLOR_DATA = 14
 
 SECTSHIFT = 13
 SECTBITS = (1<<SECTSHIFT)
@@ -402,7 +415,8 @@ class SuperBlock(OurStruct):
         self.addfield("reboots", 16)
         self.addfield(None, -20)
         self.addfield("snapshot2", 24)
-        self.addfield(None, -305)
+        self.addfield(None, -149)
+        self.addfield(None, -156)
         self.addfield(None, -16)
         self.addfield(None, 48)			# Maybe: system-id
         self.addfield("sbmagic", -32)		# 11010011000111000011110000011111
@@ -437,23 +451,36 @@ class BadSect():
 #################################################################################################
 # Unknown purpose
 
+class Part1Rec(OurStruct):
+    ''' ... '''
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            f0_=24,
+            f1_=8,
+            f2_=24,
+            f3_=8,
+        )
+
 class Part1Sect(OurStruct):
     def __init__(self, up, lo):
         double_up(self, up, lo, COLOR_PART_1)
         super().__init__(
             up,
             lo,
-            f0_=30,
+            vertical=True,
+            f0_=26,
+            f1_=8,
             more=True,
         )
         self.map = []
         while self.hi < lo + SECTBITS - 64:
-            self.map.append(
-                self.addfield(None, -64)
-            )
-        # self.hide_the_rest(SECTBITS)
-        if len(self.map) > 1:
-            self.vertical = True
+            j = self.addfield(None, Part1Rec)
+            self.map.append(j)
+            if j.f1 == 1 and j.f2:
+                up.claim_sector(j.f2, COLOR_SPARE)
+        self.hide_the_rest(SECTBITS)
         self.done()
 
 class Part1():
@@ -559,7 +586,7 @@ class WorldIdxRec(OurStruct):
             up,
             lo,
             world_=10,
-            f2_=31,
+            snapshot_=31,
             sector_=24,
         )
 
@@ -587,7 +614,8 @@ class WorldListRec(OurStruct):
             up,
             lo,
             world_=10,
-            f2_=-106,
+            snapshot_=31,
+            f2_=-75,
             f6_=20,
             f5_=44,
             volume_=4,
@@ -621,7 +649,8 @@ class WorldPtr(OurStruct):
         super().__init__(
             up,
             lo,
-            f1_=-34,
+            f1_=10,
+            f2_=24,
             snapshot_=31,
             sector_=24,
         )
@@ -684,6 +713,12 @@ class Extent(OurStruct):
             sector_=24,
         )
 
+    def render(self):
+        if self.flg or self.span or self.sector:
+            yield from super().render()
+        else:
+            yield "Ø"
+
 class Segment(OurStruct):
     ''' ... '''
     def __init__(self, up, lo):
@@ -692,24 +727,35 @@ class Segment(OurStruct):
             lo,
             more=True,
             vertical=False,
-            col2_=10,
+            lib_=10,
             other1_=1,
             col4_=23,
-            other2a_=30,
-            other2b_=10,
-            col9_=8,
-            other3_=34,
-            col5_=52,
+            snapshot_=31,
+            other2a_=8,
+            col9_=9,
+            other3a__=17,
+            vol_=4,
+            other3c_=13,
+            col5a_=10,
+            col5b__=10,
+            col5d_=32,
             other5_=22,
-            col7_=31,
-            other6_=14,
+            npg_=31,
+            other6__=14,
             multiplier_=32,
-            lba_array_=ArrayHead,
+            lba_array__=ArrayHead,
         )
+        assert self.col5b_ == 0
+        assert self.other3a_ == 0x200
+        assert self.other6_ == 0x2005
+        assert self.lba_array_.mark == 0x40
+        assert self.lba_array_.bits == 0x220
+        assert self.lba_array_.dim1 == 1
+        assert self.lba_array_.dim2 == 10
+        self.bogus = False
         self.indir = []
-        assert self.lba_array.dim2 == 10
         self.lba = []
-        for i in range(self.lba_array.dim2):
+        for i in range(self.lba_array_.dim2):
             self.lba.append(
                 self.addfield("lba%d" % i, Extent)
             )
@@ -717,12 +763,14 @@ class Segment(OurStruct):
         self.addfield("mobj", 32)
         assert 915 + self.lo == self.hi
         self.done()
-        t = up.segments.get(self.col5)
-        if not t or t.other2a < self.other2a:
-            up.segments[self.col5] = self
+        if self.npg < 9 and self.multiplier > 1:
+            self.bogus = True
+        t = up.segments.get(self.col4)
+        if not t or t.snapshot < self.snapshot:
+            up.segments[self.col4] = self
 
     def __iter__(self):
-        n = self.col7
+        n = self.npg
         if self.multiplier == 1:
             for i in self.lba:
                 if not n:
@@ -741,6 +789,8 @@ class Segment(OurStruct):
 
     def dive(self, world):
         self.world = world
+        if self.bogus:
+            return
 
         if self.multiplier == 1:
             for i in self.lba:
@@ -754,13 +804,18 @@ class Segment(OurStruct):
                     self.indir.append(indir)
 
     def render(self):
-        if self.up.segments[self.col5] != self:
-            yield "Superseeded_Segment"
-        else:
-            yield from super().render()
-            t = getattr(self, "r1k_segment", None)
-            if t:
-                yield self.up.this.top.html_link_to(t)
+        l = list(x for x in super().render())
+        cls = r1k_defs.OBJ_CLASS.get(self.mgr)
+        if cls:
+            l.append("[%s,%d,1]" % (cls, self.mobj))
+        t = getattr(self, "r1k_segment", None)
+        if t:
+            l.append(str(t))
+        if self.up.segments[self.col4] != self:
+            l.append("Superceeded")
+        if self.bogus:
+            l.append("Bogus")
+        yield " ".join(l)
 
 #################################################################################################
 
@@ -866,7 +921,7 @@ class R1K_Disk(bv.BitView):
         self.part2 = Part2(self)
 
         if self.sb.worldidx:
-            self.worldidx = WorldIdx(self, self.sb.worldidx << SECTSHIFT)
+            self.worldidx = WorldIdx(self, self.sb.worldidx << SECTSHIFT).insert()
             for i in self.worldidx.worldidx:
                 j = WorldList(self, i.sector << SECTSHIFT).insert()
                 self.worlds |= j.worlds
@@ -984,7 +1039,7 @@ class R1K_System():
         if True:
             print(self, "Spelunking worlds")
             for i, j in self[1].worlds.items():
-                # print("doing World", i, j.volume, hex(j.sector))
+                print("doing World", i, j.volume, hex(j.sector))
                 World(self[j.volume], j.sector << SECTSHIFT, nbr=i).insert()
             if True:
                 print(self, "Spelunking segments")
@@ -993,6 +1048,7 @@ class R1K_System():
                         continue
                     print(i, len(i.segments), "Segments")
                     for j in i.segments.values():
+                        print("doing Seg", j, hex(j.lo>>SECTSHIFT), i)
                         j.dive(i)
             if True:
                 for i in self.disks:
@@ -1000,17 +1056,24 @@ class R1K_System():
                         continue
                     print(i, "Spelunking segment data")
                     for j in i.segments.values():
+                        if j.bogus:
+                            continue
+                        if j.col9 not in (0x7b, 0x81):
+                            continue
                         l = []
                         for x in j:
-                            l.append(i.this[x.sector<<10:(x.sector+1)<<10])
+                            if x.sector:
+                                l.append(i.this[x.sector<<10:(x.sector+1)<<10])
+                            else:
+                                l.append(void[:1024])
                         if not l:
                             continue
                         y = i.this.create(start=0, stop=len(i.this), records=l)
                         z = r1k_defs.R1KSegment()
                         z.tag = j.col9
                         y.r1ksegment = z
-                        if z.tag == 0x81:
-                            y.add_note("%02x_tag" % z.tag)
+                        y.add_note("R1k_Segment")
+                        y.add_note("%02x_tag" % z.tag)
                         j.r1k_segment = y
         if False:
             for i in self.disks:
