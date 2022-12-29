@@ -17,6 +17,55 @@ OBJ_CLASS = {
     15: "ARCHIVED_CODE",
 }
 
+OBJ_SUBCLASS = {
+    0: "NIL",
+    2: "SUBSYSTEM",
+    3: "DIRECTORY",
+    4: "SUBSYSTEM",
+    5: "SPEC_VIEW",
+    6: "LOAD_VIEW",
+    8: "GENERIC_PROCEDURE",
+    9: "GENERIC_FUNCTION",
+    10: "GENERIC_PACKAGE",
+    12: "PACKAGE_INSTANTIATION",
+    13: "PACKAGE_SPEC",
+    17: "PROCEDURE_SPEC",
+    21: "FUNCTION_SPEC",
+    28: "PROCEDURE_BODY",
+    29: "FUNCTION_BODY",
+    31: "TASK_BODY",
+    32: "PACKAGE_BODY",
+    39: "COMPILATION_UNIT",
+    42: "TEXT",
+    43: "BINARY",
+    46: "ACTIVITY",
+    47: "SWITCH",
+    48: "SEARCH_LIST",
+    49: "OBJECT_SET",
+    51: "POSTSCRIPT",
+    52: "SWITCH_DEFINITION",
+    56: "MAIN_PROCEDURE_SPEC",
+    57: "MAIN_PROCEDURE_BODY",
+    61: "COMPATIBILITY_DATABASE",
+    62: "LOADED_PROCEDURE_SPEC",
+    63: "LOADED_FUNCTION_SPEC",
+    66: "COMBINED_VIEW",
+    70: "CMVC_DATABASE",
+    71: "DOCUMENT_DATABASE",
+    72: "CONFIGURATION",
+    80: "CMVC_ACCESS",
+    555: "BINARY_GATEWAY",
+    597: "REMOTE_TEXT_GATEWAY",
+}
+
+def ObjRef(cls, nbr, subcls):
+    i = OBJ_CLASS.get(cls, "%d" % cls)
+    j = OBJ_SUBCLASS.get(subcls, None)
+    if not j:
+        print("MISS", subcls)
+        j = "%d" % subcls
+    return ("[" + i + ",%d,1]" % nbr).ljust(24) + " (" + j + ")"
+
 class ObjClass():
 
     def __init__(self, val):
