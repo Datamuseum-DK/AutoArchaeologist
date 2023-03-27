@@ -123,7 +123,7 @@ class FromBitStore():
         if arg in self.loaded or arg in self.blacklist:
             return
         meta = self.fetch_wiki_source('Bits:' + arg)
-        meta = meta.split('= METADATA =')[1]
+        meta = meta.split('= Metadata =')[1]
         metalines = [x.strip() for x in meta.split("\n")]
 
         i = metalines.index("BitStore.Format:")
