@@ -22,7 +22,7 @@ class DDHF_Excavation(autoarchaeologist.Excavation):
         fo.write('<tr>\n')
 
         fo.write('<td style="vertical-align: middle;">\n')
-        fo.write('<img src="https://datamuseum.dk/w/images/ddhf.png"/>\n')
+        fo.write('<img src="/logo/ddhf_logo.svg"/>\n')
         fo.write('</td>\n')
 
         fo.write('<td style="vertical-align: top;')
