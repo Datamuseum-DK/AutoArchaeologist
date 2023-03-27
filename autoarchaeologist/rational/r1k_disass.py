@@ -25,7 +25,12 @@ class R1kDisass():
         tf1 = this.tmpfile_for()
         this.writetofile(open(tf1.filename, "wb"))
 
-        tf2 = this.add_utf8_interpretation("Disassembly")
+        if script in (
+             "DFS/disass_dfs.py",
+        ):
+            tf2 = this.add_html_interpretation("Disassembly")
+        else:
+            tf2 = this.add_utf8_interpretation("Disassembly")
         sys.stdout.flush()
         sys.stderr.flush()
 
