@@ -47,6 +47,33 @@ class Utf8Interpretation():
             fo.write(html.escape(i))
         os.remove(self.filename)
 
+
+class HtmlInterpretation():
+    '''
+       Some examinations output a HTML representation to a file
+       That output can be stored in a temporary file until the html
+       production phase, saving VM.
+       Using Pythons tempfile is not a good idea, because the file
+       hang around.
+    '''
+
+    def __init__(self, this, title):
+        self.this = this
+        self.title = title
+        self.filename = this.tmpfile_for().filename
+        this.add_interpretation(self, self.html_interpretation)
+
+    def html_interpretation(self, fo, this):
+        try:
+            fi = open(self.filename)
+        except FileNotFoundError as err:
+            print(this, "Could not open output file:", err)
+            return
+        fo.write("<H3>" + self.title + "</H3>\n")
+        for i in fi:
+            fo.write(i)
+        os.remove(self.filename)
+
 class ArtifactClass():
 
     '''
@@ -224,6 +251,9 @@ class ArtifactClass():
 
     def add_utf8_interpretation(self, title):
         return Utf8Interpretation(self, title)
+
+    def add_html_interpretation(self, title):
+        return HtmlInterpretation(self, title)
 
     def add_description(self, desc):
         ''' Add a description '''
