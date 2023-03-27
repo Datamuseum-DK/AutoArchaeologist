@@ -64,4 +64,4 @@ def r1k_dfs_job(**kwargs):
 
 if __name__ == "__main__":
     import subr_main
-    subr_main.main(r1k_dfs_job, subdir="r1k_dfs", downloads=True)
+    subr_main.main(r1k_dfs_job, subdir="r1k_dfs", download_links=True)
