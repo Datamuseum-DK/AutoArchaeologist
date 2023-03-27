@@ -123,7 +123,14 @@ class FromBitStore():
         if arg in self.loaded or arg in self.blacklist:
             return
         meta = self.fetch_wiki_source('Bits:' + arg)
-        meta = meta.split('= Metadata =')[1]
+        if '= Metadata =' in meta:
+            meta = meta.split('= Metadata =')[1]
+        elif '= METADATA =' in meta:
+            meta = meta.split('= METADATA =')[1]
+        else:
+            print("Wiki page not recognized")
+            print(meta)
+            return
         metalines = [x.strip() for x in meta.split("\n")]
 
         i = metalines.index("BitStore.Format:")
