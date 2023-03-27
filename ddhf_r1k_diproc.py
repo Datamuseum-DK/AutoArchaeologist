@@ -8,7 +8,7 @@ from autoarchaeologist.ddhf.bitstore import FromBitStore
 
 from autoarchaeologist.rational.r1k_diag import R1kDiagFirmWare
 
-def r1k_diag_job(**kwargs):
+def r1k_diproc_job(**kwargs):
 
     ''' Rational R1000/400 Diag processor firmware '''
 
@@ -32,4 +32,4 @@ def r1k_diag_job(**kwargs):
 
 if __name__ == "__main__":
     import subr_main
-    subr_main.main(r1k_diag_job, subdir="r1k_diag", downloads=True)
+    subr_main.main(r1k_diproc_job, subdir="r1k_diproc", downloads=True)
