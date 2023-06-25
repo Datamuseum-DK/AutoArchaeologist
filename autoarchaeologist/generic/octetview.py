@@ -34,7 +34,8 @@ class Octets(tree.TreeLeaf):
         # yield str(self)
         octets = self.this[self.lo:self.hi]
         fmt = "%02x"
-        yield " ".join(fmt % x for x in octets)
+        tc = self.this.type_case.decode(octets)
+        yield " ".join(fmt % x for x in octets) + "   |" + tc + "|"
 
 class Be16(Octets):
     def __init__(self, up, lo, **kwargs):
@@ -150,7 +151,17 @@ class OctetView(tree.Tree):
         prev = None
         for i in sorted(self):
             if i.lo < lo:
-                print("Overlap", hex(i.lo>>13), i, prev)
+                print("Overlap", self.this)
+                print("  this: ", hex(i.lo), hex(i.hi), i)
+                for n, j in enumerate(i.render()):
+                    print("\t" + j)
+                    if n > 5:
+                        break
+                print("  prev: ", hex(prev.lo), hex(prev.hi), prev)
+                for n, j in enumerate(prev.render()):
+                    print("\t" + j)
+                    if n > 5:
+                        break
             if i.lo > lo:
                 yield from self.pad(lo, i.lo)
             yield i
