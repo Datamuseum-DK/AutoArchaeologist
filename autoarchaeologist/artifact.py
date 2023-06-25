@@ -12,6 +12,8 @@ import os
 import hashlib
 import html
 
+from itertools import zip_longest
+
 import autoarchaeologist.excavation as excavation
 import autoarchaeologist.record as record
 import autoarchaeologist.scattergather as scattergather
@@ -125,6 +127,7 @@ class ArtifactClass():
 
         self.index_representation = None
         self.link_to = ""
+        self.byte_order = None
 
         self.by_class = {} # Experimental extension point
 
@@ -150,6 +153,18 @@ class ArtifactClass():
 
     def __iter__(self):
         yield from self.bdx
+
+    def iter_bytes(self):
+        if not self.byte_order:
+            yield from self.bdx
+
+        def group(input, chunk):
+            i = [iter(input)] * chunk
+            return zip_longest(*i, fillvalue=0)
+
+        for i in group(self.bdx, len(self.byte_order)):
+            for j in self.byte_order:
+                yield i[j]
 
     def bits(self, lo, width=None, hi=None):
         ''' Get a slice as a bitstring '''
@@ -331,6 +346,7 @@ class ArtifactClass():
             this.add_parent(self)
         if start or stop:
             self.layout.append((start, stop, this))
+        this.byte_order = self.byte_order
         return this
 
     def examined(self):

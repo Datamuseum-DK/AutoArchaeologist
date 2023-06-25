@@ -79,7 +79,7 @@ class Ascii():
         bodylen = 0
         lines = 0
         last_idx = None
-        for idx, c in enumerate(this):
+        for idx, c in enumerate(this.iter_bytes()):
             if c:
                 if pfx is None:
                     pfx = idx
@@ -126,7 +126,7 @@ class Ascii():
         t = []
         after_cr = False
         after_ht = False
-        for byte in self.this:
+        for byte in self.this.iter_bytes():
             byte &= 0x7f
             if CHARSET[byte][0] & 16:
                 continue
