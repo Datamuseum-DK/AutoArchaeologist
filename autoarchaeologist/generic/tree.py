@@ -139,6 +139,15 @@ class Tree():
                     yield lst.pop(0)
         yield from lst
 
+    def gaps(self):
+        last = 0
+        for i in self:
+            if i.lo > last:
+                yield (last, i.lo)
+            last = i.hi
+        if last < len(self.this):
+            yield (last, len(self.this))
+
 def test_tree():
     ''' Minimal test cases '''
 
