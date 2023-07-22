@@ -14,8 +14,8 @@ class Octets(tree.TreeLeaf):
         if hi is None:
             assert width is not None
             hi = lo + width
-        if hi - lo > (1>>13):
-            assert hi - lo <= (1<<13), "Too big 0x%x-0x%x" % (lo, hi)
+        if hi - lo > (1<<16):
+            print("Big Octets 0x%x" % (hi - lo), hex(lo), hex(hi), up, up.this)
         self.up = up
         self.this = up.this
         if name is None:
@@ -25,6 +25,18 @@ class Octets(tree.TreeLeaf):
 
     def __len__(self):
         return self.hi - self.lo
+
+    def __getitem__(self, idx):
+        return self.this[self.lo + idx]
+
+    def __iter__(self):
+        yield from self.this[self.lo:self.hi]
+
+    def __str__(self):
+        try:
+            return " ".join(self.render())
+        except:
+            return str(super())
 
     def insert(self):
         self.up.insert(self)
@@ -36,6 +48,26 @@ class Octets(tree.TreeLeaf):
         fmt = "%02x"
         tc = self.this.type_case.decode(octets)
         yield " ".join(fmt % x for x in octets) + "   |" + tc + "|"
+
+class Le16(Octets):
+    def __init__(self, up, lo, **kwargs):
+        super().__init__(up, lo, width=2, **kwargs)
+        self.val = self.this[lo + 1] << 8
+        self.val |= self.this[lo]
+
+    def render(self):
+        yield "0x%04x" % self.val
+
+class Le32(Octets):
+    def __init__(self, up, lo, **kwargs):
+        super().__init__(up, lo, width=4, **kwargs)
+        self.val = self.this[lo + 3] << 24
+        self.val |= self.this[lo + 2] << 16
+        self.val |= self.this[lo + 1] << 8
+        self.val |= self.this[lo]
+
+    def render(self):
+        yield "0x%08x" % self.val
 
 class Be16(Octets):
     def __init__(self, up, lo, **kwargs):
@@ -138,9 +170,11 @@ class OctetView(tree.Tree):
         if i:
             yield Octets(self, lo, width - i)
             lo += width - i
-        while lo < hi:
-            yield Octets(self, lo, hi = min(lo + width, hi))
+        while lo + width <= hi:
+            yield Octets(self, lo, width)
             lo += width
+        if lo < hi:
+            yield Octets(self, lo, hi)
 
     def prefix(self, lo, hi):
         fmt = "%%0%dx" % len("%x" % self.hi)
@@ -174,7 +208,23 @@ class OctetView(tree.Tree):
         print(self.this, "Rendering", self.gauge, "octetview-leaves")
         self.tfn = self.this.add_utf8_interpretation(title)
         with open(self.tfn.filename, "w") as file:
+            last = None
+            lasti = None
+            rpt = 0
             for i in self.pad_out():
                 for j in i.render():
+                    if j == last:
+                        rpt += 1
+                        lasti = i
+                        continue
+                    if rpt == 1:
+                        file.write(self.prefix(lasti.lo, lasti.hi) + " " + last + "\n")
+                        rpt = 0
+                    elif rpt:
+                        file.write(self.prefix(lasti.lo, lasti.hi) + " …[0x%x]\n" % rpt)
+                        rpt = 0
+                    last = j
                     file.write(self.prefix(i.lo, i.hi) + " " + j + "\n")
+            if rpt:
+                file.write(self.prefix(lasti.lo, lasti.hi) + " …[0x%x]\n" % rpt)
 
