@@ -155,8 +155,9 @@ class ArtifactClass():
         yield from self.bdx
 
     def iter_bytes(self):
-        if not self.byte_order:
+        if self.byte_order is None:
             yield from self.bdx
+            return
 
         def group(input, chunk):
             i = [iter(input)] * chunk
@@ -342,7 +343,7 @@ class ArtifactClass():
         if not this:
             this = ArtifactClass(self, digest, bits)
             this.type_case = self.type_case
-        else:
+        elif this != self:
             this.add_parent(self)
         if start or stop:
             self.layout.append((start, stop, this))
