@@ -46,17 +46,17 @@ def rc3600_job(**kwargs):
     FromBitStore(
         ctx,
         "_ddhf_bitstore_cache",
-        "RC3600/COMAL",
-        "RC3600/DE2",
-        "RC3600/DISK",
-        "RC3600/DOMUS",
-        "RC3600/HW",
-        "RC3600/LOADER",
-        "RC3600/MUSIL",
-        "RC3600/PAPERTAPE",
-        "RC3600/SW",
-        "RC3600/TEST",
-        "RC3600/UTIL",
+        "RC/RC3600/COMAL",
+        "RC/RC3600/DE2",
+        "RC/RC3600/DISK",
+        "RC/RC3600/DOMUS",
+        "RC/RC3600/HW",
+        "RC/RC3600/LOADER",
+        "RC/RC3600/MUSIL",
+        "RC/RC3600/PAPERTAPE",
+        "RC/RC3600/SW",
+        "RC/RC3600/TEST",
+        "RC/RC3600/UTIL",
     )
 
     return ctx
