@@ -1,35 +1,29 @@
 '''
-Rational R1000/400 Diag Artifacts from Datamuseum.dk's BitStore
+Rational R1000/400 Diag Processor Firmware from Datamuseum.dk's BitStore
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
-
-from autoarchaeologist.ddhf.bitstore import FromBitStore
+from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 
 from autoarchaeologist.rational.r1k_diag import R1kDiagFirmWare
 
-def r1k_diproc_job(**kwargs):
+class R1KDIPROC(DDHF_Excavation):
 
-    ''' Rational R1000/400 Diag processor firmware '''
+    ''' Rational R1000/400 Diag Processor firmware '''
 
-    ctx = DDHF_Excavation(
-        ddhf_topic = "Rational R1000/400",
-        ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
-        hexdump_limit=1<<10,
-        **kwargs,
-    )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    ctx.add_examiner(R1kDiagFirmWare)
+        self.add_examiner(R1kDiagFirmWare)
 
-    FromBitStore(
-        ctx,
-        "_ddhf_bitstore_cache",
-        "30002517",
-        "30003041",
-    )
-
-    return ctx
+        self.from_bitstore(
+            "30002517",
+            "30003041",
+        )
 
 if __name__ == "__main__":
-    import subr_main
-    subr_main.main(r1k_diproc_job, subdir="r1k_diproc", downloads=True)
+    main(
+        R1KDIPROC,
+        html_subdir="r1k_diproc",
+        ddhf_topic = "Rational R1000/400 Diag Processor Firmware",
+        ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
+    )

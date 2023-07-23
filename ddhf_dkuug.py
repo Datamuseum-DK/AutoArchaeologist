@@ -1,43 +1,38 @@
 '''
 DKUUG and EUUG Conference tapes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
-
-from autoarchaeologist.ddhf.bitstore import FromBitStore
+from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 
 from autoarchaeologist.generic.ascii import Ascii
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.unix.tar_file import TarFile
 from autoarchaeologist.unix.compress import Compress
 
-def dkuug_job(**kwargs):
+class DkuugEuug(DDHF_Excavation):
 
     '''
     DKUUG and EUUG Conference tapes
     '''
 
-    ctx = DDHF_Excavation(
-        ddhf_topic = "DKUUG/EUUG Conference tapes",
-        ddhf_topic_link = 'https://datamuseum.dk/wiki/DKUUG',
-        hexdump_limit=1<<10,
-        **kwargs,
-    )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    ctx.add_examiner(Compress)
-    ctx.add_examiner(TarFile)
-    ctx.add_examiner(Ascii)
-    ctx.add_examiner(SameSame)
+        self.add_examiner(Compress)
+        self.add_examiner(TarFile)
+        self.add_examiner(Ascii)
+        self.add_examiner(SameSame)
 
-    FromBitStore(
-        ctx,
-        "_ddhf_bitstore_cache",
-        "30001252",
-        "30001253",
-    )
-
-    return ctx
+        self.from_bitstore(
+            "30001252",
+            "30001253",
+        )
 
 if __name__ == "__main__":
-    import subr_main
-    subr_main.main(dkuug_job, subdir="dkuug", downloads=True, download_links=True)
+    main(
+        DkuugEuug,
+        html_subdir="dkuug",
+        ddhf_topic = "DKUUG/EUUG Conference tapes",
+        ddhf_topic_link = 'https://datamuseum.dk/wiki/DKUUG',
+    )

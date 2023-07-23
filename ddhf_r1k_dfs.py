@@ -1,10 +1,9 @@
 '''
-Rational R1000/400 DFS Artifacts from Datamuseum.dk's BitStore
+Rational R1000/400 DFS Tapes from Datamuseum.dk's BitStore
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
-
-from autoarchaeologist.ddhf.bitstore import FromBitStore
+from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 
 from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
@@ -19,49 +18,43 @@ from autoarchaeologist.rational.r1k_m200 import R1kM200File
 from autoarchaeologist.rational.r1k_experiment import R1kExperiment
 
 from autoarchaeologist.generic.samesame import SameSame
-import autoarchaeologist.generic.ascii as ascii
+import autoarchaeologist.generic.ascii as Ascii
 
-ascii.CHARSET[0][0] |= 16
+Ascii.CHARSET[0][0] |= 16
 
-def r1k_dfs_job(**kwargs):
-
+class R1KDFS(DDHF_Excavation):
     ''' Rational R1000/400 DFS tapes '''
 
-    ctx = DDHF_Excavation(
-        ddhf_topic = "Rational R1000/400",
-        ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
-        hexdump_limit=1<<10,
-        **kwargs,
-    )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    ctx.add_examiner(TAPfile)
-    ctx.add_examiner(AnsiTapeLabels)
-    ctx.add_examiner(R1K_Tape_blocks)
-    ctx.add_examiner(R1K_Index_Data)
-    ctx.add_examiner(R1K_DFS_Tape)
-    ctx.add_examiner(R1kM200ConfigFile)
-    ctx.add_examiner(R1kAssyFile)
-    ctx.add_examiner(R1K_Ucode_File)
-    ctx.add_examiner(R1kM200File)
-    ctx.add_examiner(R1kExperiment)
-    ctx.add_examiner(ascii.Ascii)
-    ctx.add_examiner(SccsId)
-    #ctx.add_examiner(SameSame)
+        self.add_examiner(TAPfile)
+        self.add_examiner(AnsiTapeLabels)
+        self.add_examiner(R1K_Tape_blocks)
+        self.add_examiner(R1K_Index_Data)
+        self.add_examiner(R1K_DFS_Tape)
+        self.add_examiner(R1kM200ConfigFile)
+        self.add_examiner(R1kAssyFile)
+        self.add_examiner(R1K_Ucode_File)
+        self.add_examiner(R1kM200File)
+        self.add_examiner(R1kExperiment)
+        self.add_examiner(ascii.Ascii)
+        self.add_examiner(SccsId)
+        self.add_examiner(SameSame)
 
-    FromBitStore(
-        ctx,
-        "_ddhf_bitstore_cache",
-        "30000744",   # precise file sizes
-        "30000407",   # precise file sizes
+        self.from_bitstore(
+            "30000744",   # precise file sizes
+            "30000407",   # precise file sizes
 
-        "30000528",   # file sizes rounded up
-        "30000743",   # file sizes rounded up
-        "30000750",   # file sizes rounded up
-
-    )
-
-    return ctx
+            "30000528",   # file sizes rounded up
+            "30000743",   # file sizes rounded up
+            "30000750",   # file sizes rounded up
+        )
 
 if __name__ == "__main__":
-    import subr_main
-    subr_main.main(r1k_dfs_job, subdir="r1k_dfs", download_links=True)
+    main(
+        R1KDFS,
+        html_subdir="r1k_dfs",
+        ddhf_topic = "Rational R1000/400 DFS Tapes",
+        ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
+    )

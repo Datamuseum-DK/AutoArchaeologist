@@ -2,9 +2,7 @@
 Rational R1000/400 Backup tape from Datamuseum.dk's BitStore
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation
-
-from autoarchaeologist.ddhf.bitstore import FromBitStore
+from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 
 from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
@@ -19,39 +17,36 @@ from autoarchaeologist.generic.samesame import SameSame
 
 CHARSET[0][0] = 16
 
-def r1k_backup_job(**kwargs):
+class R1KBACKUP(DDHF_Excavation):
 
     ''' Rational R1000/400 Backup tape '''
 
-    ctx = DDHF_Excavation(
-        ddhf_topic = "Rational R1000/400",
-        ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
-	hexdump_limit=1<<10,
-        **kwargs,
-    )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    ctx.add_examiner(TAPfile)
-    ctx.add_examiner(AnsiTapeLabels)
-    ctx.add_examiner(R1kBackup)
 
-    ctx.add_examiner(R1kE3Objects)
-    ctx.add_examiner(R1kAssyFile)
-    ctx.add_examiner(R1k6ZeroSegment)
+        self.add_examiner(TAPfile)
+        self.add_examiner(AnsiTapeLabels)
+        self.add_examiner(R1kBackup)
 
-    ctx.add_examiner(R1kSegHeap)
+        self.add_examiner(R1kE3Objects)
+        self.add_examiner(R1kAssyFile)
+        self.add_examiner(R1k6ZeroSegment)
 
-    ctx.add_examiner(Ascii)
-    ctx.add_examiner(TextFiles)
-    ctx.add_examiner(SameSame)
+        self.add_examiner(R1kSegHeap)
 
-    FromBitStore(
-        ctx,
-        "_ddhf_bitstore_cache",
-        "30000544",	# PAM arrival backup
-    )
+        self.add_examiner(Ascii)
+        self.add_examiner(TextFiles)
+        self.add_examiner(SameSame)
 
-    return ctx
+        self.from_bitstore(
+            "30000544",	# PAM arrival backup
+        )
 
 if __name__ == "__main__":
-    import subr_main
-    subr_main.main(r1k_backup_job, subdir="r1k_backup", downloads=True)
+    main(
+        R1KBACKUP,
+        html_subdir="r1k_backup",
+        ddhf_topic = "Rational R1000/400",
+        ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
+    )

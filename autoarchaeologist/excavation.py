@@ -6,7 +6,7 @@
 
     `Excavation` holds the global state for analyzing a set
     of related artifacts, so that programs can juggle
-    multiple excavation.
+    multiple excavation (if need be)
 '''
 
 import os
@@ -69,15 +69,11 @@ class Excavation():
         download_limit=15 << 20,   # Only produce downloads if smaller than
         hexdump_limit=8192,	   # How many bytes to hexdump
         html_dir="/tmp/aa",	   # Where to put HTML output
-        subdir=None,		   # Subdir under html_dir
         link_prefix=None,	   # Default is file://[…]
-        spill_index=10,           # Spill limit for index lines
+        spill_index=10,		   # Spill limit for index lines
     ):
 
         # Sanitize parameters
-
-        if subdir:
-            html_dir = os.path.join(html_dir, subdir)
 
         os.makedirs(html_dir, exist_ok=True)
 
@@ -158,7 +154,7 @@ class Excavation():
         this.add_description(description)
         return this
 
-    def add_file_artifact(self, filename, description=None):
+    def add_file_artifact(self, filename, description=None, **kwargs):
         ''' Add a file as top-level artifact '''
 
         if not description:
@@ -170,7 +166,7 @@ class Excavation():
             0,
             access=mmap.ACCESS_READ,
         )
-        return self.add_top_artifact(mapped, description)
+        return self.add_top_artifact(mapped, description=description, **kwargs)
 
     def add_to_index(self, key, this):
         ''' Add things to the index '''
