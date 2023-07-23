@@ -379,12 +379,12 @@ class ArtifactClass():
                 else:
                     nam = self.name() + " "
             j = set()
-            for i in sorted(self.iter_types(True)):
+            if self.descriptions:
+                txt += sorted(self.descriptions)
+            for i in sorted(self.iter_types(False)):
                 if i not in j:
                     txt.append(i)
                     j.add(i)
-            if self.descriptions:
-                txt += sorted(self.descriptions)
             if notes:
                 txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
             if not link or not ident:
