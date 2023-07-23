@@ -129,7 +129,12 @@ class Inode(autoarchaeologist.Record):
             block_no += 1
 
     def __str__(self):
-        txt = "%6d" % self.di_inum
+        return " ".join(self.ls())
+
+    def ls(self):
+        ''' Return list of columns in "ls -li" like output '''
+        retval = []
+        retval.append("%6d" % self.di_inum)
 
         typ = {
             self.ufs.S_IFPIP: "p",
@@ -140,15 +145,15 @@ class Inode(autoarchaeologist.Record):
         }.get(self.di_type)
 
         mode = self.di_mode
-
+ 
         if typ is None:
-            txt += " %10o" % mode
+            txt = "%10o" % mode
         elif not mode & self.ufs.S_IXUSR and mode & self.ufs.S_ISUID:
-            txt += " %10o" % mode
+            txt = "%10o" % mode
         elif not mode & self.ufs.S_IXGRP and mode & self.ufs.S_ISGID:
-            txt += " %10o" % mode
+            txt = "%10o" % mode
         else:
-            txt += " " + typ
+            txt = typ
             txt += "r" if mode & self.ufs.S_IRUSR else '-'
             txt += "w" if mode & self.ufs.S_IWUSR else '-'
             if mode & self.ufs.S_IXUSR and mode & self.ufs.S_ISUID:
@@ -173,14 +178,14 @@ class Inode(autoarchaeologist.Record):
                 txt += "T"
             else:
                 txt += "-"
-
-        txt += " %4d" % self.di_nlink
-        txt += " %5d" % self.di_uid
-        txt += " %5d" % self.di_gid
-        txt += " %8d" % self.di_size
+        retval.append(txt)
+        retval.append("%4d" % self.di_nlink)
+        retval.append("%5d" % self.di_uid)
+        retval.append("%5d" % self.di_gid)
+        retval.append("%8d" % self.di_size)
         mtime = time.gmtime(self.di_mtime)
-        txt += time.strftime(" %Y-%m-%dT%H:%M:%SZ", mtime)
-        return txt
+        retval.append(time.strftime("%Y-%m-%dT%H:%M:%SZ", mtime))
+        return retval
 
     def fix_di_addr(self):
         ''' Implemented by specific filesystems as needed '''
