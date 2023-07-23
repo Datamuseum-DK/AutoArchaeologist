@@ -49,6 +49,12 @@ class Octets(tree.TreeLeaf):
         tc = self.this.type_case.decode(octets)
         yield " ".join(fmt % x for x in octets) + "   |" + tc + "|"
 
+class HexOctets(Octets):
+    ''' Octets rendered without text column '''
+
+    def render(self):
+        yield "".join("%02x" % i for i in self)
+
 class Le16(Octets):
     def __init__(self, up, lo, **kwargs):
         super().__init__(up, lo, width=2, **kwargs)
@@ -103,11 +109,12 @@ class Struct(Octets):
         del self.args
 
     def addfield(self, name, what):
+        ''' add a field to the structure '''
         assert hasattr(self, "args")
         if name is None:
             name = "at%04x" % (self.hi - self.lo)
         if isinstance(what, int):
-            y = Octets(self.up, self.hi, width=what)
+            y = HexOctets(self.up, self.hi, width=what)
             z = y
         else:
             y = what(self.up, self.hi)
@@ -118,6 +125,7 @@ class Struct(Octets):
         return y
 
     def hide_the_rest(self, size):
+        ''' hide the rest of the space occupied by the structure '''
         assert hasattr(self, "args")
         assert self.lo + size >= self.hi
         if self.lo + size != self.hi:
@@ -152,7 +160,7 @@ class Struct(Octets):
 class OctetView(tree.Tree):
     ''' ... '''
 
-    def __init__(self, this):
+    def __init__(self, this, max_render=None):
         self.this = this
         hi = len(this)
         super().__init__(
@@ -160,6 +168,10 @@ class OctetView(tree.Tree):
             hi = hi,
             limit = 1<<16,
         )
+        if max_render is None:
+            max_render = hi
+        self.max_render = max_render
+
 
     def pad(self, lo, hi):
         width = 16
@@ -205,13 +217,18 @@ class OctetView(tree.Tree):
             yield from self.pad(lo, self.hi)
 
     def render(self, title="OctetView"):
+        ''' Render via utf8 file '''
         print(self.this, "Rendering", self.gauge, "octetview-leaves")
-        self.tfn = self.this.add_utf8_interpretation(title)
-        with open(self.tfn.filename, "w") as file:
+        tfn = self.this.add_utf8_interpretation(title)
+        with open(tfn.filename, "w") as file:
             last = None
             lasti = None
+            trunc = ""
             rpt = 0
             for i in self.pad_out():
+                if i.lo > self.max_render:
+                    trunc = "[Truncated]\n"
+                    break
                 for j in i.render():
                     if j == last:
                         rpt += 1
@@ -227,4 +244,4 @@ class OctetView(tree.Tree):
                     file.write(self.prefix(i.lo, i.hi) + " " + j + "\n")
             if rpt:
                 file.write(self.prefix(lasti.lo, lasti.hi) + " …[0x%x]\n" % rpt)
-
+            file.write(trunc)
