@@ -164,7 +164,6 @@ class FromBitStore():
         except autoarchaeologist.DuplicateArtifact as why:
             print(why)
             return
-        this.set_name(arg)
 
     def fetch_pattern(self, arg):
         ''' Fetch and parse the keyword page from the wiki '''
