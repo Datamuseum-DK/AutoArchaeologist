@@ -41,7 +41,7 @@ class Intel_ISIS(DDHF_Excavation):
 if __name__ == "__main__":
     main(
         Intel_ISIS,
-        html_subdir="Intel_ISIS",
+        html_subdir="intel_isis",
         ddhf_topic = "Intel ISIS Floppy Disks",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/CR80',
     )
