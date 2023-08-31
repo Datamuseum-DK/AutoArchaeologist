@@ -14,8 +14,10 @@ class Octets(tree.TreeLeaf):
         if hi is None:
             assert width is not None
             hi = lo + width
+        assert hi > lo
         if hi - lo > (1<<16):
             print("Big Octets 0x%x" % (hi - lo), hex(lo), hex(hi), up, up.this)
+            assert False
         self.up = up
         self.this = up.this
         if name is None:
@@ -37,6 +39,9 @@ class Octets(tree.TreeLeaf):
             return " ".join(self.render())
         except:
             return str(super())
+
+    def octets(self):
+        return self.this[self.lo:self.hi]
 
     def insert(self):
         self.up.insert(self)
@@ -174,6 +179,7 @@ class OctetView(tree.Tree):
 
 
     def pad(self, lo, hi):
+        assert hi > lo
         width = 16
         if hi - lo <= width:
             yield Octets(self, lo, hi=hi)
@@ -186,7 +192,7 @@ class OctetView(tree.Tree):
             yield Octets(self, lo, width)
             lo += width
         if lo < hi:
-            yield Octets(self, lo, hi)
+            yield Octets(self, lo, hi = hi)
 
     def prefix(self, lo, hi):
         fmt = "%%0%dx" % len("%x" % self.hi)
