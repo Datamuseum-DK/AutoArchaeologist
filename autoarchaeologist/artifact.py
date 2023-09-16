@@ -106,7 +106,7 @@ class ArtifactClass():
 
         self.digest = digest
 
-        self.parents = []
+        self.parents = set()
         self.children = []
 
         self.named = None
@@ -132,7 +132,7 @@ class ArtifactClass():
         self.by_class = {} # Experimental extension point
 
     def __str__(self):
-        return "{A %d %s}" % (len(self), self.name())
+        return "{A %d %s}" % (len(self), self.ident())
 
     def __repr__(self):
         return str(self)
@@ -149,7 +149,7 @@ class ArtifactClass():
     def __lt__(self, other):
         if isinstance(other, excavation.Excavation):
             return 1
-        return self.name() < other.name()
+        return self.digest < other.digest
 
     def __iter__(self):
         yield from self.bdx
@@ -220,16 +220,14 @@ class ArtifactClass():
         else:
             fo.write(self.bdx)
 
-    def name(self):
+    def ident(self):
         ''' Get the canonical name of the artifact '''
-        if self.named:
-            return "\u27e6" + self.named + "\u27e7"
         return "\u27e6" + self.digest[:self.top.digest_prefix] + "\u27e7"
 
     def add_parent(self, parent):
         ''' Attach to parent, and vice-versa '''
         assert self != parent
-        self.parents.append(parent)
+        self.parents.add(parent)
         parent.children.append(self)
 
     def set_name(self, name, fallback=True):
@@ -377,7 +375,7 @@ class ArtifactClass():
                 if link:
                     nam = self.top.html_link_to(self) + " "
                 else:
-                    nam = self.name() + " "
+                    nam = self.ident() + " "
             j = set()
             if self.descriptions:
                 txt += sorted(self.descriptions)
