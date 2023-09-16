@@ -403,16 +403,17 @@ class ArtifactClass():
             fo.write("    Notes: " + ", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
         fo.write("</pre>\n")
 
-        fo.write("<H4>Derivation</H4>\n")
-        fo.write("<pre>\n")
-        self.html_derivation(fo)
-        fo.write("</pre>\n")
+        if self.top not in self.parents or len(self.parents) > 1:
+            fo.write("<H3>Derivation</H3>\n")
+            fo.write("<pre>\n")
+            self.html_derivation(fo)
+            fo.write("</pre>\n")
 
         if self.children and not self.interpretations:
             self.html_interpretation_children(fo, self)
 
         if self.comments:
-            fo.write("<H4>NB: Comments at End</H4>\n")
+            fo.write("<H3>NB: Comments at End</H3>\n")
 
         if self.interpretations:
             for _owner, func in self.interpretations:
@@ -423,7 +424,7 @@ class ArtifactClass():
             self.html_interpretation_hexdump(fo, self)
 
         if self.comments:
-            fo.write("<H4>Comments</H4>\n")
+            fo.write("<H3>Comments</H3>\n")
             fo.write("<pre>\n")
             for i in self.comments:
                 fo.write(i + "\n")
@@ -432,7 +433,7 @@ class ArtifactClass():
     def html_interpretation_children(self, fo, _this):
         ''' Default interpretation list of children'''
 
-        fo.write("<H4>Children</H4>\n")
+        fo.write("<H3>Children</H3>\n")
         fo.write("<pre>\n")
         for start, stop, this in sorted(self.layout):
             fo.write("  0x%08x" % start + "-0x%08x  " % stop)
@@ -441,7 +442,7 @@ class ArtifactClass():
 
     def html_interpretation_hexdump(self, fo, _this):
         ''' Default interpretation as hexdump '''
-        fo.write("<H4>HexDump</H4>\n")
+        fo.write("<H3>HexDump</H3>\n")
         fo.write("<pre>\n")
 
         if not isinstance(self.bdx, scattergather.ScatterGather):
