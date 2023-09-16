@@ -89,7 +89,6 @@ class Excavation():
         if download_links:
             downloads = True
 
-
         # Parameters
         self.digest_prefix = digest_prefix
         self.downloads = downloads
@@ -251,6 +250,9 @@ class Excavation():
 
     def produce_front_page(self):
         ''' Top level html page '''
+        fn = self.filename_for(self, suf=".css")
+        with open(fn.filename, "w") as file:
+            file.write(self.CSS)
         fn = self.filename_for(self)
         fo = open(fn.filename, "w")
         self.html_prefix(fo, self)
@@ -361,6 +363,7 @@ class Excavation():
         fo.write("<html>\n")
         fo.write("<head>\n")
         self.html_prefix_head(fo, this)
+        self.html_prefix_style(fo, this)
         fo.write("</head>\n")
         fo.write("<body>\n")
         self.html_prefix_banner(fo, this)
@@ -378,3 +381,23 @@ class Excavation():
     def html_derivation(self, _fo):
         ''' Duck-type as ArtifactClass '''
         return ""
+
+    def html_prefix_style(self, fo, _target):
+        ''' Duck-type as ArtifactClass '''
+        rdir = self.filename_for(self, suf=".css").link
+        fo.write('<link rel="stylesheet" href="%s">\n' % rdir)
+
+    CSS = '''
+        body {
+            font-family: "Inconsolata", "Courier New", mono-space;
+        }
+        td,th {
+            padding: 0 10px 0; 
+        }
+        th {
+            border-bottom: 1px solid black;
+        }
+        td.l, th.l { text-align: left; }
+        td.r, th.r { text-align: right; }
+        td.c, th.c { text-align: center; }
+    '''
