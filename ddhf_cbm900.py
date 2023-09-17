@@ -9,7 +9,7 @@ from autoarchaeologist.unix.cbm900_partition import CBM900_Partition
 from autoarchaeologist.unix.v7_filesystem import V7_Filesystem
 from autoarchaeologist.unix.cbm900_ar import Ar
 from autoarchaeologist.unix.cbm900_l_out import L_Out
-from autoarchaeologist.generic.ascii import Ascii
+from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic.samesame import SameSame
 
 class CBM900(DDHF_Excavation):
@@ -26,7 +26,7 @@ class CBM900(DDHF_Excavation):
         self.add_examiner(V7_Filesystem)
         self.add_examiner(Ar)
         self.add_examiner(L_Out)
-        self.add_examiner(Ascii)
+        self.add_examiner(textfiles.TextFile)
         self.add_examiner(SameSame)
 
         self.from_bitstore(
