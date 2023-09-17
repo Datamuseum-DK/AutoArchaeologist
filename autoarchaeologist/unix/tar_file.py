@@ -5,25 +5,66 @@
 import html
 import time
 
-from autoarchaeologist.unix.unix_file_mode import unix_file_mode
+import autoarchaeologist
+from autoarchaeologist.unix.unix_stat import UnixStat
 
 class Invalid(Exception):
     ''' invalid tar file '''
 
+class NameSpace(autoarchaeologist.NameSpace):
+    ''' ... '''
+
+    KIND = "Tar file"
+
+    TABLE = (
+        ("l", "mode"),
+        ("r", "link"),
+        ("r", "uid"),
+        ("r", "gid"),
+        ("r", "size"),
+        ("l", "mtime"),
+        ("l", "name"),
+        ("l", "artifact"),
+    )
+
+    stat = UnixStat()
+
+    def ns_render(self):
+        if self.ns_name[-1] == '/':
+            sfmt = "d"
+        else:
+            sfmt = "-"
+        return [
+            sfmt + self.stat.mode_bits(self.ns_priv.mode),
+            self.ns_priv.link,
+            self.ns_priv.uid,
+            self.ns_priv.gid,
+            self.ns_priv.size,
+            self.stat.timestamp(self.ns_priv.mtime),
+        ] + super().ns_render()
+
 class TarEntry():
     ''' One tar(1) file entry '''
 
-    def __init__(self, that, offset):
+    def __init__(self, up, that, offset):
+        self.up = up
         self.hdr = that[offset:offset+512].tobytes()
         self.parse_header()
         self.filename = that.type_case.decode(self.filename)
+        self.namespace = NameSpace(
+            name = self.filename,
+            parent = up.namespace,
+            separator = "",
+            priv = self,
+        )
         if self.target:
             self.target = that.type_case.decode(self.target)
         hdrchild = that.create(start=offset, stop=offset + 512)
         hdrchild.by_class[TarFile] = that
         if self.link == 0 and self.size:
             self.this = that.create(start=offset + 512, stop=offset + 512 + self.size)
-            self.this.set_name(self.filename)
+            # self.this.set_name(self.filename)
+            self.namespace.ns_set_this(self.this)
         else:
             self.this = None
         if self.link:
@@ -76,19 +117,6 @@ class TarEntry():
                 )
             )
 
-    def render(self, fo):
-        ''' as tar -tvf would '''
-        fo.write(unix_file_mode(self.mode))
-        fo.write(" %d %5d %5d %8d " % (self.link, self.uid, self.gid, self.size))
-        fo.write(time.ctime(self.mtime) + " ")
-        if self.this:
-            fo.write(self.this.summary())
-        else:
-            fo.write(html.escape(self.filename))
-        if self.link == 1:
-            fo.write(" link to " + html.escape(self.target))
-        fo.write("\n")
-
 class TarFile():
 
     ''' A UNIX tar(1) file '''
@@ -98,8 +126,13 @@ class TarFile():
             return
         if TarFile in [*this.parents][0].by_class:
             return
+        self.namespace = NameSpace(
+            name = "",
+            separator = "",
+            root = this,
+        )
         try:
-            entry = TarEntry(this, 0)
+            entry = TarEntry(self, this, 0)
         except Invalid as e:
             # print("TAR", this, e)
             return
@@ -107,15 +140,7 @@ class TarFile():
         this.type = "Tar_file"
         this.add_note("Tar_file")
         while entry.next < len(this) and this[entry.next]:
-            entry = TarEntry(this, entry.next)
+            entry = TarEntry(self, this, entry.next)
             self.children.append(entry)
-        this.add_interpretation(self, self.render)
+        this.add_interpretation(self, self.namespace.ns_html_plain)
         this.taken = True
-
-    def render(self, fo, _this):
-        ''' ... '''
-        fo.write("<H3>Tar(1) file</H3>\n")
-        fo.write("<pre>\n")
-        for i in self.children:
-            i.render(fo)
-        fo.write("</pre>\n")
