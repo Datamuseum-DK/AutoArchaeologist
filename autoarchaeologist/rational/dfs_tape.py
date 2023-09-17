@@ -6,7 +6,55 @@
 import html
 import struct
 
-class R1K_DFS_Tape():
+import autoarchaeologist
+from autoarchaeologist.generic import octetview as ov
+
+class NameSpace(autoarchaeologist.NameSpace):
+    ''' ... '''
+
+    TABLE = (
+        ( "r", "nbyte"),
+        ( "r", "nsect"),
+        ( "r", "f2"),
+        ( "r", "f3"),
+        ( "r", "f4"),
+        ( "r", "f5"),
+        ( "r", "length"),
+        ( "l", "name"),
+        ( "l", "artifact"),
+    )
+
+    def ns_render(self):
+        meta = self.ns_priv
+        return [
+            meta.nbyte.val,
+            meta.nsect.val,
+            meta.f2.val,
+            meta.f3.val,
+            meta.f4.val,
+            meta.f5.val,
+            meta.length,
+        ] + super().ns_render()
+
+class Meta(ov.Struct):
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            name_=ov.Text(30),
+            nsect=ov.Be16,
+            nbyte=ov.Be16,
+            f2_=ov.Be16,
+            f3_=ov.Be16,
+            f4_=ov.Be16,
+            f5_=ov.Be16,
+            more=True,
+        )
+        self.name.txt = self.name.txt.rstrip()
+        self.done(pad=0x40)
+        self.length = ((self.nsect.val-1) << 10) + self.nbyte.val
+
+class R1K_DFS_Tape(ov.OctetView):
 
     def __init__(self, this):
         if this[:13].tobytes() != b'DFS_BOOTSTRAP':
@@ -16,41 +64,38 @@ class R1K_DFS_Tape():
 
         print("?R1KDFS", this, this.has_type("TAPE file"))
 
-        this.add_interpretation(self, self.render_dfs_tape)
+        super().__init__(this)
 
-        offset = 0
+        self.namespace = NameSpace(
+            name='',
+            separator='',
+            root=this,
+        )
+        this.add_interpretation(self, self.namespace.ns_html_plain)
+
         self.files = []
+        offset = 0
         for r in this.iterrecords():
             if len(r) == 64:
+                hdr = Meta(self, offset).insert()
                 offset += len(r)
-                lbl = r.tobytes()
-                words = list(struct.unpack(">30sHHHHHH", lbl[:42]))
-                assert 0x20 < words[0][0] < 0x7e
-                words[0] = words[0].rstrip(b'\x00').decode("ASCII")
-                txt = []
-                # txt.append(words[0].ljust(31))
-                txt.append("0x%04x" % words[1])
-                txt.append("0x%04x" % words[2])
-                txt.append("0x%04x" % words[3])
-                txt.append("0x%04x" % words[4])
-                txt.append("0x%04x" % words[5])
-                txt.append("0x%04x" % words[6])
-                # assert not max(lbl[42:]), lbl[42:].hex()
-                txt.append(lbl[42:].hex())
-                y = this.create(
-                    start=offset,
-                    stop=offset+((words[1]-1)<<10)+words[2]
+
+                y = ov.This(
+                    self,
+                    lo=offset,
+                    width=hdr.length,
+                ).insert()
+               
+                NameSpace(
+                    name=hdr.name.txt,
+                    parent=self.namespace,
+                    priv = hdr,
+                    this=y.this,
                 )
-                y.set_name(words[0])
-                i = words[0].split(".")
-                y.add_type(i[-1])
-                self.files.append((offset, " ".join(txt), y))
+                
+                i = hdr.name.txt.split(".")
+                y.this.add_type(i[-1])
             else:
                 offset += len(r)
 
-    def render_dfs_tape(self, fo, _this):
-        fo.write("<H3>DFS Tape</H3>\n")
-        fo.write("<pre>\n")
-        for offset, txt, that in self.files:
-            fo.write("0x%08x " % offset + txt + " " + that.summary() + "\n")
-        fo.write("</pre>\n")
+        self.render()

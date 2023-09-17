@@ -296,7 +296,7 @@ class OctetView(tree.Tree):
                 print("Overlap", self.this)
                 print("  this: ", hex(i.lo), hex(i.hi), i)
                 for n, j in enumerate(i.render()):
-                    print("\t" + j)
+                    print("\t" + str(j))
                     if n > 5:
                         break
                 if prev is None:
@@ -304,7 +304,7 @@ class OctetView(tree.Tree):
                 else:
                     print("  prev: ", hex(prev.lo), hex(prev.hi), prev)
                     for n, j in enumerate(prev.render()):
-                        print("\t" + j)
+                        print("\t" + str(j))
                         if n > 5:
                             break
             if i.lo > lo:

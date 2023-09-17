@@ -18,9 +18,7 @@ from autoarchaeologist.rational.r1k_m200 import R1kM200File
 from autoarchaeologist.rational.r1k_experiment import R1kExperiment
 
 from autoarchaeologist.generic.samesame import SameSame
-import autoarchaeologist.generic.ascii as Ascii
-
-Ascii.CHARSET[0][0] |= 16
+from autoarchaeologist.generic import textfiles
 
 class R1KDFS(DDHF_Excavation):
     ''' Rational R1000/400 DFS tapes '''
@@ -38,7 +36,7 @@ class R1KDFS(DDHF_Excavation):
         self.add_examiner(R1K_Ucode_File)
         self.add_examiner(R1kM200File)
         self.add_examiner(R1kExperiment)
-        self.add_examiner(ascii.Ascii)
+        self.add_examiner(textfiles.TextFile)
         self.add_examiner(SccsId)
         self.add_examiner(SameSame)
 

@@ -14,7 +14,7 @@ import mmap
 import hashlib
 
 import autoarchaeologist.artifact as artifact
-import autoarchaeologist.type_case as type_case
+from autoarchaeologist import type_case
 
 def dotdotdot(gen, limit=35):
     ''' Return a limited number of elements, and mark as truncated if so. '''
@@ -112,7 +112,6 @@ class Excavation():
         self.children = []
         self.by_class = {} # Experimental extension point
 
-        # Default character set
         self.type_case = type_case.Ascii()
 
     def __lt__(self, other):
