@@ -34,7 +34,7 @@ class Octets(tree.TreeLeaf):
         self.this = up.this
         if name is None:
             name = self.__class__.__name__
-        self.name = name
+        self.ov_name = name
         super().__init__(lo, hi)
 
     def __len__(self):
@@ -68,7 +68,6 @@ class Octets(tree.TreeLeaf):
             for j in self.this.byte_order:
                 yield i[j]
 
-
     def insert(self):
         self.up.insert(self)
         return self
@@ -78,6 +77,16 @@ class Octets(tree.TreeLeaf):
         fmt = "%02x"
         tcase = self.this.type_case.decode(octets)
         yield " ".join(fmt % x for x in octets) + "   |" + tcase + "|"
+
+class This(Octets):
+    ''' A new artifact '''
+
+    def __init__(self, up, *args, **kwargs):
+        super().__init__(up, *args, **kwargs)
+        self.this = up.this.create(start=self.lo, stop=self.hi)
+
+    def render(self):
+        yield self.this
 
 class Opaque(Octets):
 
@@ -170,7 +179,6 @@ class Me32(Octets):
     def render(self):
         yield "0x%08x" % self.val
 
-
 class Struct(Octets):
     ''' ... '''
 
@@ -228,9 +236,9 @@ class Struct(Octets):
             for name, obj in self.fields:
                 if name[-1] != "_":
                     i.append(name + "=" + "|".join(obj.render()))
-            yield self.name + " {" + ", ".join(i) + "}"
+            yield self.ov_name + " {" + ", ".join(i) + "}"
         else:
-            yield self.name + " {"
+            yield self.ov_name + " {"
             for name, obj in self.fields:
                 if name[-1] != "_":
                     j = list(obj.render())
