@@ -128,6 +128,7 @@ class ArtifactClass():
         self.index_representation = None
         self.link_to = ""
         self.byte_order = None
+        self.namespaces = {}
 
         self.by_class = {} # Experimental extension point
 
