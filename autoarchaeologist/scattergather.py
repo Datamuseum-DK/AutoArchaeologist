@@ -25,8 +25,7 @@ class ScatterGather():
 
     def __iter__(self):
         for i in self.sgx:
-            for j in i:
-                yield j
+            yield from i
 
     def iterrecords(self):
         yield from self.sgx
