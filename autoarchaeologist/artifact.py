@@ -132,7 +132,7 @@ class ArtifactClass():
         self.by_class = {} # Experimental extension point
 
     def __str__(self):
-        return "{A %d %s}" % (len(self), self.ident())
+        return "\u27e6" + self.digest[:self.top.digest_prefix] + "\u27e7"
 
     def __repr__(self):
         return str(self)
@@ -219,10 +219,6 @@ class ArtifactClass():
             self.bdx.writetofile(fo)
         else:
             fo.write(self.bdx)
-
-    def ident(self):
-        ''' Get the canonical name of the artifact '''
-        return "\u27e6" + self.digest[:self.top.digest_prefix] + "\u27e7"
 
     def add_parent(self, parent):
         ''' Attach to parent, and vice-versa '''
@@ -375,7 +371,7 @@ class ArtifactClass():
                 if link:
                     nam = self.top.html_link_to(self) + " "
                 else:
-                    nam = self.ident() + " "
+                    nam = str(self) + " "
             j = set()
             if self.descriptions:
                 txt += sorted(self.descriptions)

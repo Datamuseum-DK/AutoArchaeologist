@@ -339,7 +339,7 @@ class Excavation():
         if link_text:
             t += link_text
         else:
-            t += this.ident()
+            t += str(this)
         t += '</a>'
         return t
 
@@ -351,7 +351,7 @@ class Excavation():
         elif isinstance(this, str):
             fo.write('<title>' + this + '</title>\n')
         else:
-            fo.write('<title>' + this.ident() + '</title>\n')
+            fo.write('<title>' + str(this) + '</title>\n')
 
     def html_prefix_banner(self, _fo, _this):
         ''' Top of pages banner '''
