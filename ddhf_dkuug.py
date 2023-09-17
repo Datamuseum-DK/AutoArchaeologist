@@ -5,7 +5,7 @@ DKUUG and EUUG Conference tapes
 
 from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 
-from autoarchaeologist.generic.ascii import Ascii
+from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.unix.tar_file import TarFile
 from autoarchaeologist.unix.compress import Compress
@@ -21,7 +21,7 @@ class DkuugEuug(DDHF_Excavation):
 
         self.add_examiner(Compress)
         self.add_examiner(TarFile)
-        self.add_examiner(Ascii)
+        self.add_examiner(textfiles.TextFile)
         self.add_examiner(SameSame)
 
         self.from_bitstore(
