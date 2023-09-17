@@ -378,7 +378,7 @@ class Excavation():
         fo.write("</body>\n")
         fo.write("</html>\n")
 
-    def html_derivation(self, _fo):
+    def html_derivation(self, _fo, target=False):
         ''' Duck-type as ArtifactClass '''
         return ""
 

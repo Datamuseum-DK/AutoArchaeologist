@@ -69,7 +69,7 @@ class L_Out():
 
             if offset + seglen > len(self.this):
                 break
-            fo.write("<H4>CBM900 %s</H4>\n" % segnam)
+            fo.write("<H3>CBM900 %s</H3>\n" % segnam)
             fo.write("<pre>\n")
             hexdump.hexdump_to_file(self.this[offset:offset+seglen], fo)
             if segnam == "L_SYM":

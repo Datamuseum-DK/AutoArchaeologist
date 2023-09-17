@@ -363,7 +363,14 @@ class ArtifactClass():
         for start, stop in lst:
             self.create(start=start, stop=stop)
 
-    def summary(self, link=True, ident=True, notes=False):
+    def summary(
+        self,
+        link=True,
+        ident=True,
+        notes=False,
+        types=True,
+        descriptions=True,
+    ):
         ''' Produce a one-line summary '''
         if not link or not ident or not self.index_representation:
             txt = []
@@ -461,12 +468,26 @@ class ArtifactClass():
                 if done > self.top.hexdump_limit:
                     break
 
-    def html_derivation(self, fo):
+    def html_derivation(self, fo, target=True):
         ''' Recursively document how this artifact came to be '''
         prefix = ""
         for p in sorted(self.parents):
-            t = p.html_derivation(fo)
+            t = p.html_derivation(fo, target=False)
             if len(t) > len(prefix):
                 prefix = t
-            fo.write(t + "└─" + self.summary() + '\n')
+
+            if target:
+                link = "\u27e6this\u27e7"
+            else:
+                link = self.top.html_link_to(self)
+            if self.descriptions:
+                desc = " ".join(sorted(self.descriptions))
+            else:
+                desc = ""
+            if p in self.namespaces:
+                # XXX: multiple names in one namespace ?
+                for ns in sorted(self.namespaces[p]):
+                    fo.write(t + "└─ " + link + " »" + ns.ns_path() + "« " + desc + '\n')
+            else:
+                fo.write(t + "└─" + link + " " + desc + '\n')
         return prefix + "    "

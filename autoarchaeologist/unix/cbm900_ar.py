@@ -31,7 +31,8 @@ class Ar():
             a = this.create(start=offset, stop=offset+i)
             a.add_note("AR member")
             try:
-                a.set_name(this.named + ":" + name)
-            except autoarchaeologist.core_classes.DuplicateName:
-                a.add_note(this.named + ":" + name)
+                a.set_name(name)
+            except autoarchaeologist.DuplicateName:
+                a.add_note(name)
             offset += i
+        this.add_interpretation(self, this.html_interpretation_children)

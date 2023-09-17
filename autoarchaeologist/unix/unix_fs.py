@@ -36,58 +36,33 @@ import time
 
 import autoarchaeologist
 
-CSS = '''
-<style>
-ul, #myUL { /* Remove default bullets */
-  list-style-type: none;
-  padding: 0;
-}
-#myUL { /* Remove margins and padding from the parent ul */
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-}
-pre {
-  margin: 0;
-}
-.b { /* Style the caret/arrow */
-  cursor: pointer;
-  user-select: none; /* Prevent text selection */
-}
-.b::before { /* Create the caret/arrow with a unicode, and style it */
-  color: black;
-  display: inline-block;
-  margin-right: 0px;
-}
-.a::before {
-  color: black;
-  display: inline-block;
-  margin-right: 0px;
-}
-.nested { /* Hide the nested list */
-  display: none;
-}
-.active { /* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
-  display: block;
-}
-</style>
-'''
+class NameSpace(autoarchaeologist.NameSpace):
+    ''' Unix NameSpace '''
 
-JS = '''
-<script>
+    def __init__(self, dirent, *args, **kwargs):
+        kwargs.setdefault("separator", "/")
+        super().__init__(*args, **kwargs)
+        self.dirent = dirent
 
-var toggler = document.getElementsByClassName("b");
-var i;
-  
-for (i = 0; i < toggler.length; i++) {
-  toggler[i].addEventListener("click", function() {
-    this.parentElement.parentElement.querySelector(".nested").classList.toggle("active");
-  });
-}
-  
-</script>
-'''
+    def ns_render(self):
+        retval = []
+        if self.dirent.inode:
+            retval += self.dirent.inode.ls()
+        else:
+            retval += ["0", None, None, None, None, None, None]
+        return retval + super().ns_render()
 
+    TABLE = (
+        ("r", "inode"),
+        ("c", "permissions"),
+        ("r", "links"),
+        ("r", "uid"),
+        ("r", "gid"),
+        ("r", "size"),
+        ("c", "mtime"),
+        ("l", "path"),
+        ("l", "artifact"),
+    )
 
 class Inode(autoarchaeologist.Record):
     ''' Inode in a UNIX filesystem '''
@@ -129,7 +104,7 @@ class Inode(autoarchaeologist.Record):
             block_no += 1
 
     def __str__(self):
-        return " ".join(self.ls())
+        return " ".join(str(x) for x in self.ls())
 
     def ls(self):
         ''' Return list of columns in "ls -li" like output '''
@@ -179,12 +154,12 @@ class Inode(autoarchaeologist.Record):
             else:
                 txt += "-"
         retval.append(txt)
-        retval.append("%4d" % self.di_nlink)
-        retval.append("%5d" % self.di_uid)
-        retval.append("%5d" % self.di_gid)
-        retval.append("%8d" % self.di_size)
+        retval.append(self.di_nlink)
+        retval.append(self.di_uid)
+        retval.append(self.di_gid)
+        retval.append(self.di_size)
         mtime = time.gmtime(self.di_mtime)
-        retval.append(time.strftime("%Y-%m-%dT%H:%M:%SZ", mtime))
+        retval.append(time.strftime("%Y-%m-%dT%H:%M:%S", mtime))
         return retval
 
     def fix_di_addr(self):
@@ -241,8 +216,10 @@ class DirEnt():
     ''' Directory Entry in a UNIX filesystem '''
 
     def __init__(self, ufs, parent, name, inum, inode):
-        self.ufs = ufs
         self.parent = parent
+        self.namespace = NameSpace(self, name)
+        self.parent.namespace.ns_add_child(self.namespace)
+        self.ufs = ufs
         self.path = self.parent.path + [name]
         self.inum = inum
         self.inode = inode
@@ -272,20 +249,18 @@ class DirEnt():
                 return
             self.artifact = self.ufs.this.create(bits=b)
             self.artifact.add_note("UNIX file")
-            try:
-                self.artifact.set_name("/".join(self.path))
-            except autoarchaeologist.DuplicateName:
-                self.artifact.add_note("/".join(self.path))
+            self.namespace.ns_set_this(self.artifact)
 
 class Directory():
     ''' A directory in a UNIX filesystem '''
 
-    def __init__(self, ufs, path, inode):
+    def __init__(self, ufs, path, namespace, inode):
         self.ufs = ufs
         self.path = path
         self.inode = inode
         self.dirents = []
         self.ufs.inode_is[self.inode.di_inum] = self
+        self.namespace = namespace
         n = 0
         for inum, dname in self.parse():
             if n == 0 and dname != ".":
@@ -319,7 +294,8 @@ class Directory():
             dirent.directory = self.ufs.DIRECTORY(
                 self.ufs,
                 dirent.path,
-                dirent.inode
+                dirent.namespace,
+                dirent.inode,
             )
 
     def commit_files(self):
@@ -327,27 +303,6 @@ class Directory():
         for dirent in sorted(self.dirents):
             dirent.commit_file()
         assert self.ufs.inode_is[self.inode.di_inum] == self
-
-    def html_as_lsl(self, fo):
-        ''' Recursively render as ls -l output '''
-        for dirent in sorted(self.dirents):
-            txt = ""
-            if dirent.inode:
-                lead = str(dirent.inode)
-            elif dirent.inum:
-                lead = "BAD INODE# 0x%x" % dirent.inum
-            else:
-                lead = "DELETED"
-            txt += lead.ljust(64) + " " + "/".join(dirent.path)
-            if dirent.artifact:
-                txt += "     // " + dirent.artifact.summary()
-            if dirent.directory:
-                fo.write('<li><pre><span class="b"><b>' + txt + '</b></span></pre>\n')
-                fo.write('<ul class="nested">\n')
-                dirent.directory.html_as_lsl(fo)
-                fo.write('</ul></li>\n')
-            else:
-                fo.write('<li><pre><span class="a">' + txt + '</span></pre></li>\n')
 
     def parse(self):
         ''' Parse classical unix directory: 16bit inode + 14 char name '''
@@ -412,10 +367,15 @@ class UnixFileSystem():
         self.get_superblock()
         if not self.sblock:
             return
-        self.rootdir = self.DIRECTORY(self, [], self.get_inode(2))
+        self.rootdir = self.DIRECTORY(
+            self,
+            [],
+            NameSpace(None, name="", separator="", root=self.this),
+            self.get_inode(2),
+        )
+        self.this.add_interpretation(self, self.rootdir.namespace.ns_html_plain)
         self.rootdir.commit_files()
-        self.this.add_interpretation(self, self.html_as_lsl)
-        self.this.add_type(self.FS_TYPE)
+        self.this.add_description(self.FS_TYPE)
 
     def speculate(self):
         ''' Look for orphan inodes '''
@@ -430,7 +390,6 @@ class UnixFileSystem():
             if inode.di_type not in (0, self.S_IFDIR, self.S_IFREG):
                 continue
             self.suspect_inodes[inum] = inode
-            print("?", inode)
 
         if not self.suspect_inodes:
             return
@@ -463,10 +422,10 @@ class UnixFileSystem():
                 continue
             if tour and inode.di_type not in (0, self.S_IFDIR):
                 continue
-            if inode.di_size % 0x10:
+            if inode.di_size % 0x10:   # XXX: Only SysV
                 continue
             try:
-                specdir = self.DIRECTORY(self, [], inode)
+                specdir = self.DIRECTORY(self, [], autoarchaeologist.NameSpace(""), inode)
             except Exception as err:
                 print("TRIED", inum, tour, err)
                 continue
@@ -479,18 +438,17 @@ class UnixFileSystem():
                 pdir = self.inode_is.get(pdino)
             if not isinstance(pdir, self.DIRECTORY):
                 continue
+
             name = "~ORPHAN_%d" % inum
             fpath = pdir.path + [name]
             print("  Reattach ", inode, "as", "/".join(fpath) )
-            specdir = self.DIRECTORY(self, pdir.path + [name], inode)
             dirent = DirEnt(self, pdir, name, inum, inode)
-            dirent.directory = specdir
-            pdir.dirents.append(dirent)
-            specdir.commit_files()
+            specdir = self.DIRECTORY(self, pdir.path + [name], dirent.namespace, inode)
             return True
 
     def speculate_ifreg(self):
         ''' Reattach regular files '''
+        return
         pdir = self.inode_is.get(2)
         for inum, inode in self.suspect_inodes.items():
             if inode.di_type not in (0, self.S_IFREG):
@@ -506,17 +464,6 @@ class UnixFileSystem():
             pdir.dirents.append(dirent)
             dirent.commit_file()
             inode.di_type = styp
-
-    def html_as_lsl(self, fo, _this):
-        ''' Render as recursive ls -l '''
-        fo.write("<H3>ls -l</H3>\n")
-        fo.write("<div>\n")
-        fo.write(CSS)
-        fo.write('<ul id="myUL">\n')
-        self.rootdir.html_as_lsl(fo)
-        fo.write('</ul>\n')
-        fo.write(JS)
-        fo.write("</div>\n")
 
     def get_superblock(self):
         '''
