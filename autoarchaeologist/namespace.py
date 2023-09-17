@@ -41,6 +41,7 @@ class NameSpace():
         this = None,		# The artifact named by this node
         separator = None,	# The path separator string for this node
         root = None,		# The artifact in which the name-space lives.
+        priv = None,		# The artifact in which the name-space lives.
     ):
         self.ns_children = []
         self.ns_name = name
@@ -48,6 +49,7 @@ class NameSpace():
         self.ns_separator = separator
         self.ns_this = None
         self.ns_root = None
+        self.ns_priv = priv
         if root:
             self.ns_set_root(root)
         if parent:
