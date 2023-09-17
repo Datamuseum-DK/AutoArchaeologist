@@ -16,3 +16,5 @@ class CBM900_Partition():
         this.taken = self
         for i in range(NSLICE):
             this.create(start=i * SLICE, stop=(i+1) * SLICE)
+
+        this.add_interpretation(self, this.html_interpretation_children)
