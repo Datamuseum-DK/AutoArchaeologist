@@ -56,13 +56,13 @@ class TypeCase():
         ''' Hexdump in canonical format '''
         txt1 = ""
         txt2 = ""
-        for j, i in enumerate(that):
+        for j, octet in enumerate(that):
             i = j % width
             if not i:
                 txt1 = prefix + "%04x " % offset
                 txt2 = "  ┆"
-            txt1 += self.fmt % i
-            txt2 += self.slugs[i].short
+            txt1 += self.fmt % octet
+            txt2 += self.slugs[octet].short
             if i == width - 1:
                 yield txt1 + txt2 + "┆"
             offset += 1
