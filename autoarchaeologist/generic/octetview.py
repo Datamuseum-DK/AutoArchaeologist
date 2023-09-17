@@ -106,6 +106,7 @@ def Text(width):
             kwargs["width"] = self.WIDTH
             super().__init__(*args, **kwargs)
             self.txt = self.this.type_case.decode(self.this[self.lo:self.hi])
+            self.txt = self.this.type_case.decode(self.iter_bytes())
 
         def render(self):
             yield "»" + self.txt + "«"
