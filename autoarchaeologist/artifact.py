@@ -381,15 +381,17 @@ class ArtifactClass():
                 else:
                     nam = str(self) + " "
             j = set()
-            if self.descriptions:
-                txt += sorted(self.descriptions)
-            for i in sorted(self.iter_types(False)):
-                if i not in j:
-                    txt.append(i)
-                    j.add(i)
+            if descriptions:
+                if self.descriptions:
+                    txt += sorted(self.descriptions)
+            if types:
+                for i in sorted(self.iter_types(False)):
+                    if i not in j:
+                        txt.append(i)
+                        j.add(i)
             if notes:
                 txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
-            if not link or not ident:
+            if not link or not ident or not types or not descriptions:
                 return nam + ", ".join(txt)
             self.index_representation = nam + ", ".join(txt)
         return self.index_representation
