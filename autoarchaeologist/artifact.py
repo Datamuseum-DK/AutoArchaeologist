@@ -129,6 +129,7 @@ class ArtifactClass():
         self.link_to = ""
         self.byte_order = None
         self.namespaces = {}
+        self.names = set()
 
         self.by_class = {} # Experimental extension point
 
@@ -226,6 +227,13 @@ class ArtifactClass():
         assert self != parent
         self.parents.add(parent)
         parent.children.append(self)
+
+    def add_namespace(self, namespace):
+        ''' Add a namespace reference '''
+        self.namespaces.setdefault(namespace.ns_root, []).append(namespace)
+        if namespace.ns_name not in self.names:
+            self.names.add(namespace.ns_name)
+            self.top.add_to_index(namespace.ns_name, self)
 
     def set_name(self, name, fallback=True):
         ''' Set a unique name '''
@@ -409,6 +417,8 @@ class ArtifactClass():
             fo.write("    Types: " + ", ".join(sorted(self.types)) + "\n")
         if self.notes:
             fo.write("    Notes: " + ", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
+        if self.names:
+            fo.write("    Names: " + ", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
         fo.write("</pre>\n")
 
         if self.top not in self.parents or len(self.parents) > 1:
@@ -488,9 +498,10 @@ class ArtifactClass():
                 desc = " ".join(sorted(self.descriptions))
             else:
                 desc = ""
-            if p in self.namespaces:
-                # XXX: multiple names in one namespace ?
-                for ns in sorted(self.namespaces[p]):
+            v = self.namespaces.get(p)
+            if v:
+                # Not quite: See CBM900 ⟦e681055fa⟧
+                for ns in sorted(v):
                     fo.write(t + "└─ " + link + " »" + ns.ns_path() + "« " + desc + '\n')
             else:
                 fo.write(t + "└─" + link + " " + desc + '\n')
