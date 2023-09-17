@@ -96,7 +96,7 @@ class TarFile():
     def __init__(self, this):
         if len(this) <= 512:
             return
-        if TarFile in this.parents[0].by_class:
+        if TarFile in [*this.parents][0].by_class:
             return
         try:
             entry = TarEntry(this, 0)

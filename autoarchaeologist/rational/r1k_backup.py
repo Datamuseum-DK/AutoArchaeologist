@@ -258,11 +258,11 @@ class R1kBackup():
         self.volumes = {}
         self.void = None
 
-        us = this.parents[0].by_class.get(R1kBackup)
+        us = [*this.parents][0].by_class.get(R1kBackup)
         if us:
             us.add_tape_file(this)
             return
-        if this.parents[0].children[0] != this:
+        if [*this.parents][0].children[0] != this:
             # We only care for the first ANSI label on the tape
             return
         if not this.has_type("ANSI Tape Label"):
@@ -286,7 +286,7 @@ class R1kBackup():
             # print("%02x" % bits, i)
         if bits != 0x1f:
             return
-        this.parents[0].by_class[R1kBackup] = self
+        [*this.parents][0].by_class[R1kBackup] = self
         print(this, "MATCH")
         self.add_tape_file(this)
 
