@@ -78,7 +78,7 @@ class NameSpace():
             return
         assert self.ns_this is None
         self.ns_this = this
-        this.namespaces.setdefault(self.ns_root, []).append(self)
+        this.add_namespace(self)
 
     def ns_path(self):
         sep = self.ns_separator
