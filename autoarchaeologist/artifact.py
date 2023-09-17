@@ -342,6 +342,8 @@ class ArtifactClass():
             this.add_parent(self)
         if start or stop:
             self.layout.append((start, stop, this))
+        else:
+            self.layout.append((0, len(self), this))
         this.byte_order = self.byte_order
         return this
 
