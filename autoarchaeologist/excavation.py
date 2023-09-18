@@ -295,10 +295,10 @@ class Excavation():
 
                 if len(entries) < self.spill_index:
                     for i in sorted(entries):
-                        fo.write("   " + i.summary(notes=True) + "<br>\n")
+                        fo.write("   " + i.summary(notes=True, names=True) + "<br>\n")
                 else:
                     for i in sorted(entries)[:self.spill_index // 2]:
-                        fo.write("   " + i.summary(notes=True) + "<br>\n")
+                        fo.write("   " + i.summary(notes=True, names=True) + "<br>\n")
                     link = self.html_index_item(key, entries)
                     fo.write('   <a href="%s">… full list</a><br>\n' % link)
                 fo.write('</td>\n')
@@ -322,7 +322,7 @@ class Excavation():
         fot.write('</td>\n')
         fot.write('<td style="font-size: 80%;">')
         for x in sorted(entries):
-            fot.write("   " + x.summary(notes=True) + "<br>\n")
+            fot.write("   " + x.summary(notes=True, names=True) + "<br>\n")
         fot.write('</td>\n')
         fot.write("</table>\n")
         self.html_suffix(fot)

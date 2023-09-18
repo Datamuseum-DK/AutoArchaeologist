@@ -103,6 +103,8 @@ class WellKnown(TypeCase):
                 self.set_slug(i, ' ', '\n')
             elif char == "\r":
                 self.set_slug(i, ' ', '\\r')
+            elif char == "\f":
+                self.set_slug(i, ' ', '\\f')
             elif char == " ":
                 self.set_slug(i, ' ', ' ')
             elif unicodedata.category(char)[0] in "LNPSZ":

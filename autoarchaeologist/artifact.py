@@ -380,6 +380,7 @@ class ArtifactClass():
         notes=False,
         types=True,
         descriptions=True,
+        names=False,
     ):
         ''' Produce a one-line summary '''
         if not link or not ident or not self.index_representation:
@@ -399,6 +400,8 @@ class ArtifactClass():
                     if i not in j:
                         txt.append(i)
                         j.add(i)
+            if names:
+                txt += ["»" + x + "«" for x in sorted(self.names)]
             if notes:
                 txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
             if not link or not ident or not types or not descriptions:

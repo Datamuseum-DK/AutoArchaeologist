@@ -8,6 +8,7 @@ from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
 from autoarchaeologist.generic.sccs_id import SccsId
+from autoarchaeologist.type_case import Ascii
 from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
 from autoarchaeologist.rational.index_data import R1K_Index_Data
 from autoarchaeologist.rational.dfs_tape import R1K_DFS_Tape
@@ -19,6 +20,18 @@ from autoarchaeologist.rational.r1k_experiment import R1kExperiment
 
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.generic import textfiles
+
+class TextFile(textfiles.TextFile):
+    def credible(self):
+        if len(self.this) - len(self.txt) >= 1024:
+            return False
+        return True
+
+class TypeCase(Ascii):
+    ''' ... '''
+    def __init__(self):
+        super().__init__()
+        self.set_slug(0, ' ', '«nul»', self.EOF)
 
 class R1KDFS(DDHF_Excavation):
     ''' Rational R1000/400 DFS tapes '''
@@ -36,9 +49,11 @@ class R1KDFS(DDHF_Excavation):
         self.add_examiner(R1K_Ucode_File)
         self.add_examiner(R1kM200File)
         self.add_examiner(R1kExperiment)
-        self.add_examiner(textfiles.TextFile)
+        self.add_examiner(TextFile)
         self.add_examiner(SccsId)
         self.add_examiner(SameSame)
+
+        self.type_case = TypeCase()
 
         self.from_bitstore(
             "30000744",   # precise file sizes

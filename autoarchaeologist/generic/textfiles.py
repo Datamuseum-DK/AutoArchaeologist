@@ -25,6 +25,8 @@ class TextFile():
 
     verbose = False
 
+    MAX_TAIL = 128
+
     def __init__(self, this):
         self.this = this
         self.txt = []
@@ -49,7 +51,7 @@ class TextFile():
 
     def credible(self):
         ''' Determine if result warrants a new artifact '''
-        if len(self.this) - len(self.txt) > 128:
+        if len(self.this) - len(self.txt) > self.MAX_TAIL:
             return False
         if '\n' not in self.txt:
             return False
