@@ -164,17 +164,17 @@ class Directory():
     def __init__(self, up, linkage):
         self.up = up
         self.linkage = linkage
-        self.dirents = {}
+        self.dirents = []
         self.namespace = NameSpace(None, separator="", root=up.this)
         for sec in linkage:
             self.up.picture[(sec.cyl, 0, sec.sect)] = "D"
             for off in range(0, 128, 16):
                 i = DirEnt(up, sec.lo + off, width = 16, namespace=self.namespace)
                 i.insert()
-                self.dirents[i.name] = i
+                self.dirents.append(i)
 
     def __iter__(self):
-        yield from self.dirents.values()
+        yield from self.dirents
 
 class IntelIsis(disk.Disk):
     ''' Intel ISIS-II floppy disks '''
@@ -184,7 +184,7 @@ class IntelIsis(disk.Disk):
             return
 
         print(this, "Intel_ISIS")
-        this.add_note("IntelISISII")
+        this.add_note("Intel_ISIS_II")
         super().__init__(
             this,
             [
