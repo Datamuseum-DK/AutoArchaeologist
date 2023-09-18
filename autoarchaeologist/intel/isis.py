@@ -1,25 +1,20 @@
+#!/usr/bin/env python3
 
 '''
-   Intel ISIS floppies
+   Intel ISIS-II floppies
+
+   See: http://bitsavers.org/pdf/intel/ISIS_II/ISIS_internals.pdf
 
 '''
 
-import struct
-
+import autoarchaeologist
 import autoarchaeologist.generic.octetview as ov
+import autoarchaeologist.generic.disk as disk
 
-class Sector(ov.Octets):
-    def __init__(self, up, cyl_no=None, sec_no=None, lo=None, desc=None):
-        if lo is None:
-            lo = (cyl_no * 52 + (sec_no - 1)) * 128
-        self.cyl_no = cyl_no
-        self.sec_no = sec_no
-        super().__init__(up, lo, width=128)
-        self.desc = desc
+class LinkageBlock(disk.Sector):
+    ''' 64 pairs of (track, sector), first two are prev+next '''
 
-class LinkageBlock(Sector):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    ident = "LinkageBlock"
 
     def __iter__(self):
         for i in range(64):
@@ -28,36 +23,76 @@ class LinkageBlock(Sector):
     def __getitem__(self, idx):
         return self.up.this[self.lo + idx * 2 + 1], self.up.this[self.lo + idx * 2]
 
+    def render(self):
+        ''' render as list of "track,sect" '''
+        yield self.ident + " {" + " ".join("%d,%d" % x for x in self) + "}"
+
 class Linkage():
-    def __init__(self, up, cyl, sect):
+    ''' A list of LinkageBlocks '''
+
+    def __init__(self, up, cyl, sect, name):
         self.up = up
         self.cyl = cyl
         self.sect = sect
         self.lbs = []
-        lb = LinkageBlock(up, cyl, sect)
-        if lb[0] != (0,0):
-            return
-        self.lbs.append(lb)
-        self.lbs[-1].insert()
-        nxt = self.lbs[-1][1]
-        while nxt != (0,0):
-            self.lbs.append(LinkageBlock(up, nxt[0], nxt[1]))
-            nxt = self.lbs[-1][1]
-
-    def insert(self):
-        for lb in self.lbs:
-            lb.insert()
+        self.name = name
+        while cyl != 0 or sect != 0:
+            lblock = LinkageBlock(up, cyl=cyl, head=0, sect=sect)
+            self.up.picture[(cyl, 0, sect)] = "L"
+            if lblock[0] != (0,0) and len(self.lbs) == 0:
+                break
+            lblock.ident = "LinkageBlock[»%s«,%d]" % (name, len(self.lbs))
+            lblock.insert()
+            self.lbs.append(lblock)
+            cyl, sect = lblock[1]
+        self.sectors = []
+        for lblock in self.lbs:
+            for i in range(2, 64):
+                if lblock[i] == (0,0):
+                    return
+                self.sectors.append(
+                    disk.DataSector(self.up, cyl=lblock[i][0], head=0, sect=lblock[i][1])
+                )
 
     def __iter__(self):
-        for lb in self.lbs:
-            for i in range(2, 64):
-                if lb[i] == (0,0):
-                    return
-                yield Sector(self.up, lb[i][0], lb[i][1])
+        yield from self.sectors
+
+class NameSpace(autoarchaeologist.NameSpace):
+    ''' customized namespace '''
+
+    KIND = "Intel ISIS II file system"
+
+    TABLE = (
+        ("l", "activity"),
+        ("l", "attribute"),
+        ("r", "tail"),
+        ("r", "blocks"),
+        ("l", "linkadr"),
+        ("l", "name"),
+        ("l", "artifact"),
+    )
+
+    def __init__(self, dirent, *args, **kwargs):
+        if dirent:
+            super().__init__(dirent.name, *args, **kwargs)
+        else:
+            super().__init__("", *args, **kwargs)
+        self.dirent = dirent
+
+    def ns_render(self):
+        ''' table data '''
+        return [
+            "0x%04x" % self.dirent.activity,
+            "0x%04x" % self.dirent.attribute,
+            "%d" % self.dirent.tail,
+            "%d" % self.dirent.blocks,
+            "%d,%d" % self.dirent.linkadr,
+        ] + super().ns_render()
 
 class DirEnt(ov.Octets):
+    ''' Directory entry '''
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.activity = self[0]
         self.attribute = self[0xa]
@@ -66,71 +101,110 @@ class DirEnt(ov.Octets):
         self.linkadr = (self[0xf], self[0xe])
         self.name = ""
         for i in range(1, 7):
-            c = self[i]
-            if 32 < c < 126:
-                self.name += "%c" % c
+            j = self[i]
+            if 32 < j < 126:
+                self.name += "%c" % j
             else:
                 break
         self.name += "."
         for i in range(7, 10):
-            c = self[i]
-            if 32 < c < 126:
-                self.name += "%c" % c
+            j = self[i]
+            if 32 < j < 126:
+                self.name += "%c" % j
             else:
                 break
+        if self.name[-1] == ".":
+            self.name = self.name[:-1]
+        if not self.activity:
+            self.namespace = NameSpace(
+                self,
+                parent=namespace,
+            )
+        else:
+            self.namespace = None
+        self.linkage = None
 
     def render(self):
-        for i in super().render():
-            yield " ".join(
-                (
-                ".DIRENT",
-                self.name.ljust(10),
-                "%02x" % self.activity,
-                "%02x" % self.attribute,
-                "%02x" % self.tail,
-                "%02x" % self.blocks,
-                "%d,%d" % self.linkadr
-                )
+        ''' render function '''
+        yield " ".join(
+            (
+            ".DIRENT",
+            self.name.ljust(10),
+            "%02x" % self.activity,
+            "%02x" % self.attribute,
+            "%02x" % self.tail,
+            "%02x" % self.blocks,
+            "%d,%d" % self.linkadr
             )
+        )
 
     def commit(self):
-        self.linkage = Linkage(self.up, *self.linkadr)
+        ''' Commit to this directory entry '''
+        self.linkage = Linkage(self.up, *self.linkadr, self.name)
         that = []
-        for sec in self.linkage:
+        unread = False
+        for idx, sec in enumerate(self.linkage):
             sec.insert()
+            sec.terse = True
+            if sec.is_unread:
+                unread = True
+                self.up.picture[(sec.cyl, 0, sec.sect)] = "▒"
+            else:
+                self.up.picture[(sec.cyl, 0, sec.sect)] = "·"
+            sec.ident = "DataSector[»%s«]" % (self.name,)
             that.append(sec.octets())
         if that:
-            y = self.up.this.create(b''.join(that)[:self.blocks * 128 + self.tail - 128])
-            y.set_name(self.name)
- 
+            i = self.up.this.create(b''.join(that)[:self.blocks * 128 + self.tail - 128])
+            self.namespace.ns_set_this(i)
+            if unread:
+                i.add_note("UNREAD_DATA")
 
 class Directory():
+    ''' The directory sectors '''
     def __init__(self, up, linkage):
         self.up = up
         self.linkage = linkage
         self.dirents = {}
+        self.namespace = NameSpace(None, separator="", root=up.this)
         for sec in linkage:
+            self.up.picture[(sec.cyl, 0, sec.sect)] = "D"
             for off in range(0, 128, 16):
-                y = DirEnt(up, sec.lo + off, width = 16)
-                y.insert()
-                self.dirents[y.name] = y
+                i = DirEnt(up, sec.lo + off, width = 16, namespace=self.namespace)
+                i.insert()
+                self.dirents[i.name] = i
 
     def __iter__(self):
         yield from self.dirents.values()
 
-class Intel_Isis(ov.OctetView):
+class IntelIsis(disk.Disk):
+    ''' Intel ISIS-II floppy disks '''
 
     def __init__(self, this):
         if len(this) not in (77*52*128,):
             return
 
-        print("Intel_ISIS", this)
-        super().__init__(this)
+        print(this, "Intel_ISIS")
+        this.add_note("IntelISISII")
+        super().__init__(
+            this,
+            [
+                [77, 1, 52, 128],
+            ],
+        )
+        this.add_description("Intel_ISIS_II")
 
-        l0 = Linkage(self, 1, 1)
-        dir = Directory(self, l0)
-        for dirent in dir:
+        dirlink = Linkage(self, 1, 1, "ISIS.DIR")
+        self.dir = Directory(self, dirlink)
+        for dirent in self.dir:
             if not dirent.activity and dirent.name != "ISIS.DIR":
                 dirent.commit()
 
+        this.add_interpretation(self, self.dir.namespace.ns_html_plain)
+
+        self.picture_legend['D'] = "Directory Sector"
+        self.picture_legend['▒'] = "Unread Data Sector"
+        self.picture_legend['L'] = "Linkage Sector"
+        this.add_interpretation(self, self.disk_picture)
+
+        self.fill_gaps()
         self.render()

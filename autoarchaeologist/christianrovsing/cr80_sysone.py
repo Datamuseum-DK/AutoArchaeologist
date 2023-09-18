@@ -14,8 +14,6 @@ from autoarchaeologist import type_case
 import autoarchaeologist.generic.octetview as ov
 import autoarchaeologist.christianrovsing.interleave as ileave
 
-from .cr80_util import *
-
 N_SECT = 26
 N_TRACK = 77
 SECTOR_LENGTH = 128
