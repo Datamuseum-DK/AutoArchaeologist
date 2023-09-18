@@ -337,7 +337,7 @@ class CR80_FS2(disk.Disk):
         if this[0x10] or this[0x11] != 0x2:
             return
         print("CRFS2", this)
-        this.add_type("CR80_Amos_Fs")
+        this.add_note("CR80_Amos_Fs")
         super().__init__(
             this,
             [ [ N_TRACK, 1, N_SECT, SECTOR_LENGTH ] ],
