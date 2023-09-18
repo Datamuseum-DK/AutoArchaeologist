@@ -23,6 +23,10 @@ from autoarchaeologist.generic import textfiles
 
 class TextFile(textfiles.TextFile):
     def credible(self):
+        if len(self.txt) < 5:
+            return False
+        if len(self.txt) < 10 and '\n' not in self.txt:
+            return False
         if len(self.this) - len(self.txt) >= 1024:
             return False
         return True
