@@ -463,6 +463,7 @@ class ArtifactClass():
 
     def html_interpretation_hexdump(self, fo, _this):
         ''' Default interpretation as hexdump '''
+        # XXX: should respect .byte_order
         fo.write("<H3>HexDump</H3>\n")
         fo.write("<pre>\n")
 

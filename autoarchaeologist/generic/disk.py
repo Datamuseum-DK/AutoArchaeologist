@@ -62,6 +62,9 @@ class DataSector(Sector):
         up.picture[(self.cyl, self.head, self.sect)] = '·'
     ident = "DataSector"
 
+    def render(self):
+        yield self.ident
+
 class UnusedSector(Sector):
     ''' An unused sector '''
     def __init__(self, up, *args, **kwargs):
@@ -138,6 +141,11 @@ class Disk(ov.OctetView):
                 j = i + self.width[adr]
                 if i >= lo and j <= hi:
                     UnusedSector(self, lo=i, hi=j).insert()
+
+    def set_picture(self, what, cyl=None, head=None, sect=None, lo=None):
+        if lo is not None:
+            cyl, head, sect = self.losec[lo]
+        self.picture[(cyl, head, sect)] = what
 
     def disk_picture(self, file, _this):
         ''' Draw a UTF-8-art picture of the disk '''

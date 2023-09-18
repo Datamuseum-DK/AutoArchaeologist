@@ -7,6 +7,7 @@ import glob
 
 from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 from autoarchaeologist.christianrovsing import cr80_sysone 
+from autoarchaeologist.christianrovsing import cr80_fs2 
 from autoarchaeologist.intel import isis 
 from autoarchaeologist.generic import textfiles 
 
@@ -19,6 +20,8 @@ class Cr80Floppy(DDHF_Excavation):
 
         self.add_examiner(cr80_sysone.Cr80SystemOneInterleave)
         self.add_examiner(cr80_sysone.Cr80SystemOneFs)
+        self.add_examiner(cr80_fs2.CR80_FS2Interleave)
+        self.add_examiner(cr80_fs2.CR80_FS2)
         self.add_examiner(isis.IntelIsis)
         self.add_examiner(textfiles.TextFile)
 

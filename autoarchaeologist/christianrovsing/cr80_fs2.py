@@ -6,72 +6,110 @@
    See https://ta.ddhf.dk/wiki/Bits:30004479
 '''
 
-import struct
-
+import autoarchaeologist
+from autoarchaeologist.generic import disk
 import autoarchaeologist.generic.octetview as ov
 
-from .cr80_util import *
+N_SECT = 26
+N_TRACK = 77
+SECTOR_LENGTH = 128
 
-class Text_(ov.Octets):
-    def __init__(self, up, lo, *args, **kwargs):
-        super().__init__(up, lo, width=self.width, *args, **kwargs)
-        t = []
-        for a in range(self.width):
-            if a & 1:
-                 t.append(self.this[lo + a])
-                 t.append(b)
-            else:
-                 b = self.this[lo + a]
-        try:
-            i = t.index(0)
-            if i > 0:
-                t = t[:i]
-        except ValueError:
-            pass
-        self.txt = "".join("%c" % x for x in t)
+L_SECTOR_SHIFT = 9
 
-    def render(self):
-        yield '»' + self.txt + '«' + " " * (self.width - len(self.txt))
+class CR80_FS2Interleave():
 
-class DataSect(ov.Octets):
-    def __init__(self, up, lo, bfd, n):
-        super().__init__(up, lo, width=512)
-        self.bfd = bfd
-        self.n = n
+    def __init__(self, this):
+        if not this.top in this.parents:
+            return
+        if len(this) != N_SECT * N_TRACK * SECTOR_LENGTH:
+            return
+        if this[0x10] != 0xff or this[0x11] != 0xfd:
+            return
 
-    def render(self):
-        yield "DataSector " + str(self.bfd) + " #0x%x" % self.n
-        return
-        for a in range(0, 512, 16):
-            y = ov.Octets(self.up, self.lo + a, 16)
-            yield from ("  " + x for x in y.render())
+        img = bytearray(len(this))
 
-class Text16_(Text):
-    width = 16
-        
+        ileave = [
+                  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24,
+                  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25,
+        ]
+        for cyl in range(N_TRACK):
+            for sect in range(N_SECT):
+                pcyl = cyl
+                psect = ileave[(cyl * 0 + sect + N_SECT) % N_SECT]
+                padr = pcyl * N_SECT * SECTOR_LENGTH + psect * SECTOR_LENGTH
+                octets = this[padr:padr + SECTOR_LENGTH]
+                lba = cyl * N_SECT * SECTOR_LENGTH + sect * SECTOR_LENGTH
+                for n, i in enumerate(octets):
+                    img[lba + n] = i ^ 0xff
+        that = this.create(bits=img)
+        that.add_type("ileave2")
+        this.add_interpretation(self, this.html_interpretation_children)
+
+class NameSpace(autoarchaeologist.NameSpace):
+    ''' ... '''
+
+    TABLE = (
+        ("r", "bfd"),
+        ("r", "ok"),
+        ("r", "-"),
+        ("r", "-"),
+        ("r", "type"),
+        ("r", "length"),
+        ("r", "-"),
+        ("r", "nsect"),
+        ("r", "-"),
+        ("r", "areasz"),
+        ("r", "sector"),
+        ("r", "-"),
+        ("r", "-"),
+        ("r", "flags"),
+        ("l", "name"),
+        ("l", "artifact"),
+    )
+
+    def ns_render(self):
+        sfd = self.ns_priv
+        bfd = sfd.bfd
+        return [
+            sfd.file.val,
+            bfd.ok.val,
+            bfd.bfd01.val,
+            bfd.bfd02.val,
+            hex(bfd.type.val),
+            bfd.length.val,
+            bfd.bfd05.val,
+            bfd.nsect.val,
+            bfd.bfd07.val,
+            bfd.areasz.val,
+            bfd.sector.val,
+            bfd.bfd0a.val,
+            bfd.bfd0b.val,
+            bfd.flags.val,
+        ] + super().ns_render()
+
 class HomeBlock(ov.Struct):
     def __init__(self, up, lo):
         super().__init__(
             up,
             lo,
-            vertical=True,
-            label_=Text16,
+            vertical=False,
+            label_=ov.Text(16),
             magic_=ov.Be16,
             f00_=ov.Be16,
             f01_=ov.Be16,
             f02_=ov.Be16,
             f03_=ov.Be16,
             f04_=ov.Be16,
-            f05_=ov.Be16,
+            nsect_=ov.Be16,
             f06_=ov.Be16,
             f07_=ov.Be16,
             f08_=ov.Be16,
-            more=True,
+            more=False,
         )
-        self.done(pad=0x200)
+        #self.done(pad=0x200)
+        self.up.set_picture('H', lo=lo)
 
     def render(self):
-        yield "Superblock"
         yield from super().render()
 
 class IndexBlock(ov.Struct):
@@ -79,19 +117,27 @@ class IndexBlock(ov.Struct):
         super().__init__(
             up,
             lo,
-            vertical=True,
+            vertical=False,
             pad00_=ov.Be16,
             pad01_=ov.Be16,
             more=True,
         )
         self.bfd = bfd
         self.list = []
-        for i in range(bfd.nsect.val):
+        if bfd:
+            nsect = bfd.nsect.val
+        else:
+            nsect = 5
+        for i in range(nsect):
             y = self.addfield(None, ov.Be16)
             self.list.append(y)
             y = self.addfield(None, ov.Be16)
-            
+
         self.done(pad=0x200)
+        self.up.set_picture('I', lo=lo)
+
+    def __getitem__(self, idx):
+        return self.list[idx].val
 
     def iter_sectors(self):
         for i in self.list:
@@ -109,8 +155,8 @@ class BasicFileDesc(ov.Struct):
         super().__init__(
             up,
             lo,
-            vertical=True,
-            bfd00_=ov.Be16,
+            vertical=False,
+            ok_=ov.Be16,
             bfd01_=ov.Be16,
             bfd02_=ov.Be16,
             type_=ov.Be16,
@@ -118,7 +164,7 @@ class BasicFileDesc(ov.Struct):
             bfd05_=ov.Be16,
             nsect_=ov.Be16,
             bfd07_=ov.Be16,
-            kind_=ov.Be16,
+            areasz_=ov.Be16,
             sector_=ov.Be16,
             bfd0a_=ov.Be16,
             bfd0b_=ov.Be16,
@@ -133,38 +179,34 @@ class BasicFileDesc(ov.Struct):
         self.that = None
         self.block_list = []
         self.bad_bl = False
+        self.index_block = None
+        self.committed = False
         if not self.valid():
             return
+        self.up.set_picture('B', lo=lo)
 
-        if self.kind.val == 0:
+        if self.ok.val == 0:
+            pass
+        elif self.areasz.val == 0:
             for i in range(self.nsect.val):
                 self.block_list.append(self.sector.val + i)
-        elif self.kind.val == 1:
+        else:
             self.index_block = IndexBlock(up, self.sector.val << 9, self)
-            self.index_block.insert()
-            self.block_list = list(self.index_block.iter_sectors())
-        elif self.kind.val == 5:
-            self.index_block = IndexBlock(up, self.sector.val << 9, self)
-            self.index_block.insert()
             for bn in self.index_block.iter_sectors():
-                 for mult in range(5):
-                     self.block_list.append(bn + mult)
+                for mult in range(self.areasz.val):
+                    self.block_list.append(bn + mult)
 
-        if 0 in self.block_list:
-            print("BFD zero in BL", self, self.block_list)
-            self.block_list = []
-            self.bad_bl = True
-        if self.block_list and max(self.block_list) << 9 > len(self.up.this):
-            print("BFD huge sec# BL", self, hex(max(self.block_list)))
-            self.block_list = []
-            self.bad_bl = True
-        # print("bfd", hex(self.lo), hex(self.hi), self)
+    def insert(self):
+        super().insert()
+        if self.index_block:
+            self.index_block.insert()
+        return self
 
     def valid(self):
         if self.type.val not in (0, 10, 12, 14):
-             return False
+            return False
         if self.bad_bl:
-             return False
+            return False
         return True
 
     def __str__(self):
@@ -172,8 +214,9 @@ class BasicFileDesc(ov.Struct):
             (
                  "{BFD" if self.valid() else "{bfd",
                  "#0x%x" % self.nbr,
+                 "ok=" + hex(self.ok.val),
                  "type=" + hex(self.type.val),
-                 "kind=" + hex(self.kind.val),
+                 "areasz=" + hex(self.areasz.val),
                  "length=" + hex(self.length.val),
                  "sector=" + hex(self.sector.val),
                  "nsect=" + hex(self.nsect.val),
@@ -194,38 +237,99 @@ class BasicFileDesc(ov.Struct):
     def iter_sectors(self):
         yield from self.block_list
 
+class DataSector():
+    def __init__(self, up, lo, bfdno):
+        for i in range(4):
+            y = disk.DataSector(
+                up,
+                lo=lo + i * SECTOR_LENGTH,
+            ).insert()
+            y.ident = "DataSector[bfd#%d]" % bfdno
+
 class SymbolicFileDesc(ov.Struct):
-    def __init__(self, up, lo):
+    def __init__(self, up, lo, pnamespace):
         super().__init__(
             up,
             lo,
             vertical=False,
             valid_=ov.Be16,
-            fname_=Text16,
+            fname_=ov.Text(16),
             file_=ov.Be16,
-            bfd3_=12,
+            sfd3_=12,
         )
+        self.dir = None
+        self.bfd = None
+        self.fname.txt = self.fname.txt.rstrip()
+        if self.valid.val != 1:
+            self.namespace = None
+            self.bfd = None
+        elif self.file.val in up.bfd:
+            self.namespace = NameSpace(
+                name = self.fname.txt,
+                parent = pnamespace,
+                priv = self,
+                separator = "!"
+            )
+            self.bfd = up.bfd[self.file.val]
+        else:
+            print(self.up.this, "SFD has no BFD#", self.file.val)
 
-class SfdSect(ov.Struct):
-    def __init__(self, up, lo):
-        super().__init__(
-            up,
-            lo,
-            vertical=True,
-            more=True,
-        )
-        for off in range(0, 512, 32):
-            valid = ov.Be16(up, lo + off)
-            if valid.val == 1:
-                y = self.addfield(None, SymbolicFileDesc)
-                up.add_sfd(y)
-            else:
-                y = self.addfield(None, 32)
- 
-        self.done(pad=0x200)
- 
+    def commit(self):
+        ''' ... '''
+        bits = []
+        for sect in self.bfd.iter_sectors():
+            lo = sect << L_SECTOR_SHIFT
+            hi = lo + (1 << L_SECTOR_SHIFT)
+            if self.bfd.type.val != 0xa and self.file.val and not self.bfd.committed:
+                DataSector(self.up, lo=lo, bfdno = self.file.val)
+                self.bfd.committed = True
+            bits.append(self.up.this[lo:hi])
+        if self.file.val <= 2:
+            return
+        i = self.bfd.length.val
+        if i == 0:
+            return
+        if not bits:
+            return
+        j = (i + 1) & ~1
+        bits = b''.join(bits)[:j]
+        if i & 1:
+            # make sure the padding byte is legal ASCII
+            bits = bits[:-2] + b' ' + bits[-1:]
+        that = self.up.this.create(bits = bits)
+        self.namespace.ns_set_this(that)
 
-class CR80_FS2(ov.OctetView):
+class Directory():
+    def __init__(self, up, namespace, bfdno):
+        self.sfds = []
+        self.namespace = namespace
+        for sect in up.bfd[bfdno].iter_sectors():
+            lo = sect << L_SECTOR_SHIFT
+            up.set_picture('S', lo=lo)
+            for off in range(0, 1 << L_SECTOR_SHIFT, 32):
+                y = SymbolicFileDesc(up, lo + off, namespace).insert()
+                self.sfds.append(y)
+
+        for sfd in self.sfds:
+            if sfd.valid.val != 1:
+                continue
+            if sfd.bfd:
+                continue
+            if sfd.file.val == bfdno:
+                continue
+            if sfd.bfd.type.val == 0xa:
+                print("SUBDIR", sfd, sfd.bfd)
+                sfd.dir = Directory(up, sfd.namespace, sfd.file.val)
+
+    def commit(self):
+        for sfd in self.sfds:
+            if sfd.valid.val != 1:
+                continue
+            if sfd.bfd.type.val == 0xa:
+                continue
+            sfd.commit()
+
+class CR80_FS2(disk.Disk):
 
     def __init__(self, this):
         if not this.has_type("ileave2"):
@@ -233,71 +337,44 @@ class CR80_FS2(ov.OctetView):
         if this[0x10] or this[0x11] != 0x2:
             return
         print("CRFS2", this)
-        this.add_type("crfs2")
-        super().__init__(this)
+        this.add_type("CR80_Amos_Fs")
+        super().__init__(
+            this,
+            [ [ N_TRACK, 1, N_SECT, SECTOR_LENGTH ] ],
+        )
 
-        self.sb = HomeBlock(self, 0x0)
-        self.sb.insert()
+        this.byte_order = [1, 0]
 
-        self.bfdloc = ((self.this[0x204] << 8) | self.this[0x205]) << 9
-        print("BFDLOC", hex(self.bfdloc))
-        bfd_dir = BasicFileDesc(self, 0, self.bfdloc)
-        bfd_dir.insert()
+        self.sb = HomeBlock(self, 0x0).insert()
+
+        tmpiblk = IndexBlock(self, 1 << L_SECTOR_SHIFT, None)
+        tmpbfd = BasicFileDesc(self, 0, tmpiblk[0] << L_SECTOR_SHIFT)
+
         self.bfd = {}
-        for n, i in enumerate(bfd_dir.iter_sectors()):
-            if i << 9 == self.bfdloc:
-                self.bfd[n] = bfd_dir
-                continue
-            try:
-                j = BasicFileDesc(self, n, i << 9)
-                j.insert()
-                self.bfd[n] = j
-            except Exception as err:
-                print("BDF error", hex(i << 9), err)
-                break
+        for n, secno in enumerate(tmpbfd.iter_sectors()):
+            j = BasicFileDesc(self, n, secno << L_SECTOR_SHIFT)
+            j.insert()
+            self.bfd[n] = j
 
-        for n, bfd in self.bfd.items():
-            if bfd.type.val == 0x000a:
-                for i in bfd.iter_sectors():
-                    y = SfdSect(self, i << 9)
-                    y.insert()
+        self.namespace = NameSpace(
+            name="",
+            root=this,
+            separator="",
+        )
 
-        for n, bfd in self.bfd.items():
-            # print(n, bfd, bfd.sfd, list(bfd.iter_sectors()))
-            img = bytearray()
-            for ns, i in enumerate(bfd.iter_sectors()):
-                off = i << 9
-                img += this[off:off + 512]
-                if bfd.nbr and bfd.type.val != 0x000a:
-                    y = DataSect(self, off, bfd, ns)
-                    y.insert()
-            i = bfd.length.val
-            if not len(img) or not i:
-                continue
-            if i >= len(img):
-                pass
-            elif i & 1:
-                #print("ODD", i, len(img))
-                j = img[:i - 1]
-                j.append(img[i])
-                img = j
-            else:
-                img = img[:i]
-            bfd.that = this.create(bits=img)
-            bfd.that.add_type("CR80FILE")
-            bfd.that.byte_order = [1, 0]
-            if bfd.sfd:
-                bfd.that.set_name(bfd.sfd.fname.txt)
+        assert self.bfd[1].type.val == 0x000a
 
-        this.add_interpretation(self, self.html_interpretation)
+        self.root = Directory(self, self.namespace, 1)
+        self.root.commit()
+
+        this.add_interpretation(self, self.namespace.ns_html_plain)
+
+        this.add_interpretation(self, self.disk_picture)
+
+        self.fill_gaps()
+
         self.render()
 
-    def html_interpretation(self, fo, _this):
-        fo.write("<H3>CR80FS2 DIRLIST</H3>\n")
-        fo.write("<PRE>")
-        for n, bfd in self.bfd.items():
-            fo.write(str(bfd) + "\n")
-        fo.write("</PRE>")
-
-    def add_sfd(self, sfd):
-        self.bfd[sfd.file.val].sfd = sfd
+    def set_picture(self, what, lo):
+        for i in range(4):
+            super().set_picture(what, lo = lo + i * SECTOR_LENGTH)

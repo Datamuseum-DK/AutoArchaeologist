@@ -12,12 +12,10 @@ import autoarchaeologist
 from autoarchaeologist.generic import disk
 from autoarchaeologist import type_case
 import autoarchaeologist.generic.octetview as ov
-import autoarchaeologist.christianrovsing.interleave as ileave
 
 N_SECT = 26
 N_TRACK = 77
 SECTOR_LENGTH = 128
-SECTOR_SHIFT = 9
 
 UNREAD = b'_UNREAD_' * (SECTOR_LENGTH//8)
 
