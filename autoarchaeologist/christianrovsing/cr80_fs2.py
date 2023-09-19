@@ -8,6 +8,7 @@
 
 import autoarchaeologist
 from autoarchaeologist.generic import disk
+from autoarchaeologist import type_case
 import autoarchaeologist.generic.octetview as ov
 
 N_SECT = 26
@@ -102,8 +103,8 @@ class HomeBlock(ov.Struct):
             f04_=ov.Be16,
             nsect_=ov.Be16,
             f06_=ov.Be16,
-            f07_=ov.Be16,
-            f08_=ov.Be16,
+            asflen_=ov.Be16,
+            asfsec_=ov.Be16,
             more=False,
         )
         #self.done(pad=0x200)
@@ -255,7 +256,9 @@ class SymbolicFileDesc(ov.Struct):
             valid_=ov.Be16,
             fname_=ov.Text(16),
             file_=ov.Be16,
-            sfd3_=12,
+            sfd3_=ov.Be32,
+            sfd4_=ov.Be32,
+            sfd5_=ov.Be32,
         )
         self.dir = None
         self.bfd = None
@@ -301,8 +304,10 @@ class SymbolicFileDesc(ov.Struct):
 
 class Directory():
     def __init__(self, up, namespace, bfdno):
+        self.up = up
         self.sfds = []
         self.namespace = namespace
+        done = False
         for sect in up.bfd[bfdno].iter_sectors():
             lo = sect << L_SECTOR_SHIFT
             up.set_picture('S', lo=lo)
@@ -313,23 +318,41 @@ class Directory():
         for sfd in self.sfds:
             if sfd.valid.val != 1:
                 continue
-            if sfd.bfd:
-                continue
             if sfd.file.val == bfdno:
                 continue
+            if sfd.file.val < 3:
+                continue
+            if not sfd.bfd:
+                continue
             if sfd.bfd.type.val == 0xa:
-                print("SUBDIR", sfd, sfd.bfd)
                 sfd.dir = Directory(up, sfd.namespace, sfd.file.val)
 
     def commit(self):
         for sfd in self.sfds:
             if sfd.valid.val != 1:
                 continue
-            if sfd.bfd.type.val == 0xa:
+            if not sfd.bfd:
+                print(self.up.this, "NOBFD", sfd)
                 continue
-            sfd.commit()
+            if sfd.dir:
+                sfd.dir.commit()
+            else:
+                sfd.commit()
+
+class CR80Amos_Ascii(type_case.Ascii):
+    ''' ... '''
+    def __init__(self):
+        super().__init__()
+        self.set_slug(0x00, ' ', '«nul»')
+        self.set_slug(0x01, ' ', '«soh»')
+        self.set_slug(0x02, ' ', '«stx»')
+        self.set_slug(0x03, ' ', '«etx»')
+        self.set_slug(0x0c, ' ', '«ff»')
+
 
 class CR80_FS2(disk.Disk):
+
+    type_case = CR80Amos_Ascii()
 
     def __init__(self, this):
         if not this.has_type("ileave2"):
@@ -344,6 +367,7 @@ class CR80_FS2(disk.Disk):
         )
 
         this.byte_order = [1, 0]
+        this.type_case = self.type_case
 
         self.sb = HomeBlock(self, 0x0).insert()
 
