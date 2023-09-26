@@ -23,18 +23,23 @@ class TextFiles():
 class TextFile():
     ''' General Text-File-Excavator '''
 
-    verbose = False
+    VERBOSE = False
 
     MAX_TAIL = 128
+
+    TYPE_CASE = None
 
     def __init__(self, this):
         self.this = this
         self.txt = []
-        type_case = this.type_case
+        if self.TYPE_CASE:
+            type_case = self.TYPE_CASE
+        else:
+            type_case = this.type_case
         for j in this.iter_bytes():
             slug = type_case.slugs[j]
             if slug.flags & type_case.INVALID:
-                if self.verbose:
+                if self.VERBOSE:
                     print(this, "TextFile fails on", hex(j))
                 return
             if slug.flags & type_case.IGNORE:
@@ -44,10 +49,10 @@ class TextFile():
                 break
         if not self.credible():
             return
-        tmpfile = this.add_utf8_interpretation("TextFile")
+        tmpfile = this.add_utf8_interpretation(self.__class__.__name__)
         with open(tmpfile.filename, "w", encoding="utf-8") as file:
             file.write(''.join(self.txt))
-        this.add_type("TextFile")
+        this.add_type(self.__class__.__name__)
 
     def credible(self):
         ''' Determine if result warrants a new artifact '''
