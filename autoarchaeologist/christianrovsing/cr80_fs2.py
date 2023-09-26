@@ -40,8 +40,12 @@ class CR80_FS2Interleave():
                 padr = pcyl * N_SECT * SECTOR_LENGTH + psect * SECTOR_LENGTH
                 octets = this[padr:padr + SECTOR_LENGTH]
                 lba = cyl * N_SECT * SECTOR_LENGTH + sect * SECTOR_LENGTH
+                if octets != b'_UNREAD_' * (SECTOR_LENGTH//8):
+                    xor = 0xff
+                else:
+                    xor = 0x00
                 for n, i in enumerate(octets):
-                    img[lba + n] = i ^ 0xff
+                    img[lba + n] = i ^ xor
         that = this.create(bits=img)
         that.add_type("ileave2")
         this.add_interpretation(self, this.html_interpretation_children)
