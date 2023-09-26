@@ -21,6 +21,9 @@ class Slug():
             self.long = long
         self.flags = flags
 
+    def __str__(self):
+        return "<Slug '" + self.short + "' '" + self.long + "'>"
+
 
 class TypeCase():
     '''
@@ -37,12 +40,13 @@ class TypeCase():
     IGNORE = 0x02
     EOF = 0x04
 
+    noslug = Slug(' ', '', INVALID)
+
     def __init__(self, name, bitwidth=8):
         self.name = name
         self.bitwidth = bitwidth
         self.maxval = 1 << bitwidth
-        noslug = Slug(' ', '', self.INVALID)
-        self.slugs = [noslug] * self.maxval
+        self.slugs = [self.noslug] * self.maxval
         self.fmt = ' %%0%dx' % ((bitwidth + 3)//4)
         self.pad = ' ' * ((bitwidth + 3)//4 + 1)
 
@@ -114,6 +118,36 @@ class Ascii(WellKnown):
     ''' Aka: ISO 646 '''
     def __init__(self):
         super().__init__("ascii")
+
+class EvenPar(TypeCase):
+
+    ODD = 0
+    PARITY = "Even"
+
+    def __init__(self, base=None):
+        if base is None:
+            base = Ascii()
+        super().__init__(base.name + "_" + self.PARITY + "_Parity")
+        for n, i in enumerate(base.slugs):
+            if i != base.noslug:
+                self.slugs[self.parity(n)] = i
+
+    def parity(self, n):
+        n &= 0x7f
+        p = n ^ (n >> 4)
+        p = p ^ (p >> 2)
+        p = p ^ (p >> 1)
+        p &= 1
+        p ^= self.ODD
+        p <<= 7
+        return p | n
+
+    def set_slug(self, nbr, *args, **kwargs):
+        super().set_slug(self.parity(nbr), *args, **kwargs)
+
+class OddPar(EvenPar):
+    ODD = 1
+    PARITY = "Odd"
 
 class DS2089(WellKnown):
     '''
