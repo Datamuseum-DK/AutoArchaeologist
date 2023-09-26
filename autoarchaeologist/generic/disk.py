@@ -153,11 +153,8 @@ class Disk(ov.OctetView):
         file.write("<pre>\n")
         ncyl = max(chsb[0] for chsb in self.iter_chsb()) + 1
         file.write("   c ")
-        for i in range(ncyl):
-            if i % 10 == 0:
-                file.write("%d" % (i // 10))
-            else:
-                file.write(" ")
+        for i in range(0, ncyl, 10):
+            file.write(("%d" % (i//10)).ljust(10))
         file.write("\n     ")
         for i in range(ncyl):
             file.write("%d" % (i % 10))
