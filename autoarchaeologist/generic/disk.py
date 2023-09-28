@@ -35,6 +35,9 @@ class Sector(ov.Octets):
             self.up.this.add_note(unread_note)
         self.terse = False
 
+    def picture(self, what):
+        self.up.picture[(self.cyl, self.head, self.sect)] = what
+
     def render(self):
         ''' Render respecting byte ordering '''
         if self.terse:
@@ -59,7 +62,7 @@ class DataSector(Sector):
         )
         if namespace:
             self.ident = "DataSector[»" + namespace.ns_name + "«]"
-        up.picture[(self.cyl, self.head, self.sect)] = '·'
+        self.picture('·')
     ident = "DataSector"
 
     def render(self):
@@ -90,6 +93,8 @@ class UnusedSector(Sector):
 
 class Disk(ov.OctetView):
     ''' ... '''
+
+    SECTOR_OFFSET = 1
 
     def __init__(self, this, geometry, physsect=None, unread_pattern=None):
         self.geometry = geometry	# [ [C, H, S, B], ...]
@@ -122,7 +127,7 @@ class Disk(ov.OctetView):
         for ncyl, nhd, nsec, nbyte in self.geometry:
             for cyl in range(ncyl):
                 for head in range(nhd):
-                    for sec in range(1, nsec + 1):
+                    for sec in range(self.SECTOR_OFFSET, nsec + self.SECTOR_OFFSET):
                         yield cyl,head,sec,nbyte
 
     def prefix(self, lo, hi):
