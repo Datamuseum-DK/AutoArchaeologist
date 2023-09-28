@@ -57,7 +57,11 @@ class TextFile():
     def credible(self):
         ''' Determine if result warrants a new artifact '''
         if len(self.this) - len(self.txt) > self.MAX_TAIL:
+            if self.VERBOSE:
+                print(self.this, "TextFile: too long tail", len(self.this) - len(self.txt))
             return False
         if '\n' not in self.txt:
+            if self.VERBOSE:
+                print(self.this, "TextFile: no NL")
             return False
         return True
