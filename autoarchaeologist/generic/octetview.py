@@ -128,6 +128,14 @@ class HexOctets(Octets):
     def render(self):
         yield "".join("%02x" % i for i in self)
 
+class Octet(Octets):
+    def __init__(self, up, lo, **kwargs):
+        super().__init__(up, lo, width=1, **kwargs)
+        self.val = self.this[lo]
+
+    def render(self):
+        yield "0x%02x" % self.val
+
 class Le16(Octets):
     def __init__(self, up, lo, **kwargs):
         super().__init__(up, lo, width=2, **kwargs)
