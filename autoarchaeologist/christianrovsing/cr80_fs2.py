@@ -244,12 +244,14 @@ class BasicFileDesc(ov.Struct):
 
 class DataSector():
     def __init__(self, up, lo, bfdno):
+        self.is_unread = False
         for i in range(4):
             y = disk.DataSector(
                 up,
                 lo=lo + i * SECTOR_LENGTH,
             ).insert()
             y.ident = "DataSector[bfd#%d]" % bfdno
+            self.is_unread |= y.is_unread
 
 class SymbolicFileDesc(ov.Struct):
     def __init__(self, up, lo, pnamespace):
@@ -284,12 +286,14 @@ class SymbolicFileDesc(ov.Struct):
     def commit(self):
         ''' ... '''
         bits = []
+        is_unread = False
         for sect in self.bfd.iter_sectors():
             lo = sect << L_SECTOR_SHIFT
             hi = lo + (1 << L_SECTOR_SHIFT)
             if self.bfd.type.val != 0xa and self.file.val and not self.bfd.committed:
-                DataSector(self.up, lo=lo, bfdno = self.file.val)
+                y = DataSector(self.up, lo=lo, bfdno = self.file.val)
                 self.bfd.committed = True
+                is_unread |= y.is_unread
             bits.append(self.up.this[lo:hi])
         if self.file.val <= 2:
             return
@@ -304,6 +308,8 @@ class SymbolicFileDesc(ov.Struct):
             # make sure the padding byte is legal ASCII
             bits = bits[:-2] + b' ' + bits[-1:]
         that = self.up.this.create(bits = bits)
+        if is_unread:
+             that.add_note("UNREAD_DATA_SECTOR")
         self.namespace.ns_set_this(that)
 
 class Directory():

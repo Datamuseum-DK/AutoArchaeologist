@@ -57,7 +57,7 @@ class DataSector(Sector):
         super().__init__(
             up,
             *args,
-            unread_note="UNREAD_DATA_SECT",
+            unread_note="UNREAD_DATA_SECTOR",
             **kwargs
         )
         if namespace:

@@ -222,6 +222,7 @@ class DirEnt(ov.Struct):
                 de.commit(self.namespace, separator='.')
         else:
             b = []
+            is_unread = False
             for n, lba in enumerate(self.iter_sectors()):
                 try:
                     y = disk.DataSector(
@@ -229,6 +230,7 @@ class DirEnt(ov.Struct):
                         lo=lba,
                         namespace = self.namespace,
                     ).insert()
+                    is_unread |= y.is_unread
                     b.append(self.up.this[lba:lba+SECTOR_LENGTH])
                     self.up.picture[(y.cyl, y.head, y.sect)] = '·'
                 except Exception as err:
@@ -238,6 +240,8 @@ class DirEnt(ov.Struct):
             if len(b) > 0:
                 y = self.up.this.create(bits = b)
                 self.namespace.ns_set_this(y)
+                if is_unread:
+                    y.add_note("UNREAD_DATA_SECTOR")
 
 
 class Cr80SystemOneFs(disk.Disk):
