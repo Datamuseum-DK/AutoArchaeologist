@@ -10,6 +10,7 @@ from autoarchaeologist.christianrovsing import cr80_sysone
 from autoarchaeologist.christianrovsing import cr80_fs2 
 from autoarchaeologist.intel import isis 
 from autoarchaeologist.generic import textfiles 
+from autoarchaeologist.zilog.mcz import MCZRIO
 
 class Cr80Floppy(DDHF_Excavation):
 
@@ -23,11 +24,24 @@ class Cr80Floppy(DDHF_Excavation):
         self.add_examiner(cr80_fs2.CR80_FS2Interleave)
         self.add_examiner(cr80_fs2.CR80_FS2)
         self.add_examiner(isis.IntelIsis)
+        self.add_examiner(MCZRIO)
         self.add_examiner(textfiles.TextFile)
 
         self.from_bitstore(
             "CR/CR80/SW",
         )
+
+        if True:
+            for fn in sorted(glob.glob("/tmp/_*crfd????.bin")):
+                b = open(fn, "rb").read()
+                if 0 and not load_filter(b):
+                    continue
+                try:
+                    self.add_file_artifact(fn)
+                except Exception as err:
+                    print("ERR", fn, err)
+                    continue
+
 
 if __name__ == "__main__":
     main(
