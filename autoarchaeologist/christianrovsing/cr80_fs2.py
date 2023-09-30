@@ -113,6 +113,7 @@ class HomeBlock(ov.Struct):
         )
         #self.done(pad=0x200)
         self.up.set_picture('H', lo=lo)
+        self.up.picture_legend['H'] = 'Home Block'
 
     def render(self):
         yield from super().render()
@@ -140,6 +141,7 @@ class IndexBlock(ov.Struct):
 
         self.done(pad=0x200)
         self.up.set_picture('I', lo=lo)
+        self.up.picture_legend['I'] = 'Index Block'
 
     def __getitem__(self, idx):
         return self.list[idx].val
@@ -189,6 +191,7 @@ class BasicFileDesc(ov.Struct):
         if not self.valid():
             return
         self.up.set_picture('B', lo=lo)
+        self.up.picture_legend['B'] = 'Basic File Directory'
 
         if self.ok.val == 0:
             pass
@@ -321,6 +324,7 @@ class Directory():
         for sect in up.bfd[bfdno].iter_sectors():
             lo = sect << L_SECTOR_SHIFT
             up.set_picture('S', lo=lo)
+            up.picture_legend['S'] = 'Symbolic File Directory'
             for off in range(0, 1 << L_SECTOR_SHIFT, 32):
                 y = SymbolicFileDesc(up, lo + off, namespace).insert()
                 self.sfds.append(y)
