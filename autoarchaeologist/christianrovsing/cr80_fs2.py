@@ -19,13 +19,51 @@ L_SECTOR_SHIFT = 9
 
 class CR80_FS2Interleave():
 
+    VERBOSE = False
+
     def __init__(self, this):
         if not this.top in this.parents:
             return
         if len(this) != N_SECT * N_TRACK * SECTOR_LENGTH:
             return
-        if this[0x10] != 0xff or this[0x11] != 0xfd:
+
+        l0 = this[0] ^ 0xff
+        if not 0x30 <= l0 <= 0x5a:
             return
+
+        self.this = this
+        hb_format = self.word(0x1fc)
+        # Homeblock.format must be reasonable
+        if hb_format > 10:
+            if self.VERBOSE:
+                print(this, "-Homeblock.format", hex(hb_format))
+            return
+        if self.VERBOSE:
+            print(this, "+Homeblock.format", hex(hb_format))
+
+        # Homeblock.bfdaddr must fit
+        hb_bfdaddr = self.re32(0x10)
+        if not 0 < hb_bfdaddr < (N_SECT * N_TRACK * SECTOR_LENGTH) >> L_SECTOR_SHIFT:
+            if self.VERBOSE:
+                print(this, "-Homeblock.bfdaddr", hex(hb_bfdaddr))
+            return
+        if self.VERBOSE:
+            print(this, "+Homeblock.bfdaddr", hex(hb_bfdaddr))
+
+        # Homeblock.sectors must fit
+        hb_sectors = self.re32(0x1c)
+        if not 0 < hb_sectors <= (N_SECT * N_TRACK * SECTOR_LENGTH) >> L_SECTOR_SHIFT:
+            if self.VERBOSE:
+                print(this, "-Homeblock.sectors", hex(hb_sectors))
+            return
+        if self.VERBOSE:
+            print(this, "+Homeblock.sectors", hex(hb_sectors))
+
+        if self.VERBOSE:
+            print(this, "Accepted")
+
+        #if this[0x10] != 0xff or this[0x11] != 0xfd:
+        #    return
 
         img = bytearray(len(this))
 
@@ -49,6 +87,28 @@ class CR80_FS2Interleave():
         that = this.create(bits=img)
         that.add_type("ileave2")
         this.add_interpretation(self, this.html_interpretation_children)
+
+    def word(self, off):
+        a = off // 128
+        b = off % 128
+        a *= 2
+        off = a * 128 + b
+        retval = self.this[off + 0] << 8
+        retval |= self.this[off + 1]
+        retval ^= 0xffff
+        return retval
+
+    def re32(self, off):
+        a = off // 128
+        b = off % 128
+        a *= 2
+        off = a * 128 + b
+        retval = self.this[off + 2] << 24
+        retval |= self.this[off + 3] << 16
+        retval |= self.this[off + 0] << 8
+        retval |= self.this[off + 1]
+        retval ^= 0xffffffff
+        return retval
 
 class NameSpace(autoarchaeologist.NameSpace):
     ''' ... '''
@@ -89,7 +149,7 @@ class NameSpace(autoarchaeologist.NameSpace):
             bfd.sector.val,
             bfd.bfd0a.val,
             bfd.bfd0b.val,
-            bfd.flags.val,
+            hex(bfd.flags.val),
         ] + super().ns_render()
 
 class HomeBlock(ov.Struct):
@@ -99,19 +159,21 @@ class HomeBlock(ov.Struct):
             lo,
             vertical=False,
             label_=ov.Text(16),
-            magic_=ov.Be16,
-            f00_=ov.Be16,
-            f01_=ov.Be16,
-            f02_=ov.Be16,
-            f03_=ov.Be16,
-            f04_=ov.Be16,
-            nsect_=ov.Be16,
-            f06_=ov.Be16,
-            asflen_=ov.Be16,
-            asfsec_=ov.Be16,
-            more=False,
+            bfdadr_=ov.Re32,
+            free_ent_=ov.Re32,
+            first_free_=ov.Re32,
+            sectors_=ov.Re32,
+            bst_size_=ov.Be16,
+            asf_adr_=ov.Re32,
+            bst_=400,
+            bstsz_=ov.Be16,
+            unused_=52,
+            boot_entry_=ov.Re32,
+            created_=6,
+            accessed_=6,
+            format_=ov.Be16,
+            state_=ov.Be16,
         )
-        #self.done(pad=0x200)
         self.up.set_picture('H', lo=lo)
         self.up.picture_legend['H'] = 'Home Block'
 
@@ -371,8 +433,6 @@ class CR80_FS2(disk.Disk):
     def __init__(self, this):
         if not this.has_type("ileave2"):
             return
-        if this[0x10] or this[0x11] != 0x2:
-            return
         print("CRFS2", this)
         this.add_note("CR80_Amos_Fs")
         super().__init__(
@@ -385,21 +445,19 @@ class CR80_FS2(disk.Disk):
 
         self.sb = HomeBlock(self, 0x0).insert()
 
-        tmpiblk = IndexBlock(self, 1 << L_SECTOR_SHIFT, None)
-        tmpbfd = BasicFileDesc(self, 0, tmpiblk[0] << L_SECTOR_SHIFT)
-
         self.bfd = {}
-        for n, secno in enumerate(tmpbfd.iter_sectors()):
-            j = BasicFileDesc(self, n, secno << L_SECTOR_SHIFT)
-            j.insert()
-            self.bfd[n] = j
-
         self.namespace = NameSpace(
             name="",
             root=this,
             separator="",
         )
 
+        tmpbfd = BasicFileDesc(self, 0, self.sb.bfdadr.val << L_SECTOR_SHIFT)
+
+        for n, secno in enumerate(tmpbfd.iter_sectors()):
+            j = BasicFileDesc(self, n, secno << L_SECTOR_SHIFT)
+            j.insert()
+            self.bfd[n] = j
         assert self.bfd[1].type.val == 0x000a
 
         self.root = Directory(self, self.namespace, 1)

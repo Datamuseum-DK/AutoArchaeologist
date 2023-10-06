@@ -176,6 +176,17 @@ class Be32(Octets):
     def render(self):
         yield "0x%08x" % self.val
 
+class Re32(Octets):
+    def __init__(self, up, lo, **kwargs):
+        super().__init__(up, lo, width=4, **kwargs)
+        self.val = self.this[lo + 2] << 24
+        self.val |= self.this[lo + 3] << 16
+        self.val |= self.this[lo + 0] << 8
+        self.val |= self.this[lo + 1]
+
+    def render(self):
+        yield "0x%08x" % self.val
+
 class Me32(Octets):
     def __init__(self, up, lo, **kwargs):
         super().__init__(up, lo, width=4, **kwargs)
@@ -325,7 +336,7 @@ class OctetView(tree.Tree):
 
     def render(self, title="OctetView"):
         ''' Render via utf8 file '''
-        print(self.this, "Rendering", self.gauge, "octetview-leaves")
+        # print(self.this, "Rendering", self.gauge, "octetview-leaves")
         tfn = self.this.add_html_interpretation(title)
         with open(tfn.filename, "w", encoding="utf-8") as file:
             file.write("<pre>\n")
