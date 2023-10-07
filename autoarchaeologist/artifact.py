@@ -490,23 +490,26 @@ class ArtifactClass():
         ''' Recursively document how this artifact came to be '''
         prefix = ""
         for p in sorted(self.parents):
-            t = p.html_derivation(fo, target=False)
-            if len(t) > len(prefix):
-                prefix = t
+            descs = self.descriptions
+            if not descs:
+                descs = ("",)
+            for desc in descs:
+                t = p.html_derivation(fo, target=False)
+                if len(t) > len(prefix):
+                    prefix = t
 
-            if target:
-                link = "\u27e6this\u27e7"
-            else:
-                link = self.top.html_link_to(self)
-            if self.descriptions:
-                desc = " ".join(sorted(self.descriptions))
-            else:
-                desc = ""
-            v = self.namespaces.get(p)
-            if v:
-                # Not quite: See CBM900 ⟦e681055fa⟧
-                for ns in sorted(v):
-                    fo.write(t + "└─ " + link + " »" + ns.ns_path() + "« " + desc + '\n')
-            else:
-                fo.write(t + "└─" + link + " " + desc + '\n')
+                if target:
+                    link = "\u27e6this\u27e7"
+                else:
+                    link = self.top.html_link_to(self)
+                v = self.namespaces.get(p)
+                if v:
+                    # Not quite: See CBM900 ⟦e681055fa⟧
+                    for ns in sorted(v):
+                        fo.write(t + "└─ " + link + " »" + ns.ns_path() + "« " + desc + '\n')
+                else:
+                    fo.write(t + "└─" + link + " " + desc + '\n')
         return prefix + "    "
+
+    def html_description(self):
+        return "<br>\n".join(sorted(self.descriptions))

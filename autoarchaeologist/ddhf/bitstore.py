@@ -164,7 +164,18 @@ class FromBitStore():
             this = self.ctx.add_top_artifact(b, description=link_summary)
         except autoarchaeologist.DuplicateArtifact as why:
             print(why)
-            return
+            print(why.that)
+            this = why.that
+            pass
+        except:
+            raise
+
+        symlink = os.path.join(self.ctx.html_dir, arg + ".html")
+        try:
+            os.remove(symlink)
+        except FileNotFoundError:
+            pass
+        os.symlink(self.ctx.basename_for(this), symlink, )
 
     def fetch_pattern(self, arg):
         ''' Fetch and parse the keyword page from the wiki '''

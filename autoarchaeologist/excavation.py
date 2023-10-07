@@ -27,6 +27,13 @@ def dotdotdot(gen, limit=35):
 class DuplicateArtifact(Exception):
     ''' Top level artifacts should not be identical '''
 
+    def __init__(self, that, description):
+        t = "Artifact:\n\t" + description
+        t += "\nis identical to\n\t"
+        t += that.summary(False)
+        super().__init__("\n" + t + "\n")
+        self.that = that
+
 class OutputFile():
     ''' Output files have a physical filename and a html reference '''
 
@@ -143,13 +150,11 @@ class Excavation():
 
         this = self.hashes.get(digest)
         if this:
-            t = "Artifact " + description
-            t += "\n\tis identical to\n"
-            t += this.summary(False)
-            raise DuplicateArtifact("\n" + t + "\n")
-
-        this = artifact.ArtifactClass(self, digest, bits)
-        this.add_description(description)
+            this.add_description(description)
+            raise DuplicateArtifact(this, description)
+        else:
+            this = artifact.ArtifactClass(self, digest, bits)
+            this.add_description(description)
         return this
 
     def add_file_artifact(self, filename, description=None, **kwargs):
@@ -208,7 +213,7 @@ class Excavation():
         for child in self.children:
             yield from child.iter_notes(True)
 
-    def filename_for(self, this, suf=".html", temp=False):
+    def basename_for(self, this, suf=".html"):
         ''' Come up with a suitable filename related to an artifact '''
         if this == self:
             base = "index" + suf
@@ -218,6 +223,11 @@ class Excavation():
             basedir = this.digest[:2]
             os.makedirs(os.path.join(self.html_dir, basedir), exist_ok=True)
             base = os.path.join(basedir, this.digest[:self.digest_prefix] + suf)
+        return base
+
+    def filename_for(self, this, suf=".html", temp=False):
+        ''' Come up with a suitable file for an artifact '''
+        base = self.basename_for(this, suf)
         if temp:
             return TempFile(os.path.join(self.html_dir, base))
         return OutputFile(
@@ -272,7 +282,7 @@ class Excavation():
         for this in self.children:
             fo.write("<tr>\n")
             fo.write("<td>" + self.html_link_to(this) + '</td>\n')
-            fo.write("<td>" + this.summary(ident=False) + '</td>\n')
+            fo.write("<td>" + this.html_description() + "</td>\n")
             fo.write("</tr>\n")
             fo.write("<tr>\n")
             fo.write("<td></td>")
