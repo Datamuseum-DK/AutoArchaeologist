@@ -31,7 +31,7 @@ class Cr80Floppy(DDHF_Excavation):
             "CR/CR80/SW",
         )
 
-        if True:
+        if False:
             for fn in sorted(glob.glob("/tmp/_*crfd????.bin")):
                 b = open(fn, "rb").read()
                 if 0 and not load_filter(b):

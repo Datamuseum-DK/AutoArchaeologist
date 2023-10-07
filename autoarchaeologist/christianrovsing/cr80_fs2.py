@@ -423,6 +423,7 @@ class CR80Amos_Ascii(type_case.Ascii):
         self.set_slug(0x01, ' ', '«soh»')
         self.set_slug(0x02, ' ', '«stx»')
         self.set_slug(0x03, ' ', '«etx»')
+        self.set_slug(0x1c, ' ', '«fs»')
         self.set_slug(0x0c, ' ', '«ff»')
 
 
