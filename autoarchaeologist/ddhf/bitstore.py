@@ -18,6 +18,10 @@ PROTOCOL = os.environ.get("AUTOARCHAEOLOGIST_BITSTORE_PROTOCOL")
 if PROTOCOL is None:
     PROTOCOL = "http"
 
+BS_HOME = os.environ.get("AUTOARCHAEOLOGIST_BITSTORE_HOME")
+if BS_HOME is None:
+    BS_HOME = "http://datamuseum.dk"
+
 BITSTORE_FORMATS = {
     "PDF": False,
     "MP4": False,
@@ -148,7 +152,7 @@ class FromBitStore():
             print(metalines)
             return
 
-        link_summary = '<A href="http://datamuseum.dk/wiki/Bits:' + arg + '">'
+        link_summary = '<A href="' + BS_HOME + '/wiki/Bits:' + arg + '">'
         link_summary += "Bits:" + arg + '</a>&nbsp'
         link_summary += summary
 
