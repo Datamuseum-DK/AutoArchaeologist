@@ -229,7 +229,8 @@ class ComalStatement():
         ''' comment '''
         t = ""
         while stream and stream[0] != 0xe2:
-            t += "%c" % stream.pop(0)
+            c = stream.pop(0)
+            t += self.up.this.type_case.slugs[c].long
         yield t
 
     def expect_lineno(self, stream):
@@ -743,7 +744,11 @@ class ComalStatement():
             print("NO RENDER", token, self.up.this, bytes(stream).hex())
             return
         yield from self.expect(stream, token)
-        yield from rfunc(stream)
+        try:
+            yield from rfunc(stream)
+        except:
+            yield "[FAIL RENDER FUNC %s %s]" % (token, bytes(stream).hex())
+            return
 
     def render(self):
         ''' render as statement '''

@@ -9,6 +9,7 @@ from autoarchaeologist import type_case
 
 from autoarchaeologist.regnecentralen.domus_fs import Domus_Filesystem
 from autoarchaeologist.regnecentralen.rc3600_fdtape import RC3600_FD_Tape
+from autoarchaeologist.regnecentralen.rc3600_fcopy import Domus_FCOPY
 from autoarchaeologist.regnecentralen.rc7000_comal import ComalSaveFile
 from autoarchaeologist.generic.bigdigits import BigDigits
 from autoarchaeologist.data_general.absbin import AbsBin
@@ -28,9 +29,18 @@ class Domus_DS2089(type_case.DS2089):
     def __init__(self):
         super().__init__()
         self.set_slug(0x00, ' ', '«nul»', self.EOF)
+        self.set_slug(0x07, ' ', '«bel»')
         self.set_slug(0x0c, ' ', '«ff»\n')
         self.set_slug(0x0d, ' ', '')
+        self.set_slug(0x0e, ' ', '«so»')
+        self.set_slug(0x0f, ' ', '«si»')
+        self.set_slug(0x19, ' ', '«eof»', self.EOF)
         self.set_slug(0x7f, ' ', '')
+
+class NoParTextFile(textfiles.TextFile):
+    VERBOSE=False
+    TYPE_CASE = Domus_DS2089()
+    MAX_TAIL=512*6
 
 class EvenTextFile(textfiles.TextFile):
     VERBOSE=False
@@ -53,29 +63,23 @@ class Rc3600(DDHF_Excavation):
 
         self.add_examiner(Domus_Filesystem)
         self.add_examiner(RC3600_FD_Tape)
+        self.add_examiner(Domus_FCOPY)
         self.add_examiner(ComalSaveFile)
         self.add_examiner(AbsBin)
         self.add_examiner(RelBin)
         self.add_examiner(BigDigits)
         self.add_examiner(DGC_PaperTapeCheckSum)
         self.add_examiner(RCSL)
-        self.add_examiner(TxtFile)
+        self.add_examiner(NoParTextFile)
         self.add_examiner(EvenTextFile)
         self.add_examiner(OddTextFile)
         self.add_examiner(SameSame)
 
         self.from_bitstore(
-            #"RC/RC3600/COMAL",
-            #"RC/RC3600/DE2",
-            #"RC/RC3600/DISK",
             "RC/RC3600/DOMUS",
             "RC/RC3600/HW",
             "RC/RC3600/LOADER",
             "RC/RC3600/MUSIL",
-            #"RC/RC3600/PAPERTAPE",
-            #"RC/RC3600/SW",
-            #"RC/RC3600/TEST",
-            #"RC/RC3600/UTIL",
         )
 
 if __name__ == "__main__":
