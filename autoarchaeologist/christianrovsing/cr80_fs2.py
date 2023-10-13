@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python3
 
 '''
    CR80 Filesystem type 2
@@ -15,9 +15,99 @@ N_SECT = 26
 N_TRACK = 77
 SECTOR_LENGTH = 128
 
+L_SECTOR_LENGTH = 512
 L_SECTOR_SHIFT = 9
 
-class CR80_FS2Interleave():
+class HomeBlock(ov.Struct):
+    '''
+       The "home block" lives in the first sector and we use it
+       to determine if there is an AMOS filesystem on an artifact.
+
+       The classes for 16 and 32 bit fields are parameters because
+       the CR80 floppy controller has "issues", which we solve with
+       CR80_FS2Interleave.
+    '''
+
+    def __init__(self, up, lo, fe16=ov.Le16, fe32=ov.Le32):
+        super().__init__(
+            up,
+            lo,
+            vertical=False,
+            label_=ov.Text(16),
+            bfdadr_=fe32,
+            free_ent_=fe32,
+            first_free_=fe32,
+            sectors_=fe32,
+            bst_size_=fe16,
+            asf_adr_=fe32,
+            bst_=400,
+            bstsz_=fe16,
+            unused_=52,
+            boot_entry_=fe32,
+            created_=6,
+            accessed_=6,
+            format_=fe16,
+            state_=fe16,
+        )
+        self.up.set_picture('H', lo=lo)
+        self.up.picture_legend['H'] = 'Home Block'
+
+    def is_sensible(self, xor=0x00, verbose=True):
+        ''' Does this even make sense ?! '''
+
+        # This field not in first 128 bytes, so we cannot check it
+        # until the interleave has been sorted out.
+        #if 0 and self.format.val > 10:
+        #    if verbose:
+        #        print(self.up.this, "-Homeblock.format", hex(self.format.val))
+        #    return False
+
+        nlba = len(self.up.this) // L_SECTOR_LENGTH
+
+        if not 0 < self.bfdadr.val < nlba:
+            if verbose:
+                print(self.up.this, "-Homeblock.bfdaddr", hex(self.bfdadr.val))
+            return False
+
+        if not 0 < self.sectors.val <= nlba:
+            if verbose:
+                print(self.up.this, "-Homeblock.sectors", hex(self.sectors.val))
+            return False
+
+        b = bytearray(x ^ xor for x in self.label.iter_bytes())
+        while b and b[-1] == 0:
+            b.pop(-1)
+
+        if len(b) == 0:
+            if verbose:
+                print(self.up.this, "-Homeblock.label", [b])
+            return False
+
+        for i in b:
+            if 0x30 <= i <= 0x39:
+                pass
+            elif 0x41 <= i <= 0x5A:
+                pass
+            elif i in (0x2e, 0x5f,):
+                pass
+            else:
+                if verbose:
+                    print(self.up.this, "-Homeblock.label", [b], hex(i))
+                return False
+
+        return True
+
+class IBe16(ov.Be16):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.val ^= 0xffff
+
+class IRe32(ov.Re32):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.val ^= 0xffffffff
+
+class CR80_FS2Interleave(ov.OctetView):
 
     VERBOSE = False
 
@@ -27,43 +117,17 @@ class CR80_FS2Interleave():
         if len(this) != N_SECT * N_TRACK * SECTOR_LENGTH:
             return
 
-        l0 = this[0] ^ 0xff
-        if not 0x30 <= l0 <= 0x5a:
+        super().__init__(this)
+        self.picture_legend = {}
+
+        obo = this.byte_order
+        this.byte_order = [1, 0]
+        hb = HomeBlock(self, 0, fe16 = IBe16, fe32 = IRe32)
+        good = hb.is_sensible(0xff, True)
+        this.byte_order = obo
+        if not good:
+            print("NOT", this)
             return
-
-        self.this = this
-        hb_format = self.word(0x1fc)
-        # Homeblock.format must be reasonable
-        if hb_format > 10:
-            if self.VERBOSE:
-                print(this, "-Homeblock.format", hex(hb_format))
-            return
-        if self.VERBOSE:
-            print(this, "+Homeblock.format", hex(hb_format))
-
-        # Homeblock.bfdaddr must fit
-        hb_bfdaddr = self.re32(0x10)
-        if not 0 < hb_bfdaddr < (N_SECT * N_TRACK * SECTOR_LENGTH) >> L_SECTOR_SHIFT:
-            if self.VERBOSE:
-                print(this, "-Homeblock.bfdaddr", hex(hb_bfdaddr))
-            return
-        if self.VERBOSE:
-            print(this, "+Homeblock.bfdaddr", hex(hb_bfdaddr))
-
-        # Homeblock.sectors must fit
-        hb_sectors = self.re32(0x1c)
-        if not 0 < hb_sectors <= (N_SECT * N_TRACK * SECTOR_LENGTH) >> L_SECTOR_SHIFT:
-            if self.VERBOSE:
-                print(this, "-Homeblock.sectors", hex(hb_sectors))
-            return
-        if self.VERBOSE:
-            print(this, "+Homeblock.sectors", hex(hb_sectors))
-
-        if self.VERBOSE:
-            print(this, "Accepted")
-
-        #if this[0x10] != 0xff or this[0x11] != 0xfd:
-        #    return
 
         img = bytearray(len(this))
 
@@ -71,6 +135,7 @@ class CR80_FS2Interleave():
                   0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24,
                   1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25,
         ]
+        unread = b'_UNREAD_' * (SECTOR_LENGTH//8)
         for cyl in range(N_TRACK):
             for sect in range(N_SECT):
                 pcyl = cyl
@@ -78,17 +143,22 @@ class CR80_FS2Interleave():
                 padr = pcyl * N_SECT * SECTOR_LENGTH + psect * SECTOR_LENGTH
                 octets = this[padr:padr + SECTOR_LENGTH]
                 lba = cyl * N_SECT * SECTOR_LENGTH + sect * SECTOR_LENGTH
-                if octets != b'_UNREAD_' * (SECTOR_LENGTH//8):
-                    xor = 0xff
+                if octets == unread:
+                    img[lba:lba + SECTOR_LENGTH] = unread
                 else:
-                    xor = 0x00
-                for n, i in enumerate(octets):
-                    img[lba + n] = i ^ xor
+                    for n in range(0, len(octets), 2):
+                        x = octets[n] ^ 0xff
+                        y = octets[n + 1] ^ 0xff
+                        img[lba + n] = y
+                        img[lba + n + 1] = x
         that = this.create(bits=img)
         that.add_type("ileave2")
         this.add_interpretation(self, this.html_interpretation_children)
 
-    def word(self, off):
+    def set_picture(self, *args, **kwargs):
+        return
+
+    def fe16(self, _up, off):
         a = off // 128
         b = off % 128
         a *= 2
@@ -98,7 +168,7 @@ class CR80_FS2Interleave():
         retval ^= 0xffff
         return retval
 
-    def re32(self, off):
+    def fe32(self, _up, off):
         a = off // 128
         b = off % 128
         a *= 2
@@ -152,33 +222,6 @@ class NameSpace(autoarchaeologist.NameSpace):
             hex(bfd.flags.val),
         ] + super().ns_render()
 
-class HomeBlock(ov.Struct):
-    def __init__(self, up, lo):
-        super().__init__(
-            up,
-            lo,
-            vertical=False,
-            label_=ov.Text(16),
-            bfdadr_=ov.Re32,
-            free_ent_=ov.Re32,
-            first_free_=ov.Re32,
-            sectors_=ov.Re32,
-            bst_size_=ov.Be16,
-            asf_adr_=ov.Re32,
-            bst_=400,
-            bstsz_=ov.Be16,
-            unused_=52,
-            boot_entry_=ov.Re32,
-            created_=6,
-            accessed_=6,
-            format_=ov.Be16,
-            state_=ov.Be16,
-        )
-        self.up.set_picture('H', lo=lo)
-        self.up.picture_legend['H'] = 'Home Block'
-
-    def render(self):
-        yield from super().render()
 
 class IndexBlock(ov.Struct):
     def __init__(self, up, lo, bfd):
@@ -186,8 +229,8 @@ class IndexBlock(ov.Struct):
             up,
             lo,
             vertical=False,
-            pad00_=ov.Be16,
-            pad01_=ov.Be16,
+            pad00_=ov.Le16,
+            pad01_=ov.Le16,
             more=True,
         )
         self.bfd = bfd
@@ -197,9 +240,9 @@ class IndexBlock(ov.Struct):
         else:
             nsect = 5
         for i in range(nsect):
-            y = self.addfield(None, ov.Be16)
+            y = self.addfield(None, ov.Le16)
             self.list.append(y)
-            y = self.addfield(None, ov.Be16)
+            y = self.addfield(None, ov.Le16)
 
         self.done(pad=0x200)
         self.up.set_picture('I', lo=lo)
@@ -209,6 +252,9 @@ class IndexBlock(ov.Struct):
         return self.list[idx].val
 
     def iter_sectors(self):
+        #if self.lo == 0xfb400:
+        #    yield 0x7db
+        #    return
         for i in self.list:
             yield i.val
 
@@ -225,22 +271,22 @@ class BasicFileDesc(ov.Struct):
             up,
             lo,
             vertical=False,
-            ok_=ov.Be16,
-            bfd01_=ov.Be16,
-            bfd02_=ov.Be16,
-            type_=ov.Be16,
-            length_=ov.Be16,
-            bfd05_=ov.Be16,
-            nsect_=ov.Be16,
-            bfd07_=ov.Be16,
-            areasz_=ov.Be16,
-            sector_=ov.Be16,
-            bfd0a_=ov.Be16,
-            bfd0b_=ov.Be16,
-            flags_=ov.Be16,
-            bfd0d_=ov.Be16,
-            min3_=ov.Be16,
-            bfd0f_=ov.Be16,
+            ok_=ov.Le16,
+            bfd01_=ov.Le16,
+            bfd02_=ov.Le16,
+            type_=ov.Le16,
+            length_=ov.Le16,
+            bfd05_=ov.Le16,
+            nsect_=ov.Le16,
+            bfd07_=ov.Le16,
+            areasz_=ov.Le16,
+            sector_=ov.Le16,
+            bfd0a_=ov.Le16,
+            bfd0b_=ov.Le16,
+            flags_=ov.Le16,
+            bfd0d_=ov.Le16,
+            min3_=ov.Le16,
+            bfd0f_=ov.Le16,
             more=True,
         )
         self.done(pad=0x200)
@@ -254,6 +300,7 @@ class BasicFileDesc(ov.Struct):
             return
         self.up.set_picture('B', lo=lo)
         self.up.picture_legend['B'] = 'Basic File Directory'
+        self.taken = False
 
         if self.ok.val == 0:
             pass
@@ -324,12 +371,12 @@ class SymbolicFileDesc(ov.Struct):
             up,
             lo,
             vertical=False,
-            valid_=ov.Be16,
+            valid_=ov.Le16,
             fname_=ov.Text(16),
-            file_=ov.Be16,
-            sfd3_=ov.Be32,
-            sfd4_=ov.Be32,
-            sfd5_=ov.Be32,
+            file_=ov.Le16,
+            sfd3_=ov.Le32,
+            sfd4_=ov.Le32,
+            sfd5_=ov.Le32,
         )
         self.dir = None
         self.bfd = None
@@ -360,6 +407,7 @@ class SymbolicFileDesc(ov.Struct):
                 self.bfd.committed = True
                 is_unread |= y.is_unread
             bits.append(self.up.this[lo:hi])
+        self.bfd.taken = True
         if self.file.val <= 2:
             return
         i = self.bfd.length.val
@@ -374,7 +422,7 @@ class SymbolicFileDesc(ov.Struct):
             bits = bits[:-2] + b' ' + bits[-1:]
         that = self.up.this.create(bits = bits)
         if is_unread:
-             that.add_note("UNREAD_DATA_SECTOR")
+            that.add_note("UNREAD_DATA_SECTOR")
         self.namespace.ns_set_this(that)
 
 class Directory():
@@ -423,6 +471,7 @@ class CR80Amos_Ascii(type_case.Ascii):
         self.set_slug(0x01, ' ', '«soh»')
         self.set_slug(0x02, ' ', '«stx»')
         self.set_slug(0x03, ' ', '«etx»')
+        self.set_slug(0x04, ' ', '«eot»')
         self.set_slug(0x1c, ' ', '«fs»')
         self.set_slug(0x0c, ' ', '«ff»')
 
@@ -432,19 +481,26 @@ class CR80_FS2(disk.Disk):
     type_case = CR80Amos_Ascii()
 
     def __init__(self, this):
-        if not this.has_type("ileave2"):
+        if not ( this.has_type("ileave2") or len(this) == 67420160):
             return
         print("CRFS2", this)
-        this.add_note("CR80_Amos_Fs")
+
         super().__init__(
             this,
             [ [ N_TRACK, 1, N_SECT, SECTOR_LENGTH ] ],
+            # [ [ 823, 5, 32, 512 ] ],
+            # physsect=512,
         )
 
-        this.byte_order = [1, 0]
         this.type_case = self.type_case
 
-        self.sb = HomeBlock(self, 0x0).insert()
+        # y = ov.Opaque(self, 0x00b4b7f0 + (1<<10), hi=len(this)).insert()
+
+        self.homeblock = HomeBlock(self, 0x0).insert()
+        if not self.homeblock.is_sensible(0x00, True):
+            return
+
+        this.add_note("CR80_Amos_Fs")
 
         self.bfd = {}
         self.namespace = NameSpace(
@@ -453,12 +509,13 @@ class CR80_FS2(disk.Disk):
             separator="",
         )
 
-        tmpbfd = BasicFileDesc(self, 0, self.sb.bfdadr.val << L_SECTOR_SHIFT)
+        tmpbfd = BasicFileDesc(self, 0, self.homeblock.bfdadr.val << L_SECTOR_SHIFT)
 
         for n, secno in enumerate(tmpbfd.iter_sectors()):
             j = BasicFileDesc(self, n, secno << L_SECTOR_SHIFT)
             j.insert()
             self.bfd[n] = j
+
         assert self.bfd[1].type.val == 0x000a
 
         self.root = Directory(self, self.namespace, 1)
@@ -473,5 +530,5 @@ class CR80_FS2(disk.Disk):
         self.render()
 
     def set_picture(self, what, lo):
-        for i in range(4):
+        for i in range(L_SECTOR_LENGTH//SECTOR_LENGTH):
             super().set_picture(what, lo = lo + i * SECTOR_LENGTH)
