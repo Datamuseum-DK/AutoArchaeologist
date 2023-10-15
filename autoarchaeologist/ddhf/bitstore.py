@@ -7,6 +7,8 @@ import os
 import mmap
 import urllib.request
 
+import ddhf_bitstore_metadata
+
 import autoarchaeologist
 
 
@@ -87,6 +89,16 @@ class FromBitStore():
         open(self.cache_dir + "/" + key, "wb").write(body)
         return body
 
+    def fetch_meta(self, ident):
+        ''' Fetch the metadata from the bitstore '''
+        url = PROTOCOL + '://' + SERVERNAME
+        url += "/bits/%s.meta" % ident
+        body = self.cache_fetch(
+            "%s.meta.utf8" % ident,
+            url,
+        )
+        return bytes(body).decode("UTF-8")
+
     def fetch_wiki_source(self, wikipage):
         ''' Fetch the source of a wiki-page '''
         url = PROTOCOL + '://' + SERVERNAME
@@ -96,8 +108,8 @@ class FromBitStore():
             url,
         )
         body = bytes(body).decode("UTF-8")
-        body = body.split('<textarea')[-1]
-        body = body.split('>', 1)[-1]
+        body = body.rsplit('<textarea',maxsplit=1)[-1]
+        body = body.split('>', maxsplit=1)[-1]
         body = body.split('</textarea>')[0]
         return body
 
@@ -109,59 +121,49 @@ class FromBitStore():
             print(arg, "Length mismatch (%d/%d)" % (expected, len(body)))
         return body
 
-    def find_summary(self, metalines):
+    def find_summary(self, meta):
         ''' Find a one line summary of this artifact '''
-        for header in (
-            "Media.Summary:",
-            "Document.Title:",
-        ):
-            try:
-                i = metalines.index(header)
-                return metalines[i + 1]
-            except ValueError:
-                pass
+
+        try:
+            summary = meta.Media.Summary.val
+            return summary
+        except AttributeError:
+            pass
+
+        try:
+            summary = meta.Document.Title.val
+            return summary
+        except AttributeError:
+            pass
+
         return None
 
     def fetch_single(self, arg):
         ''' Fetch and parse the metadata page from the wiki '''
         if arg in self.loaded or arg in self.blacklist:
             return
-        meta = self.fetch_wiki_source('Bits:' + arg)
-        if '= Metadata =' in meta:
-            meta = meta.split('= Metadata =')[1]
-        elif '= METADATA =' in meta:
-            meta = meta.split('= METADATA =')[1]
-        else:
-            print("Wiki page not recognized")
-            print(meta)
-            return
-        metalines = [x.strip() for x in meta.split("\n")]
+        metatxt = self.fetch_meta(arg)
 
-        i = metalines.index("BitStore.Format:")
-        bitstore_format = metalines[i + 1]
-        j = BITSTORE_FORMATS.get(bitstore_format)
+        meta = ddhf_bitstore_metadata.internals.metadata.MetadataBase(metatxt)
+
+        j = BITSTORE_FORMATS.get(meta.BitStore.Format.val)
         if j is None:
-            print(arg, "Ignored, unknown format", bitstore_format)
+            print(arg, "Ignored, unknown format", meta.BitStore.Format.val)
             return
         if not j:
             return
 
-        summary = self.find_summary(metalines)
+        summary = self.find_summary(meta)
         if not summary:
             print(arg, "Ignored, no Summary found")
-            print(metalines)
             return
 
         link_summary = '<A href="' + BS_HOME + '/wiki/Bits:' + arg + '">'
         link_summary += "Bits:" + arg + '</a>&nbsp'
         link_summary += summary
 
-        i = metalines.index("BitStore.Size:")
-        if i < 0:
-            print(arg, "Ignored, no Bitstore.Size found (This is BAD!)")
-            return
+        expected = int(meta.BitStore.Size.val)
 
-        expected = int(metalines[i+1], 10)
         b = self.fetch_artifact(arg, expected)
         self.loaded.add(arg)
         try:
@@ -170,7 +172,6 @@ class FromBitStore():
             print(why)
             print(why.that)
             this = why.that
-            pass
         except:
             raise
 
@@ -194,12 +195,12 @@ class FromBitStore():
             ident = line2.split("/")[-1]
             if ident in self.blacklist:
                 continue
-            line3 = lines.pop(0)
-            _line4 = lines.pop(0)
+            _line3 = lines.pop(0)	# Excavation
+            line4 = lines.pop(0)
             line5 = lines.pop(0)
-            j = BITSTORE_FORMATS.get(line3[1:])
+            j = BITSTORE_FORMATS.get(line4[1:])
             if j is None:
-                print("FORMAT? --", line3, line5)
+                print("FORMAT? --", line4, line5)
                 continue
             if not j:
                 continue
