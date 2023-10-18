@@ -5,7 +5,7 @@ Regnecentralen RC3600/RC7000 Artifacts from Datamuseum.dk's BitStore
 
 from autoarchaeologist import ddhf
 
-from autoarchaeologist import type_case
+from autoarchaeologist.base import type_case
 
 from autoarchaeologist.regnecentralen import domus_fs
 from autoarchaeologist.regnecentralen import rc3600_fdtape

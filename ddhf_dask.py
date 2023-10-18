@@ -8,7 +8,7 @@ from autoarchaeologist import ddhf
 from autoarchaeologist.regnecentralen import gier_text
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
-from autoarchaeologist import type_case
+from autoarchaeologist.base import type_case
 
 class DaskTegn(textfiles.TextFile):
 
