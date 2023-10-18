@@ -33,7 +33,7 @@
 import struct
 import time
 
-from .. import namespace
+from ..base import namespace
 from .. import record
 
 class NameSpace(namespace.NameSpace):

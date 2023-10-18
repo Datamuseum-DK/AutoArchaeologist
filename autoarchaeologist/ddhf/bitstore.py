@@ -7,7 +7,7 @@ import os
 import mmap
 import urllib.request
 
-from .. import excavation
+from ..base import excavation
 import ddhf_bitstore_metadata
 
 

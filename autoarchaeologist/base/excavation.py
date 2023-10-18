@@ -125,6 +125,10 @@ class Excavation():
         # Duck-type as ArtifactClass
         return -1
 
+    def adopt(self, this):
+        this.top = self
+        self.add_artifact(this)
+
     def add_artifact(self, this):
         ''' Add an artifact, and start examining it '''
         assert isinstance(this, artifact.ArtifactClass)
@@ -153,8 +157,10 @@ class Excavation():
             this.add_description(description)
             raise DuplicateArtifact(this, description)
         else:
-            this = artifact.ArtifactClass(self, digest, bits)
+            this = artifact.ArtifactClass(digest, bits)
             this.add_description(description)
+            self.adopt(this)
+            this.add_parent(self)
         return this
 
     def add_file_artifact(self, filename, description=None, **kwargs):

@@ -9,7 +9,7 @@
 
 from ..generic import octetview as ov
 from ..generic import disk
-from .. import namespace
+from ..base import namespace
 
 class LinkageBlock(disk.Sector):
     ''' 64 pairs of (track, sector), first two are prev+next '''

@@ -7,8 +7,8 @@
 
 from ..generic import disk
 from ..generic import octetview as ov
-from .. import namespace
-from .. import type_case
+from ..base import namespace
+from ..base import type_case
 
 class Sector(disk.Sector):
     def __init__(self, *args, **kwargs):

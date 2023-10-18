@@ -6,7 +6,7 @@
 '''
 
 from ..generic.ascii import Str2Html
-import ..generic import tree
+import ..base import tree
 
 class Bits(tree.TreeLeaf):
     ''' ... '''

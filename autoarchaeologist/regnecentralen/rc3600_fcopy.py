@@ -5,7 +5,7 @@
 '''
 
 from ..generic import disk
-from .. import namespace
+from ..base import namespace
 from ..generic import octetview as ov
 
 # Size of sectors

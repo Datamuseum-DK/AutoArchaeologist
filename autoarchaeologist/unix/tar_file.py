@@ -2,7 +2,7 @@
    TAR(1) format
 '''
 
-from .. import namespace
+from ..base import namespace
 from . import unix_stat
 
 class Invalid(Exception):

@@ -3,7 +3,7 @@
 '''
 
 from ..generic import octetview as ov
-from .. import namespace
+from ..base import namespace
 from .unix_stat import UnixStat
 
 class ArHdr(ov.Struct):

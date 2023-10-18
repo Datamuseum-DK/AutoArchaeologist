@@ -8,7 +8,7 @@
 
 import os
 
-from .. import excavation
+from ..base import excavation
 from .bitstore import FromBitStore
 
 class DDHF_Excavation(excavation.Excavation):

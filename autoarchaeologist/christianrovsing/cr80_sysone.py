@@ -7,8 +7,8 @@
 '''
 
 from ..generic import disk
-from .. import type_case
-from .. import namespace
+from ..base import type_case
+from ..base import namespace
 from ..generic import octetview as ov
 
 N_SECT = 26

@@ -15,8 +15,8 @@ import html
 from itertools import zip_longest
 
 from . import excavation
-from . import record
-from . import scattergather
+from .. import record
+from .. import scattergather
 
 class DuplicateName(Exception):
     ''' Set names must be unique '''
@@ -97,7 +97,7 @@ class ArtifactClass():
 
     '''
 
-    def __init__(self, up, digest, bits):
+    def __init__(self, digest, bits):
         assert len(bits) > 0
         if isinstance(bits, (memoryview, scattergather.ScatterGather)):
             self.bdx = bits
@@ -121,9 +121,9 @@ class ArtifactClass():
 
         self.type_case = None
 
-        self.add_parent(up)
-        self.top = up.top
-        self.top.add_artifact(self)
+        # self.add_parent(up)
+        self.top = None
+        #self.top.add_artifact(self)
 
         self.index_representation = None
         self.link_to = ""
@@ -134,7 +134,9 @@ class ArtifactClass():
         self.by_class = {} # Experimental extension point
 
     def __str__(self):
-        return "\u27e6" + self.digest[:self.top.digest_prefix] + "\u27e7"
+        if self.top:
+            return "\u27e6" + self.digest[:self.top.digest_prefix] + "\u27e7"
+        return "\u27e6" + self.digest[:7] + "\u27e7"
 
     def __repr__(self):
         return str(self)
@@ -344,8 +346,10 @@ class ArtifactClass():
             digest = hashlib.sha256(bits.tobytes()).hexdigest()
         this = self.top.hashes.get(digest)
         if not this:
-            this = ArtifactClass(self, digest, bits)
+            this = ArtifactClass(digest, bits)
             this.type_case = self.type_case
+            self.top.adopt(this)
+            this.add_parent(self)
         elif this != self:
             this.add_parent(self)
         if start or stop:

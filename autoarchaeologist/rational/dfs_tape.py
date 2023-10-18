@@ -4,7 +4,7 @@
 '''
 
 from ..generic import octetview as ov
-from .. import namespace
+from ..base import namespace
 
 class NameSpace(namespace.NameSpace):
     ''' ... '''
