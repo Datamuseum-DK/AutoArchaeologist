@@ -8,7 +8,7 @@ from autoarchaeologist import ddhf
 from autoarchaeologist.generic import tap_file
 from autoarchaeologist.generic import ansi_tape_labels
 from autoarchaeologist.generic import sccs_id
-from autoarchaeologist.type_case import Ascii
+from autoarchaeologist.base import type_case
 from autoarchaeologist.rational import tape_blocks
 from autoarchaeologist.rational import index_data
 from autoarchaeologist.rational import dfs_tape
@@ -31,7 +31,7 @@ class TextFile(textfiles.TextFile):
             return False
         return True
 
-class TypeCase(Ascii):
+class TypeCase(type_case.Ascii):
     ''' ... '''
     def __init__(self):
         super().__init__()
