@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 '''
-    AutoArchaeologist Artifact Class
-    --------------------------------
+    AutoArchaeologist Artifact
+    --------------------------
 
-    `ArtifactClass` is hidden by the function `Artifact` which
-    ensures their uniqueness.
 '''
 
 import os
@@ -15,72 +13,18 @@ import html
 from itertools import zip_longest
 
 from . import excavation
+from . import interpretation
 from .. import record
 from .. import scattergather
 
 class DuplicateName(Exception):
     ''' Set names must be unique '''
 
-class Utf8Interpretation():
-    '''
-       Some examinations output a UTF8 representation, containing
-       no references to other artifacts during the examination phase.
-       That output can be stored in a temporary file until the html
-       production phase, saving VM.
-       Using Pythons tempfile is not a good idea, because the file
-       hang around.
-    '''
-
-    def __init__(self, this, title):
-        self.this = this
-        self.title = title
-        self.filename = this.tmpfile_for().filename
-        this.add_interpretation(self, self.html_interpretation)
-
-    def html_interpretation(self, fo, this):
-        try:
-            fi = open(self.filename)
-        except FileNotFoundError as err:
-            print(this, "Could not open output file:", err)
-            return
-        fo.write("<H3>" + self.title + "</H3>\n")
-        fo.write("<pre>\n")
-        for i in fi:
-            fo.write(html.escape(i))
-        os.remove(self.filename)
-
-
-class HtmlInterpretation():
-    '''
-       Some examinations output a HTML representation to a file
-       That output can be stored in a temporary file until the html
-       production phase, saving VM.
-       Using Pythons tempfile is not a good idea, because the file
-       hang around.
-    '''
-
-    def __init__(self, this, title):
-        self.this = this
-        self.title = title
-        self.filename = this.tmpfile_for().filename
-        this.add_interpretation(self, self.html_interpretation)
-
-    def html_interpretation(self, fo, this):
-        try:
-            fi = open(self.filename)
-        except FileNotFoundError as err:
-            print(this, "Could not open output file:", err)
-            return
-        fo.write("<H3>" + self.title + "</H3>\n")
-        for i in fi:
-            fo.write(i)
-        os.remove(self.filename)
-
-class ArtifactClass():
+class Artifact():
 
     '''
-        Artifact[Class]
-        ---------------
+        Artifact
+        --------
 
         Artifacts are just bytearrays with a high-school diploma.
 
@@ -271,10 +215,10 @@ class ArtifactClass():
         self.interpretations.append((owner, func))
 
     def add_utf8_interpretation(self, title):
-        return Utf8Interpretation(self, title)
+        return interpretation.Utf8Interpretation(self, title)
 
     def add_html_interpretation(self, title):
-        return HtmlInterpretation(self, title)
+        return interpretation.HtmlInterpretation(self, title)
 
     def add_description(self, desc):
         ''' Add a description '''
@@ -346,7 +290,7 @@ class ArtifactClass():
             digest = hashlib.sha256(bits.tobytes()).hexdigest()
         this = self.top.hashes.get(digest)
         if not this:
-            this = ArtifactClass(digest, bits)
+            this = Artifact(digest, bits)
             this.type_case = self.type_case
             self.top.adopt(this)
             this.add_parent(self)

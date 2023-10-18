@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 '''
-    AutoArchaeologist Excavation Class
-    ----------------------------------
+    AutoArchaeologist Excavation
+    ----------------------------
 
     `Excavation` holds the global state for analyzing a set
     of related artifacts, so that programs can juggle
@@ -63,7 +63,7 @@ class Excavation():
 
         All artifacts have their `.top` member pointing here.
 
-	Excavation objects also duck-types as `ArtifactClass` to
+	Excavation objects also duck-types as `Artifact` to
 	make the linkage 'just work'.
 
     '''
@@ -114,7 +114,7 @@ class Excavation():
 
         self.index = {}
 
-        # Duck-type as ArtifactClass
+        # Duck-type as Artifact
         self.top = self
         self.children = []
         self.by_class = {} # Experimental extension point
@@ -122,7 +122,7 @@ class Excavation():
         self.type_case = type_case.Ascii()
 
     def __lt__(self, other):
-        # Duck-type as ArtifactClass
+        # Duck-type as Artifact
         return -1
 
     def adopt(self, this):
@@ -131,7 +131,7 @@ class Excavation():
 
     def add_artifact(self, this):
         ''' Add an artifact, and start examining it '''
-        assert isinstance(this, artifact.ArtifactClass)
+        assert isinstance(this, artifact.Artifact)
         assert this.digest not in self.hashes
         self.hashes[this.digest] = this
         self.queue.append(this)
@@ -157,7 +157,7 @@ class Excavation():
             this.add_description(description)
             raise DuplicateArtifact(this, description)
         else:
-            this = artifact.ArtifactClass(digest, bits)
+            this = artifact.Artifact(digest, bits)
             this.add_description(description)
             self.adopt(this)
             this.add_parent(self)
@@ -394,11 +394,11 @@ class Excavation():
         fo.write("</html>\n")
 
     def html_derivation(self, _fo, target=False):
-        ''' Duck-type as ArtifactClass '''
+        ''' Duck-type as Artifact'''
         return ""
 
     def html_prefix_style(self, fo, _target):
-        ''' Duck-type as ArtifactClass '''
+        ''' Duck-type as Artifact'''
         rdir = self.filename_for(self, suf=".css").link
         fo.write('<link rel="stylesheet" href="%s">\n' % rdir)
 

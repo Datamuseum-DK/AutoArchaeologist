@@ -349,7 +349,7 @@ class OctetView(tree.Tree):
                     trunc = "[Truncated]\n"
                     break
                 for j in i.render():
-                    if isinstance(j, artifact.ArtifactClass):
+                    if isinstance(j, artifact.Artifact):
                         j = j.summary(types=False)
                     else:
                         j = html.escape(j)
