@@ -7,7 +7,7 @@
 
 '''
 
-import autoarchaeologist.generic.bitview as bv
+from ..generic import bitview as bv
 
 class OurStruct(bv.Struct):
     def __init__(self, up, lo, **kwargs):

@@ -13,8 +13,8 @@ import os
 import mmap
 import hashlib
 
-import autoarchaeologist.artifact as artifact
-from autoarchaeologist import type_case
+from . import artifact
+from . import type_case
 
 def dotdotdot(gen, limit=35):
     ''' Return a limited number of elements, and mark as truncated if so. '''

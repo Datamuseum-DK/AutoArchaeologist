@@ -2,12 +2,9 @@
    AR(1) format
 '''
 
-import struct
-
-import autoarchaeologist
-
-from autoarchaeologist.generic import octetview as ov
-from autoarchaeologist.unix.unix_stat import UnixStat
+from ..generic import octetview as ov
+from .. import namespace
+from .unix_stat import UnixStat
 
 class ArHdr(ov.Struct):
     ''' see ⟦309830465⟧ '''
@@ -25,7 +22,7 @@ class ArHdr(ov.Struct):
         )
         self.name.txt = self.name.txt.rstrip()
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     stat = UnixStat()

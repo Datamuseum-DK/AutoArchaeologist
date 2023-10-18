@@ -10,12 +10,11 @@
 import sys
 import subprocess
 
-import autoarchaeologist
-
 class R1kAssyFile():
     ''' Binary instruction segment '''
 
     def __init__(self, this):
+        return
         if this[:3].tobytes() not in (b'\x00\x0f\x58', b'\x00\x0f\x59',):
             return
         if len(this) > 128<<10:

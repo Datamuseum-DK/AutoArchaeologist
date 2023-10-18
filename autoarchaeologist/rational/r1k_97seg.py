@@ -6,7 +6,7 @@
 
 '''
 
-import autoarchaeologist.rational.r1k_bittools as bittools
+from . import r1k_bittools as bittools
 
 def what_is(self, attr):
     ''' Report if self.attr points to know chunks '''

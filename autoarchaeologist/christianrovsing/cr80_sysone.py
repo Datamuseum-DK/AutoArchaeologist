@@ -6,12 +6,10 @@
    See https://ta.ddhf.dk/wiki/Bits:30004479
 '''
 
-import struct
-
-import autoarchaeologist
-from autoarchaeologist.generic import disk
-from autoarchaeologist import type_case
-import autoarchaeologist.generic.octetview as ov
+from ..generic import disk
+from .. import type_case
+from .. import namespace
+from ..generic import octetview as ov
 
 N_SECT = 26
 N_TRACK = 77
@@ -99,13 +97,13 @@ class Cr80SystemOneInterleave():
                 b = bytearray(this[off:off+SECTOR_LENGTH])
                 if b != UNREAD:
                     for x in range(SECTOR_LENGTH):
-                        b[x] ^= 0xff;
+                        b[x] ^= 0xff
                 j.append(b)
         y = this.create(b''.join(j))
         y.add_type("ileave2,6")
         this.add_interpretation(self, this.html_interpretation_children)
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
 
     def ns_render(self):
         dirent = self.ns_priv
@@ -168,7 +166,7 @@ class DirEnt(ov.Struct):
         if self.this[self.lo:self.hi] == UNREAD[:64]:
             print(up.this, "File has unread dir sector", self)
             self.up.this.add_note("BADSECT_DIR")
-            
+
         self.dirents = []
 
     def iter_sectors(self):

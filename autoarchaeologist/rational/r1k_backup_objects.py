@@ -9,8 +9,8 @@
 import tempfile
 import mmap
 
-import autoarchaeologist.generic.hexdump as hexdump
-import autoarchaeologist.generic.bitdata as bitdata
+from ..generic import hexdump
+from ..generic import bitdata
 
 def make_void():
     tf = tempfile.TemporaryFile()

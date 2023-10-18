@@ -1,5 +1,6 @@
 import struct
-import autoarchaeologist.generic.iso8632_gcm as gcm
+
+from ..generic import iso8632_gcm as gcm
 
 class DDE_GKSFile(gcm.CGM_Data):
 

@@ -1,11 +1,7 @@
 '''
 '''
 
-import os
-import sys
-
 from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
-from autoarchaeologist.generic.ascii import Ascii, CHARSET
 from autoarchaeologist.intel.isis import Intel_Isis
 
 # CHARSET[0x00][0] |= 4

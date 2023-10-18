@@ -7,7 +7,7 @@
 
 '''
 
-import autoarchaeologist.generic.bitview as bv
+from ..generic import bitview as bv
 
 class OurStruct(bv.Struct):
     def __init__(self, up, lo, **kwargs):
@@ -173,7 +173,7 @@ class R1kSeg79(bv.BitView):
         while self.todo:
             i, j = self.todo.pop(0)
             if j not in self.t6:
-                 i(self, j).insert()
+                i(self, j).insert()
 
         for a in range(self.head.f2d, 0x15bb5a2, 32):
             y = OurStruct(self, a, what2_=32).insert()

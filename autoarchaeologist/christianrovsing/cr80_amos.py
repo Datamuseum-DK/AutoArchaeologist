@@ -5,9 +5,7 @@
    See: 30004610
 '''
 
-import struct
-
-import autoarchaeologist.generic.octetview as ov
+from ..generic import octetview as ov
 
 from .cr80_util import *
 
@@ -183,4 +181,4 @@ class AmosExec(ov.OctetView):
 
         this.add_type("CR80_EXEC")
         self.render()
-       
+

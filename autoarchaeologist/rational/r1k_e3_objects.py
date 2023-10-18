@@ -1,8 +1,7 @@
 
-import sys
 import html
-import autoarchaeologist.generic.hexdump as hexdump
-import autoarchaeologist.generic.bitdata as bitdata
+from ..generic import hexdump
+from ..generic import bitdata
 
 fof = open("/tmp/_fof", "w")
 
@@ -146,7 +145,7 @@ class R1kE3Objects(bitdata.BitRecord):
                 that = self.this[i<<10:(i<<10)+16]
                 hexdump.hexdump_to_file(that, fo)
                 i = (that[0] << 8) | that[1]
- 
+
         fo.write("</pre>\n")
 
     def render_text(self, fo, _this):

@@ -3,22 +3,22 @@ Rational R1000/400 DFS Tapes from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+from autoarchaeologist import ddhf
 
-from autoarchaeologist.generic.tap_file import TAPfile
-from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
-from autoarchaeologist.generic.sccs_id import SccsId
+from autoarchaeologist.generic import tap_file
+from autoarchaeologist.generic import ansi_tape_labels
+from autoarchaeologist.generic import sccs_id
 from autoarchaeologist.type_case import Ascii
-from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
-from autoarchaeologist.rational.index_data import R1K_Index_Data
-from autoarchaeologist.rational.dfs_tape import R1K_DFS_Tape
-from autoarchaeologist.rational.r1k_assy import R1kAssyFile
-from autoarchaeologist.rational.r1k_configuration import R1kM200ConfigFile
-from autoarchaeologist.rational.r1k_ucode import R1K_Ucode_File
-from autoarchaeologist.rational.r1k_m200 import R1kM200File
-from autoarchaeologist.rational.r1k_experiment import R1kExperiment
+from autoarchaeologist.rational import tape_blocks
+from autoarchaeologist.rational import index_data
+from autoarchaeologist.rational import dfs_tape
+from autoarchaeologist.rational import r1k_assy
+from autoarchaeologist.rational import r1k_configuration
+from autoarchaeologist.rational import r1k_ucode
+from autoarchaeologist.rational import r1k_m200
+from autoarchaeologist.rational import r1k_experiment
 
-from autoarchaeologist.generic.samesame import SameSame
+from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 
 class TextFile(textfiles.TextFile):
@@ -37,25 +37,25 @@ class TypeCase(Ascii):
         super().__init__()
         self.set_slug(0, ' ', '«nul»', self.EOF)
 
-class R1KDFS(DDHF_Excavation):
+class R1KDFS(ddhf.DDHF_Excavation):
     ''' Rational R1000/400 DFS tapes '''
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(TAPfile)
-        self.add_examiner(AnsiTapeLabels)
-        self.add_examiner(R1K_Tape_blocks)
-        self.add_examiner(R1K_Index_Data)
-        self.add_examiner(R1K_DFS_Tape)
-        self.add_examiner(R1kM200ConfigFile)
-        self.add_examiner(R1kAssyFile)
-        self.add_examiner(R1K_Ucode_File)
-        self.add_examiner(R1kM200File)
-        self.add_examiner(R1kExperiment)
+        self.add_examiner(tap_file.TAPfile)
+        self.add_examiner(ansi_tape_labels.AnsiTapeLabels)
+        self.add_examiner(tape_blocks.R1K_Tape_blocks)
+        self.add_examiner(index_data.R1K_Index_Data)
+        self.add_examiner(dfs_tape.R1K_DFS_Tape)
+        self.add_examiner(r1k_configuration.R1kM200ConfigFile)
+        self.add_examiner(r1k_assy.R1kAssyFile)
+        self.add_examiner(r1k_ucode.R1K_Ucode_File)
+        self.add_examiner(r1k_m200.R1kM200File)
+        self.add_examiner(r1k_experiment.R1kExperiment)
         self.add_examiner(TextFile)
-        self.add_examiner(SccsId)
-        self.add_examiner(SameSame)
+        self.add_examiner(sccs_id.SccsId)
+        self.add_examiner(samesame.SameSame)
 
         self.type_case = TypeCase()
 
@@ -69,7 +69,7 @@ class R1KDFS(DDHF_Excavation):
         )
 
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         R1KDFS,
         html_subdir="r1k_dfs",
         ddhf_topic = "Rational R1000/400 DFS Tapes",

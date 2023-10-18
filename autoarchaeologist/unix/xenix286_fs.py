@@ -3,9 +3,7 @@
    --------------------------------------------
 '''
 
-import struct
-
-import autoarchaeologist.unix.unix_fs as ufs
+from . import unix_fs as ufs
 
 class SysVInode(ufs.Inode):
     ''' System V inode '''
@@ -142,7 +140,7 @@ class Xenix_FileSystem(ufs.UnixFileSystem):
             )
             sblock.cylinders.append(cylgrp)
             off += cginfo._size
-        
+
         sblock.fs_nindir = self.SECTOR_SIZE // 4
         sblock.fs_imax = sblock.fs_maxino - 1
         self.sblock = sblock

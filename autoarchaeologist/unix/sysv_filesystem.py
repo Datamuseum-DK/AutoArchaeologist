@@ -2,7 +2,7 @@
    System V UFS filesystems
 '''
 
-import autoarchaeologist.unix.unix_fs as ufs
+from . import unix_fs as ufs
 
 class SysVInode(ufs.Inode):
     ''' System V inode '''

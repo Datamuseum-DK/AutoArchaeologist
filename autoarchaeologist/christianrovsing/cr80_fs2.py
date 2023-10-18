@@ -6,10 +6,10 @@
    See https://ta.ddhf.dk/wiki/Bits:30004479
 '''
 
-import autoarchaeologist
-from autoarchaeologist.generic import disk
-from autoarchaeologist import type_case
-import autoarchaeologist.generic.octetview as ov
+from ..generic import disk
+from .. import type_case
+from .. import namespace
+from ..generic import octetview as ov
 
 N_SECT = 26
 N_TRACK = 77
@@ -180,7 +180,7 @@ class CR80_FS2Interleave(ov.OctetView):
         retval ^= 0xffffffff
         return retval
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     TABLE = (

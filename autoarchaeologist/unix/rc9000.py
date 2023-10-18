@@ -5,7 +5,7 @@
 
 import struct
 
-import autoarchaeologist.unix.unix_fs as ufs
+from . import unix.unix_fs as ufs
 
 # from fx.h
 SUPERBLOCK = (

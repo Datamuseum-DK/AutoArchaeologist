@@ -30,13 +30,13 @@
         di_mtime        Modification time (POSIX time_t)
 '''
 
-import sys
 import struct
 import time
 
-import autoarchaeologist
+from .. import namespace
+from .. import record
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' Unix NameSpace '''
 
     def __init__(self, dirent, *args, **kwargs):
@@ -64,7 +64,7 @@ class NameSpace(autoarchaeologist.NameSpace):
         ("l", "artifact"),
     )
 
-class Inode(autoarchaeologist.Record):
+class Inode(record.Record):
     ''' Inode in a UNIX filesystem '''
 
     def __init__(self, ufs, **kwargs):
@@ -120,7 +120,7 @@ class Inode(autoarchaeologist.Record):
         }.get(self.di_type)
 
         mode = self.di_mode
- 
+
         if typ is None:
             txt = "%10o" % mode
         elif not mode & self.ufs.S_IXUSR and mode & self.ufs.S_ISUID:

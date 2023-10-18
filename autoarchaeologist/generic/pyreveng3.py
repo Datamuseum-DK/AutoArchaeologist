@@ -7,7 +7,12 @@ import os
 import sys
 import subprocess
 
-import autoarchaeologist
+PYREVENG3 = os.environ.get("AUTOARCHAEOLOGIST_PYREVENG3")
+if not PYREVENG3 or not os.path.isdir(PYREVENG3):
+    PYREVENG3 = str(os.environ.get("HOME")) + "/PyReveng3/"
+if not PYREVENG3 or not os.path.isdir(PYREVENG3):
+    PYREVENG3 = str(os.environ.get("HOME")) + "/Proj/PyReveng3/"
+if not PYREVENG3 or not os.path.isdir(PYREVENG3):
 
 class PyReveng3():
     ''' ... '''
@@ -23,7 +28,7 @@ class PyReveng3():
         sys.stdout.flush()
         sys.stderr.flush()
 
-        path = os.path.join(autoarchaeologist.PYREVENG3, script)
+        path = os.path.join(PYREVENG3, script)
 
         try:
             subprocess.run(

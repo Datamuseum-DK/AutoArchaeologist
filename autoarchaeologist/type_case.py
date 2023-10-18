@@ -50,6 +50,14 @@ class TypeCase():
         self.fmt = ' %%0%dx' % ((bitwidth + 3)//4)
         self.pad = ' ' * ((bitwidth + 3)//4 + 1)
 
+    def __getitem__(self, idx):
+        if idx >= self.maxval:
+            return None
+        slug = self.slugs[idx]
+        if slug.flags & self.INVALID:
+            return None
+        return slug
+
     def hexdump(
         self,
         that,

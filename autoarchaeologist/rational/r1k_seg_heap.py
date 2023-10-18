@@ -8,11 +8,11 @@ import time
 import os
 import subprocess
 
-import autoarchaeologist.rational.r1k_linkpack as LinkPack
-import autoarchaeologist.rational.r1k_bittools as bittools
-import autoarchaeologist.rational.r1k_81seg as seg81
-import autoarchaeologist.rational.r1k_97seg as seg97
-import autoarchaeologist.rational.r1k_a6seg as sega6
+from . import r1k_linkpack as LinkPack
+from . import r1k_bittools as bittools
+from . import r1k_81seg as seg81
+from . import r1k_97seg as seg97
+from . import r1k_a6seg as sega6
 
 class TreeNode():
     ''' A binary tree of bits (literally) and pieces of an artifact '''

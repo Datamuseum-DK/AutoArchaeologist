@@ -7,8 +7,6 @@
    Heuristically hunt for filesystems.
 '''
 
-import struct
-
 ROOT_DIR_SIG = bytes().fromhex('''
 	02 00 2e 00 00 00 00 00  00 00 00 00 00 00 00 00
 ''')

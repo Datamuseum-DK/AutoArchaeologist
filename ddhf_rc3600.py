@@ -3,20 +3,20 @@ Regnecentralen RC3600/RC7000 Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+from autoarchaeologist import ddhf
 
 from autoarchaeologist import type_case
 
-from autoarchaeologist.regnecentralen.domus_fs import Domus_Filesystem
-from autoarchaeologist.regnecentralen.rc3600_fdtape import RC3600_FD_Tape
-from autoarchaeologist.regnecentralen.rc3600_fcopy import Domus_FCOPY
-from autoarchaeologist.regnecentralen.rc7000_comal import ComalSaveFile
-from autoarchaeologist.generic.bigdigits import BigDigits
-from autoarchaeologist.data_general.absbin import AbsBin
-from autoarchaeologist.data_general.relbin import RelBin
-from autoarchaeologist.data_general.papertapechecksum import DGC_PaperTapeCheckSum
-from autoarchaeologist.regnecentralen.rcsl import RCSL
-from autoarchaeologist.generic.samesame import SameSame
+from autoarchaeologist.regnecentralen import domus_fs
+from autoarchaeologist.regnecentralen import rc3600_fdtape
+from autoarchaeologist.regnecentralen import rc3600_fcopy
+from autoarchaeologist.regnecentralen import rc7000_comal
+from autoarchaeologist.generic import bigdigits
+from autoarchaeologist.data_general import absbin
+from autoarchaeologist.data_general import relbin
+from autoarchaeologist.data_general import papertapechecksum
+from autoarchaeologist.regnecentralen import rcsl
+from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 
 class TxtFile(textfiles.TextFile):
@@ -52,7 +52,7 @@ class OddTextFile(textfiles.TextFile):
     MAX_TAIL=512
     TYPE_CASE = type_case.OddPar(Domus_DS2089())
 
-class Rc3600(DDHF_Excavation):
+class Rc3600(ddhf.DDHF_Excavation):
 
     ''' All RC3600 artifacts '''
 
@@ -61,19 +61,19 @@ class Rc3600(DDHF_Excavation):
 
         self.type_case = Domus_DS2089()
 
-        self.add_examiner(Domus_Filesystem)
-        self.add_examiner(RC3600_FD_Tape)
-        self.add_examiner(Domus_FCOPY)
-        self.add_examiner(ComalSaveFile)
-        self.add_examiner(AbsBin)
-        self.add_examiner(RelBin)
-        self.add_examiner(BigDigits)
-        self.add_examiner(DGC_PaperTapeCheckSum)
-        self.add_examiner(RCSL)
+        self.add_examiner(domus_fs.Domus_Filesystem)
+        self.add_examiner(rc3600_fdtape.RC3600_FD_Tape)
+        self.add_examiner(rc3600_fcopy.Domus_FCOPY)
+        self.add_examiner(rc7000_comal.ComalSaveFile)
+        self.add_examiner(absbin.AbsBin)
+        self.add_examiner(relbin.RelBin)
+        self.add_examiner(bigdigits.BigDigits)
+        self.add_examiner(papertapechecksum.DGC_PaperTapeCheckSum)
+        self.add_examiner(rcsl.RCSL)
         self.add_examiner(NoParTextFile)
         self.add_examiner(EvenTextFile)
         self.add_examiner(OddTextFile)
-        self.add_examiner(SameSame)
+        self.add_examiner(samesame.SameSame)
 
         self.from_bitstore(
             "RC/RC3600/DOMUS",
@@ -83,7 +83,7 @@ class Rc3600(DDHF_Excavation):
         )
 
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         Rc3600,
         html_subdir="rc3600",
         ddhf_topic = "RegneCentralen RC3600/RC7000",

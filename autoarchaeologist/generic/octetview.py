@@ -9,8 +9,8 @@ import html
 
 from itertools import zip_longest
 
-from autoarchaeologist import artifact
-from autoarchaeologist.generic import tree
+from .. import artifact
+from . import tree
 
 OV_LIMIT = 1<<20
 

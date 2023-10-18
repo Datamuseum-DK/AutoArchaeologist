@@ -7,7 +7,7 @@
 
 '''
 
-import autoarchaeologist.generic.bitview as bv
+from ..generic import bitview as bv
 
 class OurStruct(bv.Struct):
     def __init__(self, up, lo, **kwargs):
@@ -115,24 +115,24 @@ class Thing3(OurStruct):
         )
         up.done.add(self.lo)
         if self.ptr96:
-             up.todo.append((Thing3, self.ptr96))
+            up.todo.append((Thing3, self.ptr96))
         if self.ptr97:
-             up.todo.append((Thing3, self.ptr97))
+            up.todo.append((Thing3, self.ptr97))
         if self.ptr98:
-             up.todo.append((Thing3, self.ptr98))
+            up.todo.append((Thing3, self.ptr98))
         if self.ptr99:
-             up.todo.append((Thing3, self.ptr99))
+            up.todo.append((Thing3, self.ptr99))
         # self.dot(up.fdot)
 
     def dot(self, file):
         if self.ptr96:
-             file.write("A%06x -> A%06x [color=red]\n" % (self.lo, self.ptr96))
+            file.write("A%06x -> A%06x [color=red]\n" % (self.lo, self.ptr96))
         if self.ptr97:
-             file.write("A%06x -> A%06x [color=green]\n" % (self.lo, self.ptr97))
+            file.write("A%06x -> A%06x [color=green]\n" % (self.lo, self.ptr97))
         if self.ptr98:
-             file.write("A%06x -> A%06x [color=blue]\n" % (self.lo, self.ptr98))
+            file.write("A%06x -> A%06x [color=blue]\n" % (self.lo, self.ptr98))
         if self.ptr99:
-             file.write("A%06x -> A%06x\n" % (self.lo, self.ptr99))
+            file.write("A%06x -> A%06x\n" % (self.lo, self.ptr99))
 
 class R1kSeg89(bv.BitView):
     ''' ... '''
@@ -175,7 +175,7 @@ class R1kSeg89(bv.BitView):
                 a = i.hi
 
         i = Thing3(self, self.head.f2c).insert()
-     
+
         i = OurStruct(self, self.head.f2d, f0_=32, f1_=32, f2_=32, f3_=1, f4_=32, f5_=32).insert()
         OurStruct(self, i.f2, x_=-35).insert()
         i = Thing3(self, i.hi).insert()

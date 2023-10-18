@@ -3,16 +3,14 @@ GIER Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+from autoarchaeologist import ddhf
 
-from autoarchaeologist.regnecentralen.gier_text import GIER_Text
-from autoarchaeologist.generic.samesame import SameSame
-from autoarchaeologist.generic.textfiles import TextFile
+from autoarchaeologist.regnecentralen import gier_text
+from autoarchaeologist.generic import samesame
+from autoarchaeologist.generic import textfiles
 from autoarchaeologist import type_case
 
-TextFile.VERBOSE = True
-
-class DaskTegn(TextFile):
+class DaskTegn(textfiles.TextFile):
 
     def credible(self):
         return True
@@ -35,15 +33,15 @@ class DASK_TC(type_case.TypeCase):
         self.set_slug(0x10, "*", "*")
         self.set_slug(0x1e, " ", "«stop»")
 
-class DASK(DDHF_Excavation):
+class DASK(ddhf.DDHF_Excavation):
 
     ''' All DASK artifacts '''
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(GIER_Text)
-        self.add_examiner(SameSame)
+        self.add_examiner(gier_text.GIER_Text)
+        self.add_examiner(samesame.SameSame)
         self.add_examiner(DaskTegn)
 
         self.type_case = DASK_TC()
@@ -53,7 +51,7 @@ class DASK(DDHF_Excavation):
         )
 
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         DASK,
         html_subdir="dask",
         ddhf_topic = "RegneCentralen DASK Computer",

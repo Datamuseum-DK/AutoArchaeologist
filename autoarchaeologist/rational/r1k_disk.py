@@ -7,9 +7,9 @@ import mmap
 from pympler import summary
 from pympler import muppy
 
-import autoarchaeologist.rational.r1k_defs as r1k_defs
-import autoarchaeologist.generic.bitview as bv
-import autoarchaeologist.scattergather as scattergather
+import .r1k_defs
+import .bitview as bv
+from .. import scattergather
 
 def make_void():
     tf = tempfile.TemporaryFile()

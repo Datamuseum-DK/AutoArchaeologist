@@ -2,16 +2,13 @@
    TAR(1) format
 '''
 
-import html
-import time
-
-import autoarchaeologist
-from autoarchaeologist.unix.unix_stat import UnixStat
+from .. import namespace
+from . import unix_stat
 
 class Invalid(Exception):
     ''' invalid tar file '''
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     KIND = "Tar file"
@@ -27,7 +24,7 @@ class NameSpace(autoarchaeologist.NameSpace):
         ("l", "artifact"),
     )
 
-    stat = UnixStat()
+    stat = unix_stat.UnixStat()
 
     def ns_render(self):
         if self.ns_name[-1] == '/':

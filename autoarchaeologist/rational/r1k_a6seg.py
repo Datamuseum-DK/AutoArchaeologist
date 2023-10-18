@@ -8,7 +8,8 @@
 
 import os
 import html
-import autoarchaeologist.rational.r1k_bittools as bittools
+
+from . import r1k_bittools as bittools
 
 COMPACT = False
 

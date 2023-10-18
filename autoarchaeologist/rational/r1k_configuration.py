@@ -4,7 +4,7 @@
 
 '''
 
-from autoarchaeologist.generic import hexdump
+from ..generic import hexdump
 
 FIELDS = [
     (0x002, 1, 'Allow operator to enter CLI immediately'),

@@ -4,7 +4,7 @@
    Utilities for Disks
 '''
 
-import autoarchaeologist.generic.octetview as ov
+from . import octetview as ov
 
 class Sector(ov.Octets):
     ''' A sector '''

@@ -3,7 +3,8 @@
 '''
    'a2' type 'This is a Link Pack.' segments
 '''
-import autoarchaeologist.rational.r1k_bittools as bittools
+
+from . import r1k_bittools as bittools
 
 class MagicString(bittools.R1kSegBase):
     ''' The magic 'This is a Link Pack.' marker '''

@@ -8,7 +8,7 @@
 
 import struct
 
-import autoarchaeologist.generic.hexdump as hexdump
+from ..generic import hexdump
 
 SEGS = (
     "L_SHRI",

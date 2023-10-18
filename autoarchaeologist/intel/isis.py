@@ -7,9 +7,9 @@
 
 '''
 
-import autoarchaeologist
-import autoarchaeologist.generic.octetview as ov
-import autoarchaeologist.generic.disk as disk
+from ..generic import octetview as ov
+from ..generic import disk
+from .. import namespace
 
 class LinkageBlock(disk.Sector):
     ''' 64 pairs of (track, sector), first two are prev+next '''
@@ -57,7 +57,7 @@ class Linkage():
     def __iter__(self):
         yield from self.sectors
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' customized namespace '''
 
     KIND = "Intel ISIS II file system"

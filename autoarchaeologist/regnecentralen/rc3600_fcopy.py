@@ -4,18 +4,14 @@
 
 '''
 
-import autoarchaeologist
-from autoarchaeologist.generic import disk
-from autoarchaeologist import type_case
-import autoarchaeologist.generic.octetview as ov
-
-import struct
-import itertools
+from ..generic import disk
+from .. import namespace
+from ..generic import octetview as ov
 
 # Size of sectors
 SEC_SIZE = (1 << 9)
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     def ns_render(self):

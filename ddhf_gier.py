@@ -3,20 +3,20 @@ GIER Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+from autoarchaeologist import ddhf
 
-from autoarchaeologist.regnecentralen.gier_text import GIER_Text
-from autoarchaeologist.generic.samesame import SameSame
+from autoarchaeologist.regnecentralen import gier_text
+from autoarchaeologist.generic import samesame
 
-class GIER(DDHF_Excavation):
+class GIER(ddhf.DDHF_Excavation):
 
     ''' All GIER artifacts '''
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(GIER_Text)
-        self.add_examiner(SameSame)
+        self.add_examiner(gier_text.GIER_Text)
+        self.add_examiner(samesame.SameSame)
 
         self.from_bitstore(
             "GIER/ALGOL_4",
@@ -37,7 +37,7 @@ class GIER(DDHF_Excavation):
         )
 
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         GIER,
         html_subdir="gier",
         ddhf_topic = "RegneCentralen GIER Computer",

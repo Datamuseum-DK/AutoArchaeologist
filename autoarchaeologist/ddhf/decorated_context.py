@@ -7,10 +7,11 @@
 '''
 
 import os
-import autoarchaeologist
-from autoarchaeologist.ddhf.bitstore import FromBitStore
 
-class DDHF_Excavation(autoarchaeologist.Excavation):
+from .. import excavation
+from .bitstore import FromBitStore
+
+class DDHF_Excavation(excavation.Excavation):
     '''
         Excavation decorated for DataMuseum.dk
     '''

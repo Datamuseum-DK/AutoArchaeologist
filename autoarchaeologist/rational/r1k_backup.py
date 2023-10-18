@@ -8,7 +8,7 @@
 
 import html
 
-import autoarchaeologist.rational.r1k_backup_objects as objects
+from . import r1k_backup_objects as objects
 
 def byte_length_int(this):
     '''

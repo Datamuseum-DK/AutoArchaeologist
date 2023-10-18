@@ -5,7 +5,7 @@
 
 import struct
 
-import autoarchaeologist.generic.hexdump as hexdump
+from ..generic import hexdump
 
 class R1K_DFS():
 

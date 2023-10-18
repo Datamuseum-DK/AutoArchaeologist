@@ -1,18 +1,15 @@
 '''
 '''
 
-import os
-import sys
-import glob
+from autoarchaeologist import ddhf
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
-from autoarchaeologist.christianrovsing import cr80_sysone 
-from autoarchaeologist.christianrovsing import cr80_fs2 
-from autoarchaeologist.intel import isis 
-from autoarchaeologist.generic import textfiles 
-from autoarchaeologist.zilog.mcz import MCZRIO
+from autoarchaeologist.christianrovsing import cr80_sysone
+from autoarchaeologist.christianrovsing import cr80_fs2
+from autoarchaeologist.intel import isis
+from autoarchaeologist.generic import textfiles
+from autoarchaeologist.zilog import mcz
 
-class Cr80Floppy(DDHF_Excavation):
+class Cr80Floppy(ddhf.DDHF_Excavation):
 
     ''' CR80 Floppy disk images'''
 
@@ -24,27 +21,15 @@ class Cr80Floppy(DDHF_Excavation):
         self.add_examiner(cr80_fs2.CR80_FS2Interleave)
         self.add_examiner(cr80_fs2.CR80_FS2)
         self.add_examiner(isis.IntelIsis)
-        self.add_examiner(MCZRIO)
+        self.add_examiner(mcz.MCZRIO)
         self.add_examiner(textfiles.TextFile)
 
         self.from_bitstore(
             "CR/CR80/SW",
         )
 
-        if False:
-            for fn in sorted(glob.glob("/tmp/_*crfd????.bin")):
-                b = open(fn, "rb").read()
-                if 0 and not load_filter(b):
-                    continue
-                try:
-                    self.add_file_artifact(fn)
-                except Exception as err:
-                    print("ERR", fn, err)
-                    continue
-
-
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         Cr80Floppy,
         html_subdir="cr80",
         ddhf_topic = "CR80 Floppy Disks",

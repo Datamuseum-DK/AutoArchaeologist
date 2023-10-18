@@ -14,9 +14,9 @@ import html
 
 from itertools import zip_longest
 
-import autoarchaeologist.excavation as excavation
-import autoarchaeologist.record as record
-import autoarchaeologist.scattergather as scattergather
+from . import excavation
+from . import record
+from . import scattergather
 
 class DuplicateName(Exception):
     ''' Set names must be unique '''

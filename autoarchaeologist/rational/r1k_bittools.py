@@ -158,7 +158,7 @@ class R1kSegBase():
     def truncate(self):
         print("Change .truncate() to .finish()", self)
         return self.finish()
-        
+
     def finish(self):
         '''
         Change the length of our chunk
@@ -421,11 +421,12 @@ def to_text(seg, chunk, pointer, length, no_fail=False):
         if no_fail and pointer + 8 > len(chunk):
             return i, text
         char = int(chunk[pointer:pointer+8], 2)
-        if not seg.type_case.valid[char]:
+        slug = seg.type_case[char]
+        if not slug:
             if no_fail:
                 return i, text
             raise NotText("0x%02x is not text" % char)
-        text += seg.type_case.slugs[char]
+        text += slug.long
         pointer += 8
     return i + 1, text
 
@@ -518,7 +519,7 @@ def hunt_strings(seg, chunk, minlength=3):
         if n < 7:
             continue
         r = n % 8
-        if type_case.valid[acc]:
+        if type_case[acc]:
             if cand[r] is None:
                 cand[r] = StringCandidate(type_case, chunk, n - 7, to_text)
             cand[r].add(acc)

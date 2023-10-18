@@ -5,8 +5,8 @@
    ---------------------------------------
 '''
 
-from autoarchaeologist.generic.ascii import Str2Html
-import autoarchaeologist.generic.tree as tree
+from ..generic.ascii import Str2Html
+import ..generic import tree
 
 class Bits(tree.TreeLeaf):
     ''' ... '''

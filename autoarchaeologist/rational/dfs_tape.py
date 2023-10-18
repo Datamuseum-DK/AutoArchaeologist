@@ -3,13 +3,10 @@
    -----------------------
 '''
 
-import html
-import struct
+from ..generic import octetview as ov
+from .. import namespace
 
-import autoarchaeologist
-from autoarchaeologist.generic import octetview as ov
-
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     TABLE = (
@@ -85,14 +82,14 @@ class R1K_DFS_Tape(ov.OctetView):
                     lo=offset,
                     width=hdr.length,
                 ).insert()
-               
+
                 NameSpace(
                     name=hdr.name.txt,
                     parent=self.namespace,
                     priv = hdr,
                     this=y.this,
                 )
-                
+
                 i = hdr.name.txt.split(".")
                 y.this.add_type(i[-1])
             else:

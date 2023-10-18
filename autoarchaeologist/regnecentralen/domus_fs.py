@@ -5,13 +5,9 @@
    As described in RCSL-43-GL-7915
 '''
 
-import autoarchaeologist
-from autoarchaeologist.generic import disk
-from autoarchaeologist import type_case
-import autoarchaeologist.generic.octetview as ov
-
-import struct
-import itertools
+from ..generic import disk
+from .. import namespace
+from ..generic import octetview as ov
 
 # Size of sectors
 SEC_SIZE = (1 << 9)
@@ -51,7 +47,6 @@ class Slice(ov.Struct):
             count_=ov.Be16,
             sector_=ov.Be16,
         )
- 
 
 class Index(ov.Struct):
     '''
@@ -78,7 +73,7 @@ class Index(ov.Struct):
             for i in range(slice.count.val):
                 yield slice.sector.val + i
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     TABLE = (
@@ -254,8 +249,6 @@ class Cat():
                     print(self.up.this, "BOGUS", catent)
                     continue
                 self.catents.append(catent)
-        
-                
 
     def commit(self):
         for catent in self.catents:

@@ -3,8 +3,7 @@
    -----------------
 '''
 
-import autoarchaeologist
-import autoarchaeologist.generic.hexdump as hexdump
+from ..generic import hexdump
 
 class Fields():
 

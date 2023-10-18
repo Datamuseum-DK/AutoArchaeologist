@@ -7,9 +7,8 @@ import os
 import mmap
 import urllib.request
 
+from .. import excavation
 import ddhf_bitstore_metadata
-
-import autoarchaeologist
 
 
 SERVERNAME = os.environ.get("AUTOARCHAEOLOGIST_BITSTORE_HOSTNAME")
@@ -168,7 +167,7 @@ class FromBitStore():
         self.loaded.add(arg)
         try:
             this = self.ctx.add_top_artifact(b, description=link_summary)
-        except autoarchaeologist.DuplicateArtifact as why:
+        except excavation.DuplicateArtifact as why:
             print(why)
             print(why.that)
             this = why.that

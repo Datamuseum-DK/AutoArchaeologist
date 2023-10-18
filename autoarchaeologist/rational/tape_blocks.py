@@ -12,8 +12,8 @@
        2: Middle record(s) in file
        3: Last record in file
 '''
-import autoarchaeologist
-import autoarchaeologist.scattergather as scattergather
+
+from .. import scattergather
 
 class R1K_Tape_blocks():
 

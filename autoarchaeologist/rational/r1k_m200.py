@@ -7,7 +7,7 @@
    (https://github.com/bsdphk/PyReveng3)
 '''
 
-import autoarchaeologist.rational.r1k_disass as r1k_disass
+from . import r1k_disass
 
 class R1kM200File():
     ''' IOC program '''

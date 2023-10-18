@@ -3,14 +3,14 @@ DKUUG and EUUG Conference tapes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+from autoarchaeologist import ddhf
 
 from autoarchaeologist.generic import textfiles
-from autoarchaeologist.generic.samesame import SameSame
-from autoarchaeologist.unix.tar_file import TarFile
-from autoarchaeologist.unix.compress import Compress
+from autoarchaeologist.generic import samesame
+from autoarchaeologist.unix import tar_file
+from autoarchaeologist.unix import compress
 
-class DkuugEuug(DDHF_Excavation):
+class DkuugEuug(ddhf.DDHF_Excavation):
 
     '''
     DKUUG and EUUG Conference tapes
@@ -19,10 +19,10 @@ class DkuugEuug(DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(Compress)
-        self.add_examiner(TarFile)
+        self.add_examiner(compress.Compress)
+        self.add_examiner(tar_file.TarFile)
         self.add_examiner(textfiles.TextFile)
-        self.add_examiner(SameSame)
+        self.add_examiner(samesame.SameSame)
 
         self.from_bitstore(
             "30001252",
@@ -30,7 +30,7 @@ class DkuugEuug(DDHF_Excavation):
         )
 
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         DkuugEuug,
         html_subdir="dkuug",
         ddhf_topic = "DKUUG/EUUG Conference tapes",

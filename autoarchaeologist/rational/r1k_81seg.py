@@ -6,9 +6,7 @@
 
 '''
 
-import sys
-
-import autoarchaeologist.rational.r1k_bittools as bittools
+from . import r1k_bittools as bittools
 
 class AclEntry(bittools.R1kSegField):
 
@@ -128,7 +126,7 @@ class Bla3(bittools.R1kSegBase):
 
     def recurse(self, **kwargs):
         yield from self.b4.recurse(**kwargs)
-        
+
 class Bla4(bittools.R1kSegBase):
 
     def __init__(self, seg, address, **kwargs):
@@ -147,7 +145,7 @@ class Bla4(bittools.R1kSegBase):
             yield from self.b5_1.recurse(pfx=pfx + "L", **kwargs)
         if self.b5_2:
             yield from self.b5_2.recurse(pfx=pfx + "R", **kwargs)
-        
+
 class Bla5(bittools.R1kSegBase):
 
     def __init__(self, seg, address, **kwargs):
@@ -197,7 +195,7 @@ class Bla5(bittools.R1kSegBase):
     def recurse(self, **kwargs):
         if self.b9:
             yield from self.b9.recurse(**kwargs)
-        
+
 class Bla6(bittools.R1kSegBase):
 
     def __init__(self, seg, address, **kwargs):

@@ -37,5 +37,5 @@ class SunOsDiskLabel():
             stop = start + (w[1] << 9)
             print(this, w, "0x%x" % start, "0x%x" % stop)
             y = this.create(start=start, stop=stop)
-            y.add_type("SunOS Partition") 
+            y.add_type("SunOS Partition")
             this.taken = self

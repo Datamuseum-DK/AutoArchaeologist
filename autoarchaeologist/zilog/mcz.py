@@ -1,13 +1,14 @@
-
+#!/usr/bin/env python3
 
 '''
    MCZ floppies
 
 '''
 
-import autoarchaeologist
-from autoarchaeologist.generic import disk
-import autoarchaeologist.generic.octetview as ov
+from ..generic import disk
+from ..generic import octetview as ov
+from .. import namespace
+from .. import type_case
 
 class Sector(disk.Sector):
     def __init__(self, *args, **kwargs):
@@ -57,7 +58,7 @@ class Label(Sector):
         super().__init__(*args, **kwargs)
         self.picture('L')
 
-class NameSpace(autoarchaeologist.NameSpace):
+class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     TABLE = (
@@ -201,7 +202,7 @@ class Directory(Chain):
                 continue
             dent.commit()
 
-class MCZAscii(autoarchaeologist.type_case.Ascii):
+class MCZAscii(type_case.Ascii):
 
     def __init__(self):
         super().__init__()
