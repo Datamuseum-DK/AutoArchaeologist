@@ -10,6 +10,9 @@ class CBM900_Partition():
     ''' The sizes are hardcoded in the device driver source code '''
 
     def __init__(self, this):
+        if this.top not in this.parents:
+            return
+
         if len(this) < NSLICE * SLICE:
             return
 

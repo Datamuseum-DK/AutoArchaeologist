@@ -7,7 +7,7 @@
 
 from ..generic import disk
 from ..base import namespace
-from ..generic import octetview as ov
+from ..base import octetview as ov
 
 # Size of sectors
 SEC_SIZE = (1 << 9)
@@ -21,9 +21,9 @@ class Kit(ov.Struct):
         the first two are conspicuously zero on all extant
         filesystems.
     '''
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             sys_slice_size_=ov.Be16,
             slice_size_=ov.Be16,
@@ -40,9 +40,9 @@ class Slice(ov.Struct):
         Index block (cf. RCSL-43-GL-7915 p.5)
         -------------------------------------
     '''
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             count_=ov.Be16,
             sector_=ov.Be16,
@@ -53,9 +53,9 @@ class Index(ov.Struct):
         Index block (cf. RCSL-43-GL-7915 p.5)
         -------------------------------------
     '''
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             count_=ov.Be16,
             more=True,
@@ -66,7 +66,7 @@ class Index(ov.Struct):
                 self.addfield("a%03d" % i, Slice)
                 self.slices.append(getattr(self, "a%03d" % i))
         self.done(SEC_SIZE)
-        self.up.set_picture('I', lo=lo)
+        self.tree.set_picture('I', lo=lo)
 
     def __iter__(self):
         for slice in self.slices:
@@ -119,9 +119,9 @@ class CatEnt(ov.Struct):
         Catalog Entry (cf. RCSL-43-GL-7915 p.11)
         ----------------------------------------
     '''
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             name_=ov.Text(6),
             w3_=ov.Be16,
@@ -196,40 +196,40 @@ class CatEnt(ov.Struct):
         if self.is_subcat:
             return
         self.idx = Index(
-            self.up,
-            self.up.offset + self.idxblk.val * SEC_SIZE
+            self.tree,
+            self.tree.offset + self.idxblk.val * SEC_SIZE
         ).insert()
         l = []
         for i in self.idx:
-            off = self.up.offset + i * SEC_SIZE
+            off = self.tree.offset + i * SEC_SIZE
             d = disk.DataSector(
-                self.up,
+                self.tree,
                 lo=off,
                 hi=off+SEC_SIZE,
                 namespace=self.namespace
             ).insert()
             if len(l) < self.length.val:
-                l.append(self.up.this[off:off + SEC_SIZE])
+                l.append(self.tree.this[off:off + SEC_SIZE])
         if l:
-            that = self.up.this.create(bits = b''.join(l))
+            that = self.tree.this.create(bits = b''.join(l))
             self.namespace.ns_set_this(that)
         else:
-            print(self.up.this, "no that", self.namespace, self, l)
+            print(self.tree.this, "no that", self.namespace, self, l)
 
 class Cat():
-    def __init__(self, up, pnamespace, idxblk):
-        self.up = up
+    def __init__(self, tree, pnamespace, idxblk):
+        self.tree = tree
         self.pnamespace = pnamespace
         self.idxblk = idxblk
 
-        self.idx = Index(self.up, self.up.offset + idxblk * SEC_SIZE).insert()
+        self.idx = Index(self.tree, self.tree.offset + idxblk * SEC_SIZE).insert()
         self.catents = []
 
         for i in self.idx:
-            off = self.up.offset + i * SEC_SIZE
-            self.up.set_picture('C', lo=off)
+            off = self.tree.offset + i * SEC_SIZE
+            self.tree.set_picture('C', lo=off)
             for j in range(0, SEC_SIZE, 32):
-                catent = CatEnt(self.up, off + j).insert()
+                catent = CatEnt(self.tree, off + j).insert()
                 if catent.attrib.val in (0, 0xe5e5):
                     continue
                 if catent.attrib.val not in (
@@ -246,7 +246,7 @@ class Cat():
                     0x4010,
                     0x8010,
                 ):
-                    print(self.up.this, "BOGUS", catent)
+                    print(self.tree.this, "BOGUS", catent)
                     continue
                 self.catents.append(catent)
 
@@ -266,7 +266,7 @@ class Cat():
             if not catent.name.txt:
                 continue
             try:
-                catent.subcat = Cat(self.up, catent.namespace, catent.idxblk.val)
+                catent.subcat = Cat(self.tree, catent.namespace, catent.idxblk.val)
                 catent.subcat.commit()
             except:
                 print("SUBCAT FAIL", catent)

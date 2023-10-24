@@ -7,7 +7,7 @@
 
 '''
 
-from ..generic import octetview as ov
+from ..base import octetview as ov
 from ..generic import disk
 from ..base import namespace
 
@@ -21,7 +21,7 @@ class LinkageBlock(disk.Sector):
             yield self[i]
 
     def __getitem__(self, idx):
-        return self.up.this[self.lo + idx * 2 + 1], self.up.this[self.lo + idx * 2]
+        return self.tree.this[self.lo + idx * 2 + 1], self.tree.this[self.lo + idx * 2]
 
     def render(self):
         ''' render as list of "track,sect" '''
@@ -30,15 +30,15 @@ class LinkageBlock(disk.Sector):
 class Linkage():
     ''' A list of LinkageBlocks '''
 
-    def __init__(self, up, cyl, sect, name):
-        self.up = up
+    def __init__(self, tree, cyl, sect, name):
+        self.tree = tree
         self.cyl = cyl
         self.sect = sect
         self.lbs = []
         self.name = name
         while cyl != 0 or sect != 0:
-            lblock = LinkageBlock(up, cyl=cyl, head=0, sect=sect)
-            self.up.picture[(cyl, 0, sect)] = "L"
+            lblock = LinkageBlock(tree, cyl=cyl, head=0, sect=sect)
+            self.tree.picture[(cyl, 0, sect)] = "L"
             if lblock[0] != (0,0) and len(self.lbs) == 0:
                 break
             lblock.ident = "LinkageBlock[»%s«,%d]" % (name, len(self.lbs))
@@ -51,7 +51,7 @@ class Linkage():
                 if lblock[i] == (0,0):
                     return
                 self.sectors.append(
-                    disk.DataSector(self.up, cyl=lblock[i][0], head=0, sect=lblock[i][1])
+                    disk.DataSector(self.tree, cyl=lblock[i][0], head=0, sect=lblock[i][1])
                 )
 
     def __iter__(self):
@@ -140,7 +140,7 @@ class DirEnt(ov.Octets):
 
     def commit(self):
         ''' Commit to this directory entry '''
-        self.linkage = Linkage(self.up, *self.linkadr, self.name)
+        self.linkage = Linkage(self.tree, *self.linkadr, self.name)
         that = []
         unread = False
         for idx, sec in enumerate(self.linkage):
@@ -148,28 +148,28 @@ class DirEnt(ov.Octets):
             sec.terse = True
             if sec.is_unread:
                 unread = True
-                self.up.picture[(sec.cyl, 0, sec.sect)] = "▒"
+                self.tree.picture[(sec.cyl, 0, sec.sect)] = "▒"
             else:
-                self.up.picture[(sec.cyl, 0, sec.sect)] = "·"
+                self.tree.picture[(sec.cyl, 0, sec.sect)] = "·"
             sec.ident = "DataSector[»%s«]" % (self.name,)
             that.append(sec.octets())
         if that:
-            i = self.up.this.create(b''.join(that)[:self.blocks * 128 + self.tail - 128])
+            i = self.tree.this.create(b''.join(that)[:self.blocks * 128 + self.tail - 128])
             self.namespace.ns_set_this(i)
             if unread:
                 i.add_note("UNREAD_DATA")
 
 class Directory():
     ''' The directory sectors '''
-    def __init__(self, up, linkage):
-        self.up = up
+    def __init__(self, tree, linkage):
+        self.tree = tree
         self.linkage = linkage
         self.dirents = []
-        self.namespace = NameSpace(None, separator="", root=up.this)
+        self.namespace = NameSpace(None, separator="", root=tree.this)
         for sec in linkage:
-            self.up.picture[(sec.cyl, 0, sec.sect)] = "D"
+            self.tree.picture[(sec.cyl, 0, sec.sect)] = "D"
             for off in range(0, 128, 16):
-                i = DirEnt(up, sec.lo + off, width = 16, namespace=self.namespace)
+                i = DirEnt(tree, sec.lo + off, width = 16, namespace=self.namespace)
                 i.insert()
                 self.dirents.append(i)
 

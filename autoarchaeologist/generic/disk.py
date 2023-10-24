@@ -4,12 +4,12 @@
    Utilities for Disks
 '''
 
-from . import octetview as ov
+from ..base import octetview as ov
 
 class Sector(ov.Octets):
     ''' A sector '''
     def __init__(self,
-        up,
+        tree,
         cyl=None,
         head=None,
         sect=None,
@@ -18,25 +18,25 @@ class Sector(ov.Octets):
         **kwargs,
     ):
         if lo is None:
-            lo = up.seclo[(cyl, head, sect)]
+            lo = tree.seclo[(cyl, head, sect)]
         else:
-            cyl, head, sect = up.losec[lo]
+            cyl, head, sect = tree.losec[lo]
         super().__init__(
-            up,
+            tree,
             lo,
-            width=up.width[(cyl, head, sect)],
+            width=tree.width[(cyl, head, sect)],
             **kwargs,
         )
         self.cyl = cyl
         self.head = head
         self.sect = sect
-        self.is_unread = self.this[self.lo:self.hi] == up.unread_pattern
+        self.is_unread = self.this[self.lo:self.hi] == tree.unread_pattern
         if self.is_unread and unread_note:
-            self.up.this.add_note(unread_note)
+            self.tree.this.add_note(unread_note)
         self.terse = False
 
     def picture(self, what):
-        self.up.picture[(self.cyl, self.head, self.sect)] = what
+        self.tree.picture[(self.cyl, self.head, self.sect)] = what
 
     def render(self):
         ''' Render respecting byte ordering '''
@@ -47,15 +47,15 @@ class Sector(ov.Octets):
             octets = self.octets()
         else:
             octets = self.iter_bytes()
-        yield self.ident + " |" + self.this.type_case.decode(octets) + "|"
+        yield self.ident + " ┆" + self.this.type_case.decode(octets) + "┆"
 
     ident = "Sector"
 
 class DataSector(Sector):
     ''' A data sector '''
-    def __init__(self, up, *args, namespace=None, **kwargs):
+    def __init__(self, tree, *args, namespace=None, **kwargs):
         super().__init__(
-            up,
+            tree,
             *args,
             unread_note="UNREAD_DATA_SECTOR",
             **kwargs
@@ -70,16 +70,16 @@ class DataSector(Sector):
 
 class UnusedSector(Sector):
     ''' An unused sector '''
-    def __init__(self, up, *args, **kwargs):
+    def __init__(self, tree, *args, **kwargs):
         super().__init__(
-            up,
+            tree,
             *args,
             unread_note="UNREAD_UNUSED_SECT",
             **kwargs
         )
-        i = set(self.up.this[self.lo:self.hi])
+        i = set(self.tree.this[self.lo:self.hi])
         if len(i) == 1:
-            self.fill = " 0x%02x[%d]" % (self.up.this[self.lo], self.hi - self.lo)
+            self.fill = " 0x%02x[%d]" % (self.tree.this[self.lo], self.hi - self.lo)
         else:
             self.fill = None
 

@@ -22,7 +22,7 @@ class Slug():
         self.flags = flags
 
     def __str__(self):
-        return "<Slug '" + self.short + "' '" + self.long + "'>"
+        return "<Slug '»" + self.short + "«' '»" + self.long + "«'>"
 
 
 class TypeCase():
@@ -40,7 +40,7 @@ class TypeCase():
     IGNORE = 0x02
     EOF = 0x04
 
-    noslug = Slug(' ', '', INVALID)
+    noslug = Slug(' ', '▒', INVALID)
 
     def __init__(self, name, bitwidth=8):
         self.name = name
@@ -57,6 +57,13 @@ class TypeCase():
         if slug.flags & self.INVALID:
             return None
         return slug
+
+    def __iter__(self):
+        ''' Iterate valid slugs '''
+        for n, slug in enumerate(self.slugs):
+            if slug.flags & self.INVALID:
+                continue
+            yield (n, slug)
 
     def hexdump(
         self,
@@ -88,6 +95,16 @@ class TypeCase():
         ''' Hexdump into a HTML file '''
         for i in self.hexdump(that, **kwargs):
             file.write(html.escape(i) + "\n")
+
+    def is_valid(self, octets):
+        ''' return (bool, string) '''
+        retval = True
+        j = ''
+        for i in octets:
+            if self.slugs[i].flags & self.INVALID:
+                retval = False
+            j += self.slugs[i].long
+        return retval, j
 
     def decode(self, octets):
         ''' decode octets using short form, not checking flags '''
@@ -128,6 +145,7 @@ class Ascii(WellKnown):
         super().__init__("ascii")
 
 class EvenPar(TypeCase):
+    ''' Make an even parity version of another type case '''
 
     ODD = 0
     PARITY = "Even"
@@ -154,6 +172,8 @@ class EvenPar(TypeCase):
         super().set_slug(self.parity(nbr), *args, **kwargs)
 
 class OddPar(EvenPar):
+    ''' Make an odd parity version of another type case '''
+
     ODD = 1
     PARITY = "Odd"
 
@@ -172,6 +192,8 @@ class DS2089(WellKnown):
             ( 0x7b, 'æ',),
             ( 0x7c, 'ø',),
             ( 0x7d, 'å',),
-            ( 0x7d, 'ü',),
+            ( 0x7e, 'ü',),
         ):
             self.set_slug(i, j, j)
+
+ascii = Ascii()

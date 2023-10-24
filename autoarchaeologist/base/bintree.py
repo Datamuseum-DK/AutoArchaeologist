@@ -17,7 +17,7 @@ rather than the interval they cover, but for now it seems to work
 pretty ok.
 '''
 
-class TreeLeaf():
+class BinTreeLeaf():
     '''
     Leaves of the tree
     ------------------
@@ -30,7 +30,7 @@ class TreeLeaf():
         self.hi = hi
 
     def __repr__(self):
-        return "<tree_leaf 0x%x-0x%x>" % (self.lo, self.hi)
+        return "<BinTreeLeaf 0x%x-0x%x>" % (self.lo, self.hi)
 
     def __lt__(self, other):
         if self.lo != other.lo:
@@ -40,7 +40,7 @@ class TreeLeaf():
     def __eq__(self, other):
         return self.lo == other.lo and self.hi == other.hi
 
-class Tree():
+class BinTree():
 
     '''
     Root/branch class of the tree
@@ -60,22 +60,22 @@ class Tree():
         self.gauge = 0
 
     def __repr__(self):
-        return "<Tree 0x%x-0x%x-0x%x>" % (self.lo, self.mid, self.hi)
+        return "<BinTree 0x%x-0x%x-0x%x>" % (self.lo, self.mid, self.hi)
 
     def insert(self, leaf):
         ''' You guessed it... '''
-        assert isinstance(leaf, TreeLeaf)
+        assert isinstance(leaf, BinTreeLeaf)
         assert leaf.lo < leaf.hi
         self.gauge += 1
         if self.hi - self.lo <= self.limit:
             self.cuts.append(leaf)
         elif leaf.hi <= self.mid:
             if self.less is None:
-                self.less = Tree(self.lo, self.mid, self.limit)
+                self.less = BinTree(self.lo, self.mid, self.limit)
             self.less.insert(leaf)
         elif leaf.lo >= self.mid:
             if self.more is None:
-                self.more = Tree(self.mid, self.hi, self.limit)
+                self.more = BinTree(self.mid, self.hi, self.limit)
             self.more.insert(leaf)
         else:
             self.cuts.append(leaf)
@@ -115,36 +115,37 @@ class Tree():
         yield from lst
 
     def gaps(self):
+        ''' Yield all the gaps in the tree '''
         last = 0
         for i in self:
             if i.lo > last:
                 yield (last, i.lo)
             last = i.hi
-        if last < len(self.this):
-            yield (last, len(self.this))
+        if last < self.hi:
+            yield (last, self.hi)
 
 def test_tree():
     ''' Minimal test cases '''
 
     print("Testing tree class")
-    oak = Tree(0, 0x500)
+    oak = BinTree(0, 0x500)
 
     # Super items
-    oak.insert(TreeLeaf(0x100, 0x400))
-    oak.insert(TreeLeaf(0x100, 0x300))
-    oak.insert(TreeLeaf(0x200, 0x400))
+    oak.insert(BinTreeLeaf(0x100, 0x400))
+    oak.insert(BinTreeLeaf(0x100, 0x300))
+    oak.insert(BinTreeLeaf(0x200, 0x400))
 
     # Same items
-    oak.insert(TreeLeaf(0x200, 0x300))
+    oak.insert(BinTreeLeaf(0x200, 0x300))
 
     # Sub items
-    oak.insert(TreeLeaf(0x210, 0x290))
-    oak.insert(TreeLeaf(0x200, 0x299))
-    oak.insert(TreeLeaf(0x201, 0x300))
+    oak.insert(BinTreeLeaf(0x210, 0x290))
+    oak.insert(BinTreeLeaf(0x200, 0x299))
+    oak.insert(BinTreeLeaf(0x201, 0x300))
 
     # Skew items
-    oak.insert(TreeLeaf(0x100, 0x299))
-    oak.insert(TreeLeaf(0x201, 0x400))
+    oak.insert(BinTreeLeaf(0x100, 0x299))
+    oak.insert(BinTreeLeaf(0x201, 0x400))
 
     low = 0
     length = 0

@@ -9,7 +9,7 @@
 from ..generic import disk
 from ..base import type_case
 from ..base import namespace
-from ..generic import octetview as ov
+from ..base import octetview as ov
 
 N_SECT = 26
 N_TRACK = 77
@@ -28,9 +28,9 @@ class HomeBlock(ov.Struct):
        CR80_FS2Interleave.
     '''
 
-    def __init__(self, up, lo, fe16=ov.Le16, fe32=ov.Le32):
+    def __init__(self, tree, lo, fe16=ov.Le16, fe32=ov.Le32):
         super().__init__(
-            up,
+            tree,
             lo,
             vertical=False,
             label_=ov.Text(16),
@@ -49,8 +49,8 @@ class HomeBlock(ov.Struct):
             format_=fe16,
             state_=fe16,
         )
-        self.up.set_picture('H', lo=lo)
-        self.up.picture_legend['H'] = 'Home Block'
+        self.tree.set_picture('H', lo=lo)
+        self.tree.picture_legend['H'] = 'Home Block'
 
     def is_sensible(self, xor=0x00, verbose=True):
         ''' Does this even make sense ?! '''
@@ -59,19 +59,19 @@ class HomeBlock(ov.Struct):
         # until the interleave has been sorted out.
         #if 0 and self.format.val > 10:
         #    if verbose:
-        #        print(self.up.this, "-Homeblock.format", hex(self.format.val))
+        #        print(self.tree.this, "-Homeblock.format", hex(self.format.val))
         #    return False
 
-        nlba = len(self.up.this) // L_SECTOR_LENGTH
+        nlba = len(self.tree.this) // L_SECTOR_LENGTH
 
         if not 0 < self.bfdadr.val < nlba:
             if verbose:
-                print(self.up.this, "-Homeblock.bfdaddr", hex(self.bfdadr.val))
+                print(self.tree.this, "-Homeblock.bfdaddr", hex(self.bfdadr.val))
             return False
 
         if not 0 < self.sectors.val <= nlba:
             if verbose:
-                print(self.up.this, "-Homeblock.sectors", hex(self.sectors.val))
+                print(self.tree.this, "-Homeblock.sectors", hex(self.sectors.val))
             return False
 
         b = bytearray(x ^ xor for x in self.label.iter_bytes())
@@ -80,7 +80,7 @@ class HomeBlock(ov.Struct):
 
         if len(b) == 0:
             if verbose:
-                print(self.up.this, "-Homeblock.label", [b])
+                print(self.tree.this, "-Homeblock.label", [b])
             return False
 
         for i in b:
@@ -92,7 +92,7 @@ class HomeBlock(ov.Struct):
                 pass
             else:
                 if verbose:
-                    print(self.up.this, "-Homeblock.label", [b], hex(i))
+                    print(self.tree.this, "-Homeblock.label", [b], hex(i))
                 return False
 
         return True
@@ -102,7 +102,7 @@ class IBe16(ov.Be16):
         super().__init__(*args, **kwargs)
         self.val ^= 0xffff
 
-class IRe32(ov.Re32):
+class IRe32(ov.L2301):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.val ^= 0xffffffff
@@ -158,7 +158,7 @@ class CR80_FS2Interleave(ov.OctetView):
     def set_picture(self, *args, **kwargs):
         return
 
-    def fe16(self, _up, off):
+    def fe16(self, _tree, off):
         a = off // 128
         b = off % 128
         a *= 2
@@ -168,7 +168,7 @@ class CR80_FS2Interleave(ov.OctetView):
         retval ^= 0xffff
         return retval
 
-    def fe32(self, _up, off):
+    def fe32(self, _tree, off):
         a = off // 128
         b = off % 128
         a *= 2
@@ -224,9 +224,9 @@ class NameSpace(namespace.NameSpace):
 
 
 class IndexBlock(ov.Struct):
-    def __init__(self, up, lo, bfd):
+    def __init__(self, tree, lo, bfd):
         super().__init__(
-            up,
+            tree,
             lo,
             vertical=False,
             pad00_=ov.Le16,
@@ -245,8 +245,8 @@ class IndexBlock(ov.Struct):
             y = self.addfield(None, ov.Le16)
 
         self.done(pad=0x200)
-        self.up.set_picture('I', lo=lo)
-        self.up.picture_legend['I'] = 'Index Block'
+        self.tree.set_picture('I', lo=lo)
+        self.tree.picture_legend['I'] = 'Index Block'
 
     def __getitem__(self, idx):
         return self.list[idx].val
@@ -265,10 +265,10 @@ class IndexBlock(ov.Struct):
         yield from a[1:]
 
 class BasicFileDesc(ov.Struct):
-    def __init__(self, up, nbr, lo):
+    def __init__(self, tree, nbr, lo):
         self.nbr = nbr
         super().__init__(
-            up,
+            tree,
             lo,
             vertical=False,
             ok_=ov.Le16,
@@ -298,8 +298,8 @@ class BasicFileDesc(ov.Struct):
         self.committed = False
         if not self.valid():
             return
-        self.up.set_picture('B', lo=lo)
-        self.up.picture_legend['B'] = 'Basic File Directory'
+        self.tree.set_picture('B', lo=lo)
+        self.tree.picture_legend['B'] = 'Basic File Directory'
         self.taken = False
 
         if self.ok.val == 0:
@@ -308,7 +308,7 @@ class BasicFileDesc(ov.Struct):
             for i in range(self.nsect.val):
                 self.block_list.append(self.sector.val + i)
         else:
-            self.index_block = IndexBlock(up, self.sector.val << 9, self)
+            self.index_block = IndexBlock(tree, self.sector.val << 9, self)
             for bn in self.index_block.iter_sectors():
                 for mult in range(self.areasz.val):
                     self.block_list.append(bn + mult)
@@ -355,20 +355,20 @@ class BasicFileDesc(ov.Struct):
         yield from self.block_list
 
 class DataSector():
-    def __init__(self, up, lo, bfdno):
+    def __init__(self, tree, lo, bfdno):
         self.is_unread = False
         for i in range(4):
             y = disk.DataSector(
-                up,
+                tree,
                 lo=lo + i * SECTOR_LENGTH,
             ).insert()
             y.ident = "DataSector[bfd#%d]" % bfdno
             self.is_unread |= y.is_unread
 
 class SymbolicFileDesc(ov.Struct):
-    def __init__(self, up, lo, pnamespace):
+    def __init__(self, tree, lo, pnamespace):
         super().__init__(
-            up,
+            tree,
             lo,
             vertical=False,
             valid_=ov.Le16,
@@ -384,16 +384,16 @@ class SymbolicFileDesc(ov.Struct):
         if self.valid.val != 1:
             self.namespace = None
             self.bfd = None
-        elif self.file.val in up.bfd:
+        elif self.file.val in tree.bfd:
             self.namespace = NameSpace(
                 name = self.fname.txt,
                 parent = pnamespace,
                 priv = self,
                 separator = "!"
             )
-            self.bfd = up.bfd[self.file.val]
+            self.bfd = tree.bfd[self.file.val]
         else:
-            print(self.up.this, "SFD has no BFD#", self.file.val)
+            print(self.tree.this, "SFD has no BFD#", self.file.val)
 
     def commit(self):
         ''' ... '''
@@ -403,10 +403,10 @@ class SymbolicFileDesc(ov.Struct):
             lo = sect << L_SECTOR_SHIFT
             hi = lo + (1 << L_SECTOR_SHIFT)
             if self.bfd.type.val != 0xa and self.file.val and not self.bfd.committed:
-                y = DataSector(self.up, lo=lo, bfdno = self.file.val)
+                y = DataSector(self.tree, lo=lo, bfdno = self.file.val)
                 self.bfd.committed = True
                 is_unread |= y.is_unread
-            bits.append(self.up.this[lo:hi])
+            bits.append(self.tree.this[lo:hi])
         self.bfd.taken = True
         if self.file.val <= 2:
             return
@@ -420,23 +420,23 @@ class SymbolicFileDesc(ov.Struct):
         if i & 1:
             # make sure the padding byte is legal ASCII
             bits = bits[:-2] + b' ' + bits[-1:]
-        that = self.up.this.create(bits = bits)
+        that = self.tree.this.create(bits = bits)
         if is_unread:
             that.add_note("UNREAD_DATA_SECTOR")
         self.namespace.ns_set_this(that)
 
 class Directory():
-    def __init__(self, up, namespace, bfdno):
-        self.up = up
+    def __init__(self, tree, namespace, bfdno):
+        self.tree = tree
         self.sfds = []
         self.namespace = namespace
         done = False
-        for sect in up.bfd[bfdno].iter_sectors():
+        for sect in tree.bfd[bfdno].iter_sectors():
             lo = sect << L_SECTOR_SHIFT
-            up.set_picture('S', lo=lo)
-            up.picture_legend['S'] = 'Symbolic File Directory'
+            tree.set_picture('S', lo=lo)
+            tree.picture_legend['S'] = 'Symbolic File Directory'
             for off in range(0, 1 << L_SECTOR_SHIFT, 32):
-                y = SymbolicFileDesc(up, lo + off, namespace).insert()
+                y = SymbolicFileDesc(tree, lo + off, namespace).insert()
                 self.sfds.append(y)
 
         for sfd in self.sfds:
@@ -449,14 +449,14 @@ class Directory():
             if not sfd.bfd:
                 continue
             if sfd.bfd.type.val == 0xa:
-                sfd.dir = Directory(up, sfd.namespace, sfd.file.val)
+                sfd.dir = Directory(tree, sfd.namespace, sfd.file.val)
 
     def commit(self):
         for sfd in self.sfds:
             if sfd.valid.val != 1:
                 continue
             if not sfd.bfd:
-                print(self.up.this, "NOBFD", sfd)
+                print(self.tree.this, "NOBFD", sfd)
                 continue
             if sfd.dir:
                 sfd.dir.commit()

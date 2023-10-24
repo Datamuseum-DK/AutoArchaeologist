@@ -6,9 +6,9 @@
 '''
 
 from ..generic.ascii import Str2Html
-import ..base import tree
+import ..base import bintree
 
-class Bits(tree.TreeLeaf):
+class Bits(bintree.BinTreeLeaf):
     ''' ... '''
 
     def __init__(self, up, lo, width=None, hi=None, name=None):
@@ -172,7 +172,7 @@ class Struct(Bits):
                         yield "  " + j[-1]
             yield "}"
 
-class BitView(tree.Tree):
+class BitView(bintree.BinTree):
     ''' ... '''
 
     def __init__(self, this):

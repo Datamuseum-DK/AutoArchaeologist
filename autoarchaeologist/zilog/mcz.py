@@ -6,15 +6,15 @@
 '''
 
 from ..generic import disk
-from ..generic import octetview as ov
+from ..base import octetview as ov
 from ..base import namespace
 from ..base import type_case
 
 class Sector(disk.Sector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.prev_sector = self.up.prev_sector(self.lo)
-        self.next_sector = self.up.next_sector(self.lo)
+        self.prev_sector = self.tree.prev_sector(self.lo)
+        self.next_sector = self.tree.next_sector(self.lo)
 
 class DataSector(Sector):
     def __init__(self, *args, **kwargs):
@@ -25,16 +25,16 @@ class DataSector(Sector):
     ident = "DataSector"
 
 class Chain():
-    def __init__(self, up, chs, stype=None):
+    def __init__(self, tree, chs, stype=None):
         if stype == None:
             stype = Sector
-        self.up = up
+        self.tree = tree
         self.first = chs
         self.sectors = []
         octets = []
         self.chs = []
         while chs != (255,0,255):
-            sect = stype(self.up, *chs)
+            sect = stype(self.tree, *chs)
             self.sectors.append(sect)
             octets.append(sect.this[sect.lo+2:sect.lo+130])
             chs = sect.next_sector
@@ -105,9 +105,9 @@ class NameSpace(namespace.NameSpace):
         ] + super().ns_render()
 
 class TrackSect(ov.Struct):
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             sector_=ov.Octet,
             track_=ov.Octet,
@@ -117,9 +117,9 @@ class TrackSect(ov.Struct):
         yield "%d,%d" % (self.track.val, self.sector.val)
 
 class DescRec(ov.Struct):
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             rsv0_=4,
             file_id_=2,
@@ -138,9 +138,9 @@ class DescRec(ov.Struct):
         )
 
 class DirEnt(ov.Struct):
-    def __init__(self, up, lo, pnamespace):
+    def __init__(self, tree, lo, pnamespace):
         super().__init__(
-            up,
+            tree,
             lo,
             flag_=ov.Octet,
             more=True,
@@ -163,30 +163,30 @@ class DirEnt(ov.Struct):
             priv = self,
             separator = "",
         )
-        sect = Sector(self.up, self.track.val, 0, self.sector.val)
+        sect = Sector(self.tree, self.track.val, 0, self.sector.val)
         sect.picture('R')
-        self.desc = DescRec(self.up, lo = sect.lo + 2)
+        self.desc = DescRec(self.tree, lo = sect.lo + 2)
         self.desc.insert()
 
-        self.chain = Chain(self.up, sect.next_sector, stype=DataSector)
+        self.chain = Chain(self.tree, sect.next_sector, stype=DataSector)
         self.chain.insert()
         self.chain.picture('·')
         i = 128 - self.desc.lastbytes.val
         if i:
-            that = self.up.this.create(bits=self.chain.octets[:-i])
+            that = self.tree.this.create(bits=self.chain.octets[:-i])
         else:
-            that = self.up.this.create(bits=self.chain.octets)
+            that = self.tree.this.create(bits=self.chain.octets)
         self.namespace.ns_set_this(that)
 
 class Directory(Chain):
-    def __init__(self, up, chs, pnamespace):
-        super().__init__(up, chs)
+    def __init__(self, tree, chs, pnamespace):
+        super().__init__(tree, chs)
         self.picture("D")
         self.dirents = []
         for sect in self.sectors:
             offset = sect.lo + 2
             while True:
-                dent = DirEnt(up, offset, pnamespace)
+                dent = DirEnt(tree, offset, pnamespace)
                 self.dirents.append(dent)
                 if dent.flag.val in (0x00, 0xff):
                     break

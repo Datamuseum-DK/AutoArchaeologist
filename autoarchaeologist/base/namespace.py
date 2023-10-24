@@ -65,6 +65,7 @@ class NameSpace():
         return '<NS ' + str(self.ns_root) + " " + self.ns_path() + '>'
 
     def ns_set_root(self, root):
+        ''' Set the root artifact '''
         if self.ns_root == root:
             return
         if self.ns_root:
@@ -74,6 +75,7 @@ class NameSpace():
         self.ns_root = root
 
     def ns_set_this(self, this):
+        ''' Set this nodes artifact '''
         if self.ns_this == this:
             return
         assert self.ns_this is None
@@ -81,6 +83,7 @@ class NameSpace():
         this.add_namespace(self)
 
     def ns_path(self):
+        ''' Get the path to this node '''
         sep = self.ns_separator
         if sep is None:
             sep = '/'
@@ -88,15 +91,8 @@ class NameSpace():
             return sep + self.ns_name
         return self.ns_parent.ns_path() + sep + self.ns_name
 
-    def ns_reference(self):
-        sep = self.ns_separator
-        if sep is None:
-            sep = '/'
-        if self.ns_parent:
-            return self.ns_parent.ns_reference() + sep + self.ns_name
-        return self.ns_this.summary(types=False, descriptions=False) + self.ns_name
-
     def ns_render(self):
+        ''' Return path and summary for interpretation table '''
         path = self.ns_path()
         if self.ns_this:
             return [ path, self.ns_this.summary(notes=True, descriptions=False, types=True) ]
@@ -112,6 +108,7 @@ class NameSpace():
             child.ns_separator = self.ns_separator
 
     def ns_recurse(self, level=0):
+        ''' Recuse through the graph '''
         yield level, self
         for child in sorted(self.ns_children):
             yield from child.ns_recurse(level+1)

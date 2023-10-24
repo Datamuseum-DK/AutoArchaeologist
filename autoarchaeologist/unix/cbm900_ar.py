@@ -2,7 +2,7 @@
    AR(1) format
 '''
 
-from ..generic import octetview as ov
+from ..base import octetview as ov
 from ..base import namespace
 from .unix_stat import UnixStat
 
@@ -18,7 +18,7 @@ class ArHdr(ov.Struct):
             gid_=ov.Le16,
             uid_=ov.Le16,
             mode_=ov.Le16,
-            size_=ov.Me32,
+            size_=ov.L1032,
         )
         self.name.txt = self.name.txt.rstrip()
 

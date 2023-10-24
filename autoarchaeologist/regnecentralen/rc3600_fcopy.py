@@ -6,7 +6,7 @@
 
 from ..generic import disk
 from ..base import namespace
-from ..generic import octetview as ov
+from ..base import octetview as ov
 
 # Size of sectors
 SEC_SIZE = (1 << 9)

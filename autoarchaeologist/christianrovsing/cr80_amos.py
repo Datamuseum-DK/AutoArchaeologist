@@ -5,7 +5,7 @@
    See: 30004610
 '''
 
-from ..generic import octetview as ov
+from ..base import octetview as ov
 
 from .cr80_util import *
 

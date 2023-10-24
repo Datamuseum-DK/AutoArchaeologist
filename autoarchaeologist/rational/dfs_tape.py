@@ -3,7 +3,7 @@
    -----------------------
 '''
 
-from ..generic import octetview as ov
+from ..base import octetview as ov
 from ..base import namespace
 
 class NameSpace(namespace.NameSpace):

@@ -9,7 +9,7 @@
 from ..generic import disk
 from ..base import type_case
 from ..base import namespace
-from ..generic import octetview as ov
+from ..base import octetview as ov
 
 N_SECT = 26
 N_TRACK = 77
@@ -124,9 +124,9 @@ class NameSpace(namespace.NameSpace):
         return b
 
 class DirEnt(ov.Struct):
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             vertical=False,
             filename_=ov.Text(6),
@@ -164,8 +164,8 @@ class DirEnt(ov.Struct):
 
         self.namespace = None
         if self.this[self.lo:self.hi] == UNREAD[:64]:
-            print(up.this, "File has unread dir sector", self)
-            self.up.this.add_note("BADSECT_DIR")
+            print(tree.this, "File has unread dir sector", self)
+            self.tree.this.add_note("BADSECT_DIR")
 
         self.dirents = []
 
@@ -209,10 +209,10 @@ class DirEnt(ov.Struct):
         if self.kind.val == 0x600:
             for x in self.iter_sectors():
                 for i in range(0, SECTOR_LENGTH, 0x40):
-                    y = DirEnt(self.up, x + i)
+                    y = DirEnt(self.tree, x + i)
                     if y.kind.val not in KINDS:
                         y.insert()
-                        # y = ov.Octets(self.up, x + i, width = 0x40).insert()
+                        # y = ov.Octets(self.tree, x + i, width = 0x40).insert()
                     else:
                         y.insert()
                         self.dirents.append(y)
@@ -224,19 +224,19 @@ class DirEnt(ov.Struct):
             for n, lba in enumerate(self.iter_sectors()):
                 try:
                     y = disk.DataSector(
-                        self.up,
+                        self.tree,
                         lo=lba,
                         namespace = self.namespace,
                     ).insert()
                     is_unread |= y.is_unread
-                    b.append(self.up.this[lba:lba+SECTOR_LENGTH])
-                    self.up.picture[(y.cyl, y.head, y.sect)] = '·'
+                    b.append(self.tree.this[lba:lba+SECTOR_LENGTH])
+                    self.tree.picture[(y.cyl, y.head, y.sect)] = '·'
                 except Exception as err:
                     # Probably _UNREAD_
                     return
             b = b''.join(b)
             if len(b) > 0:
-                y = self.up.this.create(bits = b)
+                y = self.tree.this.create(bits = b)
                 self.namespace.ns_set_this(y)
                 if is_unread:
                     y.add_note("UNREAD_DATA_SECTOR")
