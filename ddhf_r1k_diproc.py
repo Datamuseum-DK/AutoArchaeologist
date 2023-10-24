@@ -19,10 +19,6 @@ class R1KDIPROC(ddhf.DDHF_Excavation):
             "30002517",
             "30003041",
         )
-        self.from_bitstore(
-            "30002517",
-            "30003041",
-        )
 
 if __name__ == "__main__":
     ddhf.main(
