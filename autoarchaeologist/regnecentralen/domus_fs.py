@@ -344,4 +344,4 @@ class Domus_Filesystem(disk.Disk):
 
         self.fill_gaps()
 
-        self.render()
+        self.add_interpretation()

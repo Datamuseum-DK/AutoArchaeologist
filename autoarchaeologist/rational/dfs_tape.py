@@ -95,4 +95,4 @@ class R1K_DFS_Tape(ov.OctetView):
             else:
                 offset += len(r)
 
-        self.render()
+        self.add_interpretation()

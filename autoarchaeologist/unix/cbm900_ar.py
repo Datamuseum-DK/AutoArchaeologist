@@ -78,4 +78,4 @@ class Ar(ov.OctetView):
             offset = z.hi
             NameSpace(y.name.txt, self.namespace, this=z.this, priv=y)
         this.add_interpretation(self, self.namespace.ns_html_plain)
-        self.render()
+        self.add_interpretation()

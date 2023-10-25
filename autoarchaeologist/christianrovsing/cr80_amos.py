@@ -180,5 +180,5 @@ class AmosExec(ov.OctetView):
         self.data = DataDesc(self, self.prog.size.val << 1).insert()
 
         this.add_type("CR80_EXEC")
-        self.render()
+        self.add_interpretation()
 

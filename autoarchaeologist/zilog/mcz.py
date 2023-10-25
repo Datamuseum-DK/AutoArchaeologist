@@ -243,7 +243,7 @@ class MCZRIO(disk.Disk):
         self.fill_gaps()
         this.add_interpretation(self, self.namespace.ns_html_plain)
         this.add_interpretation(self, self.disk_picture)
-        self.render()
+        self.add_interpretation()
 
     def prefix(self, lo, hi):
         ''' Line prefix is hex off set + CHS '''

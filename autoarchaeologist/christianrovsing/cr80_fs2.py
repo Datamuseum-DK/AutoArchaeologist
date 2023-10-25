@@ -527,7 +527,7 @@ class CR80_FS2(disk.Disk):
 
         self.fill_gaps()
 
-        self.render()
+        self.add_interpretation()
 
     def set_picture(self, what, lo):
         for i in range(L_SECTOR_LENGTH//SECTOR_LENGTH):

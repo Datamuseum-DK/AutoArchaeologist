@@ -107,4 +107,4 @@ class Domus_FCOPY(disk.Disk):
 
         # self.fill_gaps()
 
-        # self.render()
+        # self.add_interpretation()

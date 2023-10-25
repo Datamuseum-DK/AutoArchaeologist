@@ -464,7 +464,7 @@ class OctetView(bintree.BinTree):
         if lo < self.hi:
             yield from self.pad(lo, self.hi)
 
-    def render(self, title="OctetView"):
+    def add_interpretation(self, title="OctetView"):
         ''' Render via utf8 file '''
         # print(self.this, "Rendering", self.gauge, "octetview-leaves")
         tfn = self.this.add_html_interpretation(title)
@@ -499,3 +499,5 @@ class OctetView(bintree.BinTree):
                 file.write(self.prefix(lasti.lo, lasti.hi) + " …[0x%x]\n" % rpt)
             file.write(trunc)
             file.write("</pre>\n")
+
+    
