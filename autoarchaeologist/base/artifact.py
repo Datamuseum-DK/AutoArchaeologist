@@ -2,16 +2,16 @@
 
 '''
     AutoArchaeologist Artifact
-    --------------------------
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 '''
 
-import os
 import hashlib
 import html
 
 from itertools import zip_longest
 
+from . import bintree
 from . import excavation
 from . import interpretation
 from . import octetview as ov
@@ -21,13 +21,15 @@ from .. import scattergather
 class DuplicateName(Exception):
     ''' Set names must be unique '''
 
-class Artifact():
+class ArtifactBase():
 
     '''
-        Artifact
-        --------
+        ArtifactBase
+        ------------
 
-        Artifacts are just bytearrays with a high-school diploma.
+        Artifacts are just bytearrays with a high-school diploma,
+        but they come in different flavours, for which this is
+        the base class.
 
         Artifacts are always created relative to another artifact,
         or in the case of the top-level artifacts, relative to the
@@ -38,18 +40,14 @@ class Artifact():
         subsets, like the concatenation of a file's blocks in from
         a filesystem or transformations like uncompression.
 
-        XXX
+        The different subclasses implement different styles of
+        artifacts, while trying to economize RAM.
 
     '''
 
-    def __init__(self, digest, bits):
-        assert len(bits) > 0
-        if isinstance(bits, (memoryview, scattergather.ScatterGather)):
-            self.bdx = bits
-        else:
-            self.bdx = memoryview(bits)
+    def __init__(self):
 
-        self.digest = digest
+        self.digest = None
 
         self.parents = set()
         self.children = []
@@ -66,9 +64,7 @@ class Artifact():
 
         self.type_case = None
 
-        # self.add_parent(up)
         self.top = None
-        #self.top.add_artifact(self)
 
         self.index_representation = None
         self.link_to = ""
@@ -77,97 +73,48 @@ class Artifact():
         self.names = set()
 
         self.by_class = {} # Experimental extension point
+        self.separators = None
+        self._keys = {}
 
     def __str__(self):
-        if self.top:
-            return "\u27e6" + self.digest[:self.top.digest_prefix] + "\u27e7"
-        return "\u27e6" + self.digest[:7] + "\u27e7"
+        if not self.digest:
+            return "\u27e6…\u27e7"
+        if not self.top:
+            return "\u27e6" + self.digest[:7] + "\u27e7"
+        return "\u27e6" + self.digest[:self.top.digest_prefix] + "\u27e7"
 
     def __repr__(self):
         return str(self)
 
-    def __len__(self):
-        return len(self.bdx)
-
     def __hash__(self):
         return int(self.digest[:8], 16)
-
-    def __getitem__(self, idx):
-        return self.bdx[idx]
 
     def __lt__(self, other):
         if isinstance(other, excavation.Excavation):
             return 1
         return self.digest < other.digest
 
-    def __iter__(self):
-        yield from self.bdx
+    def get_rec(self, nbr):
+        return self._keys[nbr]
 
-    def iter_bytes(self):
-        if self.byte_order is None:
-            yield from self.bdx
-            return
+    def iter_rec(self):
+        yield from self._keys.values()
 
-        def group(input, chunk):
-            i = [iter(input)] * chunk
-            return zip_longest(*i, fillvalue=0)
-
-        for i in group(self.bdx, len(self.byte_order)):
-            for j in self.byte_order:
-                yield i[j]
-
-    def bits(self, lo, width=None, hi=None):
-        ''' Get a slice as a bitstring '''
-        if hi is None:
-            assert width is not None
-            hi = lo + width
-        retval = []
-        i = self.bdx[lo >> 3 : (hi + 7) >> 3]
-        for j in i:
-            retval.append(bin(256 | j)[-8:])
-        return("".join(retval)[lo & 7:hi - (lo & ~7)])
-
-    def bitint(self, lo, width=None, hi=None):
-        ''' Get a slice as integer '''
-        if hi is None:
-            assert width is not None
-            hi = lo + width
-        a = (lo) >> 3
-        b = (hi + 7) >> 3
-        c = self.bdx[a:b]
-        d = int.from_bytes(c, 'big')
-        if hi & 7:
-            e = d >> (8 - (hi & 7))
+    def set_digest(self, digest=None):
+        ''' Calculate the SHA256 digest '''
+        if digest is None:
+            i = hashlib.sha256()
+            for j in self.iter_chunks():
+                i.update(j)
+            self.digest = i.hexdigest()
         else:
-            e = d
-        f = e & ((1 << (hi - lo)) - 1)
-        return f
+            self.digest = digest
 
     def get_unique(self):
         ''' Return a unique (increasing) number '''
         rv = self.unique
         self.unique += 1
         return rv
-
-    def getblock(self, idx):
-        if isinstance(self.bdx, scattergather.ScatterGather):
-            return self.bdx.block(idx)
-        return None
-
-    def iterrecords(self):
-        if isinstance(self.bdx, scattergather.ScatterGather):
-            yield from self.bdx.iterrecords()
-        else:
-            yield self.bdx
-
-    def tobytes(self):
-        return self.bdx.tobytes()
-
-    def writetofile(self, fo):
-        if isinstance(self.bdx, scattergather.ScatterGather):
-            self.bdx.writetofile(fo)
-        else:
-            fo.write(self.bdx)
 
     def add_parent(self, parent):
         ''' Attach to parent, and vice-versa '''
@@ -450,3 +397,210 @@ class Artifact():
                 break
             fo.write(html.escape(line) + '\n')
         fo.write("</pre>\n")
+
+class Record(bintree.BinTreeLeaf):
+    '''
+       A fragment of an artifact
+       -------------------------
+    '''
+
+    def __init__(self, offset, frag, key=None):
+        super().__init__(offset, offset + len(frag))
+        self.frag = frag
+        self.key = key
+
+    def __str__(self):
+        return "<R 0x%x:0x%x %s>" % (self.lo, self.hi, str(self.key))
+
+    def __len__(self):
+        return len(self.frag)
+
+    def __getitem__(self, idx):
+        return self.frag[idx]
+
+class ArtifactStream(ArtifactBase):
+
+    '''
+       A simple artifact consisting of a sequence of octets
+       ----------------------------------------------------
+    '''
+
+    def __init__(self, octets):
+        super().__init__()
+        assert len(octets) > 0
+        if isinstance(octets, (memoryview, scattergather.ScatterGather)):
+            self.bdx = octets
+        else:
+            self.bdx = memoryview(octets)
+
+    def __len__(self):
+        return len(self.bdx)
+
+    def __getitem__(self, idx):
+        return self.bdx[idx]
+
+    def __iter__(self):
+        yield from self.bdx
+
+    def iter_bytes(self):
+        if self.byte_order is None:
+            yield from self.bdx
+            return
+
+        def group(input, chunk):
+            i = [iter(input)] * chunk
+            return zip_longest(*i, fillvalue=0)
+
+        for i in group(self.bdx, len(self.byte_order)):
+            for j in self.byte_order:
+                yield i[j]
+
+    def bits(self, lo, width=None, hi=None):
+        ''' Get a slice as a bitstring '''
+        if hi is None:
+            assert width is not None
+            hi = lo + width
+        retval = []
+        i = self.bdx[lo >> 3 : (hi + 7) >> 3]
+        for j in i:
+            retval.append(bin(256 | j)[-8:])
+        return "".join(retval)[lo & 7:hi - (lo & ~7)]
+
+    def bitint(self, lo, width=None, hi=None):
+        ''' Get a slice as integer '''
+        if hi is None:
+            assert width is not None
+            hi = lo + width
+        a = (lo) >> 3
+        b = (hi + 7) >> 3
+        c = self.bdx[a:b]
+        d = int.from_bytes(c, 'big')
+        if hi & 7:
+            e = d >> (8 - (hi & 7))
+        else:
+            e = d
+        f = e & ((1 << (hi - lo)) - 1)
+        return f
+
+    def getblock(self, idx):
+        if isinstance(self.bdx, scattergather.ScatterGather):
+            return self.bdx.block(idx)
+        return None
+
+    def iterrecords(self):
+        if isinstance(self.bdx, scattergather.ScatterGather):
+            yield from self.bdx.iterrecords()
+        else:
+            yield self.bdx
+
+    def tobytes(self):
+        return self.bdx.tobytes()
+
+    def writetofile(self, fo):
+        if isinstance(self.bdx, scattergather.ScatterGather):
+            self.bdx.writetofile(fo)
+        else:
+            fo.write(self.bdx)
+
+    def record(self, layout, **kwargs):
+        ''' Extract a compound record '''
+        return record.Extract_Record(self, layout, **kwargs)
+
+class ArtifactFragmented(ArtifactBase):
+
+    def __init__(self, fragments=None):
+        super().__init__()
+        self._recs = []
+        self._keys = {}
+        self._tree = None
+        self._len = 0
+        if fragments:
+            assert parts is None
+            for i in fragments:
+                self.add_fragment(i)
+
+        self.completed()
+
+    def __len__(self):
+        return self._len
+
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            i = [*self._tree.find(lo = idx, hi = idx + 1)]
+            assert len(i) == 1
+            return i[0][idx - i[0].lo]
+        if isinstance(idx, slice):
+            i = [*self._tree.find(lo = idx.start, hi = idx.stop)]
+            if len(i) == 1:
+                start = max(0, idx.start - i[0].lo)
+                stop = min(len(i[0]), idx.stop - i[0].lo)
+                return i[0][start:stop]
+            retval = bytearray()
+            for j in i:
+                if idx.start < j.lo and idx.stop >= j.hi:
+                    retval += j.octets
+                    continue
+                start = max(0, idx.start - j.lo)
+                stop = min(len(j), idx.stop - j.lo)
+                retval += j.octets[start:stop]
+            return retval
+        return self._keys[idx].frag
+
+    def __iter__(self):
+        for rec in self._recs:
+            yield from rec.frag
+
+    def iter_chunks(self):
+        ''' iterate artifact in whatever chunks are convenient '''
+        for rec in self._recs:
+            yield rec.frag
+
+    def iter_bytes(self):
+        if self.byte_order is None:
+            yield from self.__iter__()
+            return
+
+        def group(input, chunk):
+            i = [iter(input)] * chunk
+            return zip_longest(*i, fillvalue=0)
+
+        for chunk in self.iter_chunks:
+            for i in group(chunk, len(self.byte_order)):
+                for j in self.byte_order:
+                    yield i[j]
+
+    def add_fragment(self, frag):
+        assert len(self._keys) == 0
+        self._recs.append(Record(self._len, frag))
+        self._len += len(frag)
+
+    def add_part(self, key, frag):
+        assert len(self._keys) == len(self._recs)
+        assert key not in self._keys
+        rec = Record(self._len, frag, key)
+        self._recs.append(rec)
+        self._len += len(rec.frag)
+        self._keys[rec.key] = rec
+        return rec
+
+    def completed(self):
+        self._tree = bintree.BinTree(0, self._len)
+        i = hashlib.sha256()
+        for leaf in self._recs:
+            self._tree.insert(leaf)
+            i.update(leaf.frag)
+        self.set_digest(i.hexdigest())
+        if not self.separators:
+            self.separators = [(x.lo, "@" + str(x.key)) for x in self._tree]
+
+    def writetofile(self, fo):
+        for rec in self._recs:
+            fo.write(rec.frag)
+
+class Artifact(ArtifactStream):
+    ''' ... '''
+
+    def __init__(self, digest, payload):
+        super().__init__(payload)
+        self.set_digest(digest)
+

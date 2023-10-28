@@ -129,7 +129,7 @@ class Excavation():
 
     def add_artifact(self, this):
         ''' Add an artifact, and start examining it '''
-        assert isinstance(this, artifact.Artifact)
+        assert isinstance(this, artifact.ArtifactBase)
         assert this.digest not in self.hashes
         self.hashes[this.digest] = this
         self.queue.append(this)
