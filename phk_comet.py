@@ -21,7 +21,6 @@ def comet_tapes(**kwargs):
     ctx = DDHF_Excavation(
         ddhf_topic = "Rational R1000/400",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
-	hexdump_limit=1<<30,
         **kwargs,
     )
     ctx.type_case = DS2089()

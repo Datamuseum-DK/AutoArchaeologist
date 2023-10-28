@@ -74,7 +74,6 @@ class Excavation():
         downloads=False,   	   # Create downloadable .bin files
         download_links=False,      # Include links to .bin files
         download_limit=15 << 20,   # Only produce downloads if smaller than
-        hexdump_limit=8192,	   # How many bytes to hexdump
         html_dir="/tmp/aa",	   # Where to put HTML output
         link_prefix=None,	   # Default is file://[…]
         spill_index=10,		   # Spill limit for index lines
@@ -101,7 +100,6 @@ class Excavation():
         self.downloads = downloads
         self.download_links = download_links
         self.download_limit = download_limit
-        self.hexdump_limit = hexdump_limit
         self.html_dir = html_dir
         self.link_prefix = link_prefix
         self.spill_index = spill_index

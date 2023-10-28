@@ -94,7 +94,6 @@ def main(job, html_subdir="tmp", **kwargs):
     kwargs['html_dir'] = os.path.join(kwargs['html_dir'], html_subdir)
     kwargs.setdefault('download_links', True)
     kwargs.setdefault('download_limit', 1 << 20)
-    kwargs.setdefault('hexdump_limit', 1 << 14)
     ctx = job(**kwargs)
 
     ctx.start_examination()

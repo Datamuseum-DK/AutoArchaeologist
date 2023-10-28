@@ -56,7 +56,7 @@ class R1k6ZeroSegment():
             self.that.add_note("R1k Text-file segment")
             this.add_interpretation(self, self.render_bits)
             if self.incomplete:
-                this.add_interpretation(self, this.html_interpretation_hexdump)
+                this.add_interpretation(self, this.html_default_interpretation)
 
     def render_bits(self, fo, _this):
         ''' just a pointer to the new artifact '''

@@ -34,5 +34,4 @@ if __name__ == "__main__":
         html_subdir="cr80",
         ddhf_topic = "CR80 Floppy Disks",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/CR80',
-        hexdump_limit=1<<15,
     )

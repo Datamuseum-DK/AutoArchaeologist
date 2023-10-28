@@ -14,6 +14,7 @@ from itertools import zip_longest
 
 from . import excavation
 from . import interpretation
+from . import octetview as ov
 from .. import record
 from .. import scattergather
 
@@ -390,7 +391,7 @@ class Artifact():
                 func(fo, self)
                 fo.write('</div>\n')
         else:
-            self.html_interpretation_hexdump(fo, self)
+            self.html_default_interpretation(fo, self, max_lines=200)
 
         if self.comments:
             fo.write("<H3>Comments</H3>\n")
@@ -408,31 +409,6 @@ class Artifact():
             fo.write("  0x%08x" % start + "-0x%08x  " % stop)
             fo.write(this.summary() + "\n")
         fo.write("</pre>\n")
-
-    def html_interpretation_hexdump(self, fo, _this):
-        ''' Default interpretation as hexdump '''
-        # XXX: should respect .byte_order
-        fo.write("<H3>HexDump</H3>\n")
-        fo.write("<pre>\n")
-
-        if not isinstance(self.bdx, scattergather.ScatterGather):
-            if len(self) > self.top.hexdump_limit:
-                self.type_case.hexdump_html(
-                    self.bdx[:self.top.hexdump_limit],
-                    fo,
-                )
-                fo.write("[…]\n")
-            else:
-                self.type_case.hexdump_html(self.bdx, fo)
-        else:
-            done = 0
-            for n, r in enumerate(self.iterrecords()):
-                fo.write("Record #0x%x\n" % n)
-                self.type_case.hexdump_html(r.tobytes(), fo)
-                fo.write("\n")
-                done += len(r)
-                if done > self.top.hexdump_limit:
-                    break
 
     def html_derivation(self, fo, target=True):
         ''' Recursively document how this artifact came to be '''
@@ -461,3 +437,16 @@ class Artifact():
 
     def html_description(self):
         return "<br>\n".join(sorted(self.descriptions))
+
+    def html_default_interpretation(self, fo, this, max_lines=10000, **kwargs):
+        ''' Default interpretation is a hexdump '''
+
+        tmp = ov.OctetView(this)
+        fo.write("<H3>Hex Dump</H3>\n")
+        fo.write("<pre>\n")
+        for n, line in enumerate(tmp.render(**kwargs)):
+            if max_lines and n > max_lines:
+                fo.write("[…truncated at %d lines…]\n" % max_lines)
+                break
+            fo.write(html.escape(line) + '\n')
+        fo.write("</pre>\n")

@@ -219,10 +219,15 @@ class BitView(bintree.BinTree):
         if lo < self.hi:
             yield from self.pad(lo, self.hi)
 
-    def render(self, title="BitView"):
+    def render(self, title="BitView", maxlines=10000):
         print(self.this, "Rendering", self.gauge, "bitview-leaves")
         self.tfn = self.this.add_utf8_interpretation(title)
+        n = 0
         with open(self.tfn.filename, "w") as file:
             for i in self.pad_out():
                 for j in i.render():
                     file.write(self.prefix(i.lo, i.hi) + " " + j + "\n")
+                    n += 1
+                    if n > maxlines:
+                        file.write("[…truncated at %d lines…]\n" % max_lines)
+                        return

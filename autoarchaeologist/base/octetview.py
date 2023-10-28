@@ -82,7 +82,7 @@ class This(Octets):
         self.this = tree.this.create(start=self.lo, stop=self.hi)
 
     def render(self):
-        yield self.this
+        yield str(self.this)
 
 class Opaque(Octets):
     ''' Hide some octets '''
@@ -108,7 +108,7 @@ def Text(width):
     ''' Produce class for width text String (convenient for Struct) '''
 
     class Text_Class(Octets):
-        ''' Text String '''
+        ''' Fixed width text String (convenient for Struct) '''
 
         WIDTH = width
         def __init__(self, *args, **kwargs):
@@ -249,7 +249,7 @@ class Struct(Octets):
                     first_field_=Le32,
                     second_field__=7,
                     last_field_=text_field(8),
-                    size=0x100,              
+                    size=0x100,
                 )
 
         Note the trailing underscores which designates arguments
@@ -293,14 +293,13 @@ class Struct(Octets):
                     tree,
                     some_address,
                     n_elem_=Le16,
-                   incomplete=True,
+                    incomplete=True,
                 )
                 for i in range(leaf.n_elem.val):
                     leaf.add_field("f%d" % i, Le32)
                 leaf.complete(size = 512);
 
     '''
-
 
     def __init__(self, tree, lo, vertical=False, more=False, pad=0, **kwargs):
         self.fields = []
@@ -377,7 +376,7 @@ class Struct(Octets):
 
 def Array(count, what):
     ''' An array of things '''
- 
+
     class Array_Class(Struct):
         WHAT = what
         COUNT = count
@@ -406,98 +405,78 @@ class OctetView(bintree.BinTree):
 
     def __init__(self, this, max_render=None, default_width=16):
         self.this = this
+        self.separators = []
         hi = len(this)
         super().__init__(
             lo = 0,
             hi = hi,
             limit = 1<<16,
         )
-        if max_render is None:
-            max_render = hi
-        self.max_render = max_render
-        self.default_width = default_width
-        self.adrfmt = "%%0%dx" % len("%x" % self.hi)
 
-    def pad(self, lo, hi):
-        assert hi > lo
-        width = self.default_width
-        if hi - lo <= width:
-            yield Octets(self, lo, hi=hi)
-            return
-        i = lo % width
-        if i:
-            yield Octets(self, lo, width - i)
-            lo += width - i
-        while lo + width <= hi:
-            yield Octets(self, lo, width)
-            lo += width
-        if lo < hi:
-            yield Octets(self, lo, hi = hi)
+        self.adrwidth = len("%x" % self.hi)
+        self.adrfmt = "%%0%dx" % self.adrwidth
+
+    def pad_from_to(self, lo, hi, pad_width=5):
+        ''' yield padding lines '''
+        while hi > lo:
+            while self.separators and self.separators[0][0] <= lo:
+                yield self.separators.pop(0)[1]
+            i = lo + pad_width
+            i -= i % pad_width
+            i = min(i, hi)
+            if self.separators:
+                i = min(i, self.separators[0][0])
+            pad = Octets(self, lo, hi=i)
+            yield pad
+            lo = pad.hi
+
+    def iter_padded(self, pad_width=16):
+        ''' Render the tree with optional padding'''
+        ptr = 0
+        for leaf in self:
+            if pad_width:
+                yield from self.pad_from_to(ptr, leaf.lo, pad_width)
+            while self.separators and self.separators[0][0] <= leaf.lo:
+                yield self.separators.pop(0)[1]
+            yield leaf
+            ptr = leaf.hi
+        if pad_width:
+            yield from self.pad_from_to(ptr, self.hi, pad_width)
 
     def prefix(self, lo, hi):
         return "0x" + self.adrfmt % lo + "…" + self.adrfmt % hi
 
-    def pad_out(self):
-        lo = 0
-        prev = None
-        for i in sorted(self):
-            if i.lo < lo:
-                print("Overlap", self.this)
-                print("  this: ", hex(i.lo), hex(i.hi), i)
-                for n, j in enumerate(i.render()):
-                    print("\t" + str(j))
-                    if n > 5:
-                        break
-                if prev is None:
-                    print("  prev: None")
-                else:
-                    print("  prev: ", hex(prev.lo), hex(prev.hi), prev)
-                    for n, j in enumerate(prev.render()):
-                        print("\t" + str(j))
-                        if n > 5:
-                            break
-            if i.lo > lo:
-                yield from self.pad(lo, i.lo)
-            yield i
-            lo = i.hi
-            prev = i
-        if lo < self.hi:
-            yield from self.pad(lo, self.hi)
-
-    def add_interpretation(self, title="OctetView"):
-        ''' Render via utf8 file '''
-        # print(self.this, "Rendering", self.gauge, "octetview-leaves")
-        tfn = self.this.add_html_interpretation(title)
-        with open(tfn.filename, "w", encoding="utf-8") as file:
-            file.write("<pre>\n")
-            last = None
-            lasti = None
-            trunc = ""
-            rpt = 0
-            for i in self.pad_out():
-                if i.lo > self.max_render:
-                    trunc = "[Truncated]\n"
-                    break
-                for j in i.render():
-                    if isinstance(j, artifact.Artifact):
-                        j = j.summary(types=False)
-                    else:
-                        j = html.escape(j)
-                    if j == last:
-                        rpt += 1
-                        lasti = i
+    def render(self, default_width=32):
+        ''' Rendering iterator with padding '''
+        if 0 and self.this.separators:
+            self.separators = list(self.this.separators)
+        prev_line = None
+        repeat_line = 0
+        pending = None
+        for leaf in self.iter_padded(pad_width=default_width):
+            if isinstance(leaf, Octets):
+                for line in leaf.render():
+                    if line == prev_line:
+                        repeat_line += 1
+                        pending = None
                         continue
-                    if rpt == 1:
-                        file.write(self.prefix(lasti.lo, lasti.hi) + " " + last + "\n")
-                        rpt = 0
-                    elif rpt:
-                        file.write(self.prefix(lasti.lo, lasti.hi) + " …[0x%x]\n" % rpt)
-                        rpt = 0
-                    last = j
-                    file.write(self.prefix(i.lo, i.hi) + " " + j + "\n")
-            if rpt:
-                file.write(self.prefix(lasti.lo, lasti.hi) + " …[0x%x]\n" % rpt)
-            file.write(trunc)
-            file.write("</pre>\n")
+                    if repeat_line > 0:
+                        yield " " * (self.adrwidth + 4)  + "[…0x%x…]" % repeat_line
+                    if pending:
+                        yield pending
+                    pending = None
+                    repeat_line = 0
+                    prev_line = line
+                    #yield "  " + self.adrfmt % leaf.lo + "  " + line
+                    yield self.prefix(leaf.lo, leaf.hi) + " " + line
+            else:
+                pending = "  " + leaf
+        if repeat_line > 0:
+            yield " " * (self.adrwidth + 4)  + "[…0x%x…]" % repeat_line
 
-    
+    def add_interpretation(self, title="OctetView", **kwargs):
+        ''' Render via UTF-8 file '''
+        tfn = self.this.add_utf8_interpretation(title)
+        with open(tfn.filename, "w", encoding="utf-8") as file:
+            for line in self.render(**kwargs):
+                file.write(line + '\n')

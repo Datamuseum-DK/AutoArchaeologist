@@ -19,6 +19,8 @@ class Slug():
             self.long = short
         else:
             self.long = long
+        self.html_short = html.escape(short)
+        self.html_long = html.escape(long)
         self.flags = flags
 
     def __str__(self):
@@ -40,7 +42,7 @@ class TypeCase():
     IGNORE = 0x02
     EOF = 0x04
 
-    noslug = Slug(' ', '▒', INVALID)
+    noslug = Slug(' ', '', INVALID)
 
     def __init__(self, name, bitwidth=8):
         self.name = name
@@ -64,37 +66,6 @@ class TypeCase():
             if slug.flags & self.INVALID:
                 continue
             yield (n, slug)
-
-    def hexdump(
-        self,
-        that,
-        width=16,
-        prefix="",
-        offset=0,
-    ):
-        ''' Hexdump in canonical format '''
-        txt1 = ""
-        txt2 = ""
-        for j, octet in enumerate(that):
-            i = j % width
-            if not i:
-                txt1 = prefix + "%04x " % offset
-                txt2 = "  ┆"
-            txt1 += self.fmt % octet
-            txt2 += self.slugs[octet].short
-            if i == width - 1:
-                yield txt1 + txt2 + "┆"
-            offset += 1
-        i = len(that) % width
-        if i:
-            txt1 += self.pad * (width - i)
-            txt2 += " " * (width - i)
-            yield txt1 + txt2 + "┆"
-
-    def hexdump_html(self, that, file, **kwargs):
-        ''' Hexdump into a HTML file '''
-        for i in self.hexdump(that, **kwargs):
-            file.write(html.escape(i) + "\n")
 
     def is_valid(self, octets):
         ''' return (bool, string) '''
