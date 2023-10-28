@@ -19,8 +19,6 @@ class Slug():
             self.long = short
         else:
             self.long = long
-        self.html_short = html.escape(short)
-        self.html_long = html.escape(long)
         self.flags = flags
 
     def __str__(self):

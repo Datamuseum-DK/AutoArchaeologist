@@ -467,7 +467,6 @@ class OctetView(bintree.BinTree):
                     pending = None
                     repeat_line = 0
                     prev_line = line
-                    #yield "  " + self.adrfmt % leaf.lo + "  " + line
                     yield self.prefix(leaf.lo, leaf.hi) + " " + line
             else:
                 pending = "  " + leaf
