@@ -142,20 +142,26 @@ class Excavation():
         ''' Add an examiner function '''
         self.examiners.append(ex)
 
-    def add_top_artifact(self, bits, description=None):
+    def add_top_artifact(self, what, description=None):
         ''' Add a top-level artifact '''
 
         if not description:
             description = "Top-level Artifact"
 
-        digest = hashlib.sha256(bits).hexdigest()
+        if isinstance(what, artifact.ArtifactBase):
+            that = what
+        else:
+            that = artifact.ArtifactStream(what)
+        that.set_digest()
+        # print("ATA", that, that.digest)
+        digest = that.digest
 
         this = self.hashes.get(digest)
         if this:
             this.add_description(description)
             raise DuplicateArtifact(this, description)
         else:
-            this = artifact.Artifact(digest, bits)
+            this = that
             this.add_description(description)
             self.adopt(this)
             this.add_parent(self)

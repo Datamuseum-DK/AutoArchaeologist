@@ -442,6 +442,13 @@ class ArtifactStream(ArtifactBase):
     def __iter__(self):
         yield from self.bdx
 
+    def define_record(self, key, lo, hi):
+        self._keys[key] = Record(lo, self.bdx[lo:hi], key)
+
+    def iter_chunks(self):
+        ''' iterate artifact in whatever chunks are convenient '''
+        yield self.bdx
+
     def iter_bytes(self):
         if self.byte_order is None:
             yield from self.bdx
