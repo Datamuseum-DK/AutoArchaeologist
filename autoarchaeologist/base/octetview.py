@@ -405,7 +405,7 @@ class OctetView(bintree.BinTree):
 
     def __init__(self, this, max_render=None, default_width=16):
         self.this = this
-        self.separators = []
+        self.separators = None
         hi = len(this)
         super().__init__(
             lo = 0,
@@ -448,7 +448,7 @@ class OctetView(bintree.BinTree):
 
     def render(self, default_width=32):
         ''' Rendering iterator with padding '''
-        if 0 and self.this.separators:
+        if self.this.separators:
             self.separators = list(self.this.separators)
         prev_line = None
         repeat_line = 0
