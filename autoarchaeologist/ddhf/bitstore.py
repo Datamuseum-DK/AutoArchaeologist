@@ -27,6 +27,7 @@ if BS_HOME is None:
 BITSTORE_FORMATS = {
     "PDF": False,
     "MP4": False,
+    "BAGIT": False,
     "TAR": True,
     "SIMH-TAP": True,
     "ASCII": True,
@@ -35,18 +36,20 @@ BITSTORE_FORMATS = {
     "ASCII_SET": True,
     "BINARY": True,
     "GIERTEXT": True,
-    "IMAGEDISK": imd_file.ImdContainer,
 }
 
 class FromBitStore():
 
     ''' Pull in top-level artifacts from Datamuseum.dk's bitstore '''
 
-    def __init__(self, ctx, cache_dir, *args):
+    def __init__(self, ctx, cache_dir, *args, media_types=None):
         self.ctx = ctx
         self.cache_dir = cache_dir
         self.loaded = set()
         self.blacklist = set()
+        if media_types is not None:
+            media_types = set(media_types)
+        self.media_types = media_types
 
         if cache_dir:
             try:
@@ -162,6 +165,9 @@ class FromBitStore():
         if meta is None:
             return
 
+        if self.media_types and not self.check_media_type(meta):
+            return
+
         handler = BITSTORE_FORMATS.get(meta.BitStore.Format.val)
         if handler is None:
             print(arg, "Ignored, unknown format", meta.BitStore.Format.val)
@@ -202,6 +208,7 @@ class FromBitStore():
             raise
 
         self.impose_geometry(meta, this)
+        self.set_media_type(meta, this)
 
         symlink = os.path.join(self.ctx.html_dir, arg + ".html")
         try:
@@ -234,6 +241,28 @@ class FromBitStore():
                 continue
             self.fetch_single(ident)
 
+    def check_media_type(self, meta):
+        ''' Check Media.Type against filter '''
+
+        i = getattr(meta, "Media", None)
+        if i is None:
+            return False
+        i = getattr(i, "Type", None)
+        if i is None or i.val is None:
+            return False
+        return i.val in self.media_types
+
+    def set_media_type(self, meta, this):
+        ''' Set Media.Type on artifact '''
+
+        i = getattr(meta, "Media", None)
+        if i is None:
+            return
+        i = getattr(i, "Type", None)
+        if i is None or i.val is None:
+            return
+        this.add_type(i.val)
+
     def impose_geometry(self, meta, this):
         ''' Impose Media.Geometry as records '''
         if not hasattr(this, "define_record"):
@@ -264,8 +293,8 @@ class FromBitStore():
         ncyl = 0
         nhead = 0
         for i in ngeom:
-            # print("I", this, meta.BitStore.Ident.val, i)
-            if i["c"] == 1 and i["h"] == 1:
+            #print("I", this, meta.BitStore.Ident.val, i, maxhead)
+            if maxhead == 1 and i["c"] == 1 and i["h"] == 1:
                 for sect in range(i["s"]):
                     chs = (ncyl, nhead, sect + 1)
                     this.separators.append((ptr, "@c%d,h%d,s%d" % chs))
@@ -280,6 +309,7 @@ class FromBitStore():
                     for head in range(i["h"]):
                         for sect in range(i["s"]):
                             chs = (ncyl, head, sect + 1)
+                            #print("CHS", chs, i["b"])
                             this.separators.append((ptr, "@c%d,h%d,s%d" % chs))
                             this.define_record(chs, ptr, ptr + i["b"])
                             ptr += i["b"]

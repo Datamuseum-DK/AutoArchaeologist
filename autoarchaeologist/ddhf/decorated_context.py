@@ -74,9 +74,9 @@ class DDHF_Excavation(excavation.Excavation):
         file.write('</table>\n')
         file.write('<hr/>\n')
 
-    def from_bitstore(self, *args):
+    def from_bitstore(self, *args, **kwargs):
         ''' Add artifacts from the Datamuseum.dk Bitstore '''
-        FromBitStore(self, self.ddhf_bitstore_cache, *args)
+        FromBitStore(self, self.ddhf_bitstore_cache, *args, **kwargs)
 
 OK_ENVS = {
     "AUTOARCHAEOLOGIST_HTML_DIR": "html_dir",
