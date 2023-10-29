@@ -103,6 +103,19 @@ class DataBlock(ov.Opaque):
 class CpmNameSpace(namespace.NameSpace):
     ''' ... '''
 
+    def ns_render(self):
+        if self.ns_this:
+             l = [len(self.ns_this)]
+        else:
+             l = ['-']
+        return l + super().ns_render()
+
+    TABLE = [
+        ["r", "bytes"],
+        ["l", "name"],
+        ["l", "artifact"],
+    ]
+
 class SectorData(ov.Octets):
     ''' ... '''
 
@@ -391,7 +404,8 @@ class CpmFileSystem_CR8(CpmFileSystem):
 
     NAME = "CR7/8"
     ZONE = floppy.Zone(1, 77, 0, 1, 1, 16, 256)
-    INTERLEAVE = ZONE.interleave(1)
+    # See ⟦97d59898b⟧
+    INTERLEAVE = [0, 1, 2, 5, 6, 9, 10, 13, 14, 3, 4, 7, 8, 11, 12, 15, 16]
     BLOCK_SIZE = 2048
     N_DIRENT = 128
 
@@ -400,6 +414,7 @@ class CpmFileSystem_CR16(CpmFileSystem):
 
     NAME = "CR16"
     ZONE = floppy.Zone(1, 76, 0, 1, 1, 8, 512)
+    # see ⟦f66f0fa9c⟧
     INTERLEAVE = ZONE.interleave(1)
     BLOCK_SIZE = 2048
     N_DIRENT = 64
@@ -410,8 +425,9 @@ class CpmFileSystem_CR16(CpmFileSystem):
         cyl = self.ZONE.first_cyl + track
         head = 0
         if cyl > self.ZONE.last_cyl:
+            # ... and back the other side
             head = 1
-            cyl -= self.ZONE.n_cyl
+            cyl = 2 * self.ZONE.n_cyl - (cyl - 1)
         return (cyl, head, sector)
 
 
