@@ -36,6 +36,7 @@ BITSTORE_FORMATS = {
     "ASCII_SET": True,
     "BINARY": True,
     "GIERTEXT": True,
+    "IMAGEDISK": imd_file.ImdContainer,
 }
 
 class FromBitStore():
