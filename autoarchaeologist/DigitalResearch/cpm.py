@@ -449,6 +449,16 @@ class CpmFileSystem_Comet2(CpmFileSystem):
     BLOCK_SIZE = 4096
     N_DIRENT = 64
 
+class CpmFileSystem_Mostek(CpmFileSystem):
+    ''' Mostek '''
+
+    NAME = "Mostek"
+    ZONE = floppy.Zone(2, 76, 0, 0, 1, 26, 128)
+    INTERLEAVE = ZONE.interleave(6)
+
+    BLOCK_SIZE = 1024
+    N_DIRENT = 64
+
 def probe_butler(this, geom):
     if len(geom.c) < 100:
         return False
@@ -512,6 +522,7 @@ class CpmFileSystem():
         CpmFileSystem_Comet2,
         CpmFileSystem_Butler1,
         CpmFileSystem_Butler2,
+        CpmFileSystem_Mostek,
     ]
 
     def __init__(self, this):
