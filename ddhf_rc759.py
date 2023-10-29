@@ -54,8 +54,8 @@ class Rc759(ddhf.DDHF_Excavation):
         self.add_examiner(samesame.SameSame)
 
         self.from_bitstore(
+            "-30002875",
             "RC/RC759",
-            #"30003950",
         )
 
 if __name__ == "__main__":

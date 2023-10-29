@@ -54,6 +54,8 @@ class Rc700(ddhf.DDHF_Excavation):
         self.add_examiner(samesame.SameSame)
 
         self.from_bitstore(
+            "-30003268", # Ligner CP/M men med COMAL-80 navne semantik
+            "-30003296", # Ikke CP/M format
             "RC/RC700",
         )
 
