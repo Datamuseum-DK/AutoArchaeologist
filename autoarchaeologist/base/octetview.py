@@ -154,9 +154,9 @@ class Le24(Octets):
 
     def __init__(self, tree, lo, **kwargs):
         super().__init__(tree, lo, width=3, **kwargs)
-        self.val = self.tree[lo + 2] << 16
-        self.val |= self.tree[lo + 1] << 8
-        self.val |= self.tree[lo]
+        self.val = self.this[lo + 2] << 16
+        self.val |= self.this[lo + 1] << 8
+        self.val |= self.this[lo]
 
     def render(self):
         yield "0x%06x" % self.val
@@ -189,10 +189,10 @@ class Be24(Octets):
     ''' Three bytes Big Endian '''
 
     def __init__(self, tree, lo, **kwargs):
-        super().__init__(tree, lo, width=2, **kwargs)
-        self.val = self.tree[lo] << 16
-        self.val |= self.tree[lo + 1] << 8
-        self.val |= self.tree[lo + 2]
+        super().__init__(tree, lo, width=3, **kwargs)
+        self.val = self.this[lo] << 16
+        self.val |= self.this[lo + 1] << 8
+        self.val |= self.this[lo + 2]
 
     def render(self):
         yield "0x%06x" % self.val
