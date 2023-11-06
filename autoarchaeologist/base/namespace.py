@@ -39,7 +39,7 @@ class NameSpace():
         name = None,		# The leaf name of this node
         parent = None,		# The parent of this node
         this = None,		# The artifact named by this node
-        separator = None,	# The path separator string for this node
+        separator = "/",	# The path separator for children of this node
         root = None,		# The artifact in which the name-space lives.
         priv = None,		# The artifact in which the name-space lives.
     ):
@@ -82,14 +82,19 @@ class NameSpace():
         self.ns_this = this
         this.add_namespace(self)
 
+    def ns_path_recurse(self):
+        ''' Get the parent path, including separator, to this node '''
+        if not self.ns_parent:
+            pfx = ""
+        else:
+            pfx = self.ns_parent.ns_path_recurse()
+        return pfx + self.ns_name + self.ns_separator
+
     def ns_path(self):
         ''' Get the path to this node '''
-        sep = self.ns_separator
-        if sep is None:
-            sep = '/'
         if not self.ns_parent:
-            return sep + self.ns_name
-        return self.ns_parent.ns_path() + sep + self.ns_name
+            return  self.ns_name
+        return self.ns_parent.ns_path_recurse() + self.ns_name
 
     def ns_render(self):
         ''' Return path and summary for interpretation table '''
