@@ -90,7 +90,7 @@ class Excavation():
             abspath = os.getcwd()
             os.chdir(dir_fd)
             os.close(dir_fd)
-            link_prefix = "file://" + abspath + "/"
+            link_prefix = "file://" + abspath
 
         if download_links:
             downloads = True
