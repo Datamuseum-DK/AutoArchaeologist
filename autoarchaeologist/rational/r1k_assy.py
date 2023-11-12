@@ -45,4 +45,4 @@ class R1kAssyFile():
                 check = True,
             )
         except subprocess.CalledProcessError as err:
-            print("Disassmbly failed", this, err)
+            print("Disassembly failed", this, err)

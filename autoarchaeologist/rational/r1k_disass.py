@@ -50,6 +50,6 @@ class R1kDisass():
                 check = True,
             )
         except subprocess.CalledProcessError as err:
-            print("Disassmbly failed", this)
+            print("Disassembly failed", this)
             print("    Script:", script)
             print("    Error:", err)
