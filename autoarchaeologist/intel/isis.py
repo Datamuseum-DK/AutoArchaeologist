@@ -183,7 +183,6 @@ class IntelIsis(disk.Disk):
         if len(this) not in (77*52*128,):
             return
 
-        print(this, "Intel_ISIS")
         this.add_note("Intel_ISIS_II")
         super().__init__(
             this,

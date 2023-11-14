@@ -53,6 +53,7 @@ class DirEnt(ov.Struct):
         self.flags = DirEntFlags(flags)
         self.fields.append(("flags", self.flags))
         self.name.valid, self.name.txt = self.tree.FILENAME_TYPECASE.is_valid(name)
+
         self.filename = self.name.txt[:8].rstrip()
         i = self.name.txt[8:].rstrip()
         if i:
@@ -73,6 +74,9 @@ class DirEnt(ov.Struct):
         while i and i[-1] == 0:
             i.pop(-1)
         if 0 in i:
+            return False
+
+        if self.name.txt[:1] == ' ':
             return False
 
         if not self.name.valid:
@@ -152,14 +156,12 @@ class CpmFileSystem(ov.OctetView):
         try:
             return self.this.get_rec((c, h, s))
         except KeyError:
-            print(self.this, "Missing sector ?", (c, h, s))
+            print(self.this, self.NAME, "Missing sector ?", (c, h, s))
             return None
-        except:
-            raise
 
     def __init__(self, this):
         super().__init__(this)
-        print(this, self.NAME)
+        #print(this, self.NAME)
 
         self.ns = CpmNameSpace(
             name = '',
@@ -167,6 +169,7 @@ class CpmFileSystem(ov.OctetView):
             separator = '',
         )
         self.ns.KIND = "Namespace CP/M Filesystem - " + self.NAME
+        this.add_type(self.__class__.__name__)
 
         nblock = self.ZONE.sectors * self.ZONE.sector_length // self.BLOCK_SIZE
         #print(this, "SZ", nblock, self.BLOCK_SIZE, self.ZONE)
@@ -182,7 +185,7 @@ class CpmFileSystem(ov.OctetView):
             chs = self.sn2chs(dirsec)
             rec = self.getsect(chs)
             if rec is None:
-                print(self.NAME, this, "Missing DIRSECT", chs)
+                print(this, self.NAME, "Missing DIRSECT", chs)
                 n += self.ZONE.sector_length // 32
                 continue
             for adr in range(rec.lo, rec.lo + len(rec.frag), 32):
@@ -208,15 +211,15 @@ class CpmFileSystem(ov.OctetView):
             j = sum(j) / len(j)
             i = sum(i) / len(i)
             if j * 10 < i:
-               print(this, self.NAME, "DAL8", i, j)
+               #print(this, self.NAME, "DAL8", i, j)
                return
         else:
             for dirent in self.dirents:
-                if dirent.status.val > 0x0f:
+                if not dirent.looks_sane():
                     continue
                 for al in dirent.al:
-                    if al.val > nblock:
-                        print(this, self.NAME, "DAL16", al.val, nblock, dirent)
+                    if al.val > 10 * nblock:
+                        #print(this, self.NAME, "DAL16", al.val, nblock, dirent)
                         return
  
 
@@ -228,13 +231,13 @@ class CpmFileSystem(ov.OctetView):
             if dirent.status.val >= 0x10:
                 continue
             if not dirent.name.valid:
-                print(self.NAME, this, "CP/M: Invalid filename", dirent.idx, "»" + dirent.name.txt + "«")
+                print(self.NAME, this, "Invalid filename", dirent.idx, hex(dirent.lo), dirent)
                 continue
             if not dirent.looks_sane():
-                print(self.NAME, this, "CP/M: Improbable dirent", dirent.idx, dirent)
+                print(self.NAME, this, "Improbable dirent", dirent.idx, hex(dirent.lo), dirent)
                 continue
             if dirent.filename == '':
-                print(self.NAME, this, "CP/M: Empty filename ??", dirent.idx, dirent)
+                print(self.NAME, this, "Empty filename ??", dirent.idx, hex(dirent.lo), dirent)
                 continue
             i = filenames.setdefault(dirent.filename, [])
             i.append(dirent)
@@ -275,7 +278,7 @@ class CpmFileSystem(ov.OctetView):
                      this = y
                 )
             else:
-                print(self.this, "??  len", l, "of", len(b), dirent)
+                print(self.this, self.NAME, "??  len", l, "of", len(b), dirent)
 
         self.add_interpretation(title="OctetView - " + self.NAME)
 
@@ -338,7 +341,7 @@ class CpmFileSystemRc703(CpmFileSystem):
     ZONE = floppy.Zone(2, 79, 0, 1, 1, 10, 512)
     INTERLEAVE = ZONE.interleave(2)
     BLOCK_SIZE = 2048
-    N_DIRENT = 256
+    N_DIRENT = 240
 
 class CpmFileSystemRc702_8ss(CpmFileSystem):
     '''
@@ -397,7 +400,7 @@ class CpmFileSystem_Piccoline(CpmFileSystem):
     ZONE = floppy.Zone(2, 76, 0, 1, 1, 8, 1024)
     INTERLEAVE = ZONE.interleave(1)
     BLOCK_SIZE = 2048
-    N_DIRENT = 512
+    N_DIRENT = 288
 
 class CpmFileSystem_CR8(CpmFileSystem):
     ''' CR7/8 '''
@@ -473,7 +476,6 @@ class CpmFileSystem_Butler1(CpmFileSystem):
     BLOCK_SIZE = 2048
     N_DIRENT = 64
 
-
 class CpmFileSystem_Butler2(CpmFileSystem):
     ''' Butler '''
 
@@ -528,6 +530,7 @@ class CpmFileSystem():
     def __init__(self, this):
         if this.top not in this.parents:
             return
+        # print(self.__class__.__name__, this, "?")
 
         ovt = ov.OctetView(this)
         ovt.FILENAME_TYPECASE = self.FILENAME_TYPECASE
@@ -544,7 +547,7 @@ class CpmFileSystem():
                 break
 
         if de is None:
-            print(this, "No Dirent", this.descriptions)
+            #print(this, self.__class__.__name__, "No Dirent", this.descriptions)
             return
 
         self.fdgeom = floppy.Geometry(this)
@@ -563,18 +566,15 @@ class CpmFileSystem():
             if not self.fdgeom.fits(cand.ZONE):
                 continue
             candidates.append(cand)
-        print()
+        #print()
         self.fdgeom.find_zones()
         if not candidates:
-           print(this, "Desc", this.descriptions)
-           print(this, "Type", this.types)
-           print(this, "DE", rec.key, len(rec.frag), de)
-           print(this, "Geom", self.fdgeom.zones)
+           print(this, "CP/M Desc", this.descriptions)
+           print(this, "CP/M Type", this.types)
+           print(this, "CP/M DE", rec.key, len(rec.frag), de)
+           print(this, "CP/M Geom", self.fdgeom.zones)
+        if not candidates:
            return
 
-        print(this, "Desc", this.descriptions)
-        print(this, "Type", this.types)
-        print(this, "Geom", self.fdgeom.zones)
-        print(this, "Cand", [x.NAME for x in candidates])
         for cand in candidates:
             cand(this)

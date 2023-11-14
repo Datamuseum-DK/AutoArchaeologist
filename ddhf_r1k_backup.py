@@ -1,21 +1,40 @@
 '''
-Rational R1000/400 Backup tape from Datamuseum.dk's BitStore
+   Rational R1000/400 Backup tape from Datamuseum.dk's BitStore
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 
-from autoarchaeologist.generic.tap_file import TAPfile
-from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
+from autoarchaeologist.generic import ansi_tape_labels
 from autoarchaeologist.rational.r1k_backup import R1kBackup
 from autoarchaeologist.rational.r1k_e3_objects import R1kE3Objects
 from autoarchaeologist.rational.r1k_assy import R1kAssyFile
 from autoarchaeologist.rational.r1k_6zero import R1k6ZeroSegment
 from autoarchaeologist.rational.r1k_seg_heap import R1kSegHeap
-from autoarchaeologist.generic.ascii import Ascii,CHARSET
-from autoarchaeologist.generic.textfiles import TextFiles
+from autoarchaeologist.base import type_case
+from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic.samesame import SameSame
 
-CHARSET[0][0] = 16
+class TextFile(textfiles.TextFile):
+    ''' Custom credibility '''
+
+    VERBOSE = True
+
+    def credible(self):
+        if len(self.txt) < 5:
+            return False
+        if len(self.txt) < 10 and '\n' not in self.txt:
+            return False
+        if len(self.this) - len(self.txt) >= 1024:
+            return False
+        return True
+
+class TypeCase(type_case.Ascii):
+    ''' ... '''
+
+    def __init__(self):
+        super().__init__()
+        self.set_slug(0, ' ', '«nul»', self.EOF)
 
 class R1KBACKUP(DDHF_Excavation):
 
@@ -24,9 +43,9 @@ class R1KBACKUP(DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.type_case = TypeCase()
 
-        self.add_examiner(TAPfile)
-        self.add_examiner(AnsiTapeLabels)
+        self.add_examiner(ansi_tape_labels.AnsiTapeLabels)
         self.add_examiner(R1kBackup)
 
         self.add_examiner(R1kE3Objects)
@@ -35,8 +54,7 @@ class R1KBACKUP(DDHF_Excavation):
 
         self.add_examiner(R1kSegHeap)
 
-        self.add_examiner(Ascii)
-        self.add_examiner(TextFiles)
+        self.add_examiner(TextFile)
         self.add_examiner(SameSame)
 
         self.from_bitstore(

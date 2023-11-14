@@ -157,6 +157,7 @@ class R1kBackupObject():
         return t
 
     def render_obj(self, fo, this):
+        return
         if len(this.interpretations) > 1:
             return
         fo.write("<H3>R1K Object</H3>\n")

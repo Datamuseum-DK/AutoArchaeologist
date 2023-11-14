@@ -1,6 +1,6 @@
 '''
-Regnecentralen RC3600/RC7000 Artifacts from Datamuseum.dk's BitStore
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Regnecentralen RC3600/RC7000 Artifacts from Datamuseum.dk's BitStore
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist import ddhf
@@ -19,12 +19,8 @@ from autoarchaeologist.regnecentralen import rcsl
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 
-class TxtFile(textfiles.TextFile):
-    VERBOSE=False
-    MAX_TAIL=512
-
-class Domus_DS2089(type_case.DS2089):
-    ''' ... '''
+class DomusDS2089(type_case.DS2089):
+    ''' RC3600 typical use charset '''
 
     def __init__(self):
         super().__init__()
@@ -38,19 +34,22 @@ class Domus_DS2089(type_case.DS2089):
         self.set_slug(0x7f, ' ', '')
 
 class NoParTextFile(textfiles.TextFile):
-    VERBOSE=False
-    TYPE_CASE = Domus_DS2089()
+    ''' Non-parity '''
+
+    TYPE_CASE = DomusDS2089()
     MAX_TAIL=512*6
 
 class EvenTextFile(textfiles.TextFile):
-    VERBOSE=False
-    MAX_TAIL=512
-    TYPE_CASE = type_case.EvenPar(Domus_DS2089())
+    ''' Even-parity '''
+
+    TYPE_CASE = type_case.EvenPar(DomusDS2089())
+    MAX_TAIL=512*6
 
 class OddTextFile(textfiles.TextFile):
-    VERBOSE=False
-    MAX_TAIL=512
-    TYPE_CASE = type_case.OddPar(Domus_DS2089())
+    ''' Odd-parity '''
+
+    TYPE_CASE = type_case.OddPar(DomusDS2089())
+    MAX_TAIL=512*6
 
 class Rc3600(ddhf.DDHF_Excavation):
 
@@ -59,7 +58,7 @@ class Rc3600(ddhf.DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.type_case = Domus_DS2089()
+        self.type_case = DomusDS2089()
 
         self.add_examiner(domus_fs.Domus_Filesystem)
         self.add_examiner(rc3600_fdtape.RC3600_FD_Tape)

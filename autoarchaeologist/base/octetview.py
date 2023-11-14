@@ -104,18 +104,22 @@ class Opaque(Octets):
         else:
             yield self.rendered
 
-def Text(width):
+def Text(width, rstrip=False):
     ''' Produce class for width text String (convenient for Struct) '''
 
     class Text_Class(Octets):
         ''' Fixed width text String (convenient for Struct) '''
 
         WIDTH = width
-        def __init__(self, *args, **kwargs):
+        RSTRIP = rstrip
+        def __init__(self, *args, type_case=None, **kwargs):
             kwargs["width"] = self.WIDTH
             super().__init__(*args, **kwargs)
-            self.txt = self.this.type_case.decode(self.this[self.lo:self.hi])
-            self.txt = self.this.type_case.decode(self.iter_bytes())
+            if type_case is None:
+                type_case = self.this.type_case
+            self.txt = type_case.decode(self.iter_bytes())
+            if self.RSTRIP:
+                self.txt = self.txt.rstrip()
 
         def render(self):
             yield "»" + self.txt + "«"
@@ -316,6 +320,10 @@ class Struct(Octets):
         if not more:
             self.done(pad=pad)
 
+    def __getattr__(self, what):
+        ''' Silence pylint E1101 '''
+        raise AttributeError("'" + self.__class__.__name__ + "' has no attribute '" + str(what) + "'")
+
     def done(self, pad=0):
         ''' Struct is complete, finish up '''
         if pad:
@@ -448,8 +456,7 @@ class OctetView(bintree.BinTree):
 
     def render(self, default_width=32):
         ''' Rendering iterator with padding '''
-        if self.this.separators:
-            self.separators = list(self.this.separators)
+        self.separators = [(x.lo, "@" + str(x.key)) for x in self.this.iter_rec() if x.key is not None]
         prev_line = None
         repeat_line = 0
         pending = None

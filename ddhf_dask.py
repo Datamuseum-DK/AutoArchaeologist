@@ -11,11 +11,13 @@ from autoarchaeologist.generic import textfiles
 from autoarchaeologist.base import type_case
 
 class DaskTegn(textfiles.TextFile):
+    ''' Everything is credible '''
 
     def credible(self):
         return True
 
-class DASK_TC(type_case.TypeCase):
+class DaskTc(type_case.TypeCase):
+    ''' DASK character set '''
 
     def __init__(self):
         super().__init__("DASK")
@@ -40,11 +42,11 @@ class DASK(ddhf.DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.type_case = DaskTc()
+
         self.add_examiner(gier_text.GIER_Text)
         self.add_examiner(samesame.SameSame)
         self.add_examiner(DaskTegn)
-
-        self.type_case = DASK_TC()
 
         self.from_bitstore(
             "DASK/SW",

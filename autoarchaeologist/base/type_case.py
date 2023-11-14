@@ -102,7 +102,7 @@ class WellKnown(TypeCase):
             elif char == "\r":
                 self.set_slug(i, ' ', '\\r')
             elif char == "\f":
-                self.set_slug(i, ' ', '\\f')
+                self.set_slug(i, ' ', '\\f\n\n')
             elif char == " ":
                 self.set_slug(i, ' ', ' ')
             elif unicodedata.category(char)[0] in "LNPSZ":
@@ -164,5 +164,13 @@ class DS2089(WellKnown):
             ( 0x7e, 'ü',),
         ):
             self.set_slug(i, j, j)
+
+class DS2089Cpm(DS2089):
+    ''' With CP/M control chars '''
+    def __init__(self):
+        super().__init__()
+        self.set_slug(0x00, ' ', '«nul»')
+        self.set_slug(0x0d, ' ', '')
+        self.set_slug(0x1a, ' ', '«eof»', self.EOF)
 
 ascii = Ascii()

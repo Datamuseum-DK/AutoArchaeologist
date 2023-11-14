@@ -17,16 +17,17 @@ class BadTAPFile(Exception):
 class SimhTapContainer(artifact.ArtifactFragmented):
     ''' Create an artifact from a SIMH-TAP file '''
 
-    def __init__(self, filename, verbose=False):
+    def __init__(self, octets=None, filename=None, verbose=False):
         super().__init__()
-        fcont = plain_file.PlainFileArtifact(filename)
+        if octets is None:
+            octets = plain_file.PlainFileArtifact(filename)
+        octets = memoryview(octets).toreadonly()
 
-        fcont.type_case = type_case.ascii
-
-        ovt = ov.OctetView(fcont)
+        ovt = ov.OctetView(octets)
         adr = (0, 0)
         ptr = 0
-        while ptr < len(fcont):
+        offset = 0
+        while ptr < len(octets):
             i = ov.Le32(ovt, ptr)
             if verbose:
                 print("M", adr, hex(i.val))
@@ -39,14 +40,21 @@ class SimhTapContainer(artifact.ArtifactFragmented):
             if i.val > 0x00ffffff:
                 continue
             j = (i.val + 1) & ~1
-            frac = fcont[ptr:ptr + i.val]
+            frag = octets[ptr:ptr + i.val]
             ptr += j
-            rec = self.add_part(adr, frac)
+            self.add_fragment(
+                artifact.Record(
+                    low=offset,
+                    frag=frag,
+                    key=adr,
+                )
+            )
+            offset += len(frag)
             adr = (adr[0], adr[1] + 1)
             j = ov.Le32(ovt, ptr)
             if i.val != j.val:
                 raise BadTAPFile("Pre & Post disagree")
             ptr = j.hi
-        if ptr != len(fcont):
+        if ptr != len(octets):
             raise BadTAPFile("Stuff after EOT")
         self.completed()

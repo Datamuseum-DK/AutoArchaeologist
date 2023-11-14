@@ -425,7 +425,7 @@ class UnixFileSystem():
             if inode.di_size % 0x10:   # XXX: Only SysV
                 continue
             try:
-                specdir = self.DIRECTORY(self, [], autoarchaeologist.NameSpace(""), inode)
+                specdir = self.DIRECTORY(self, [], NameSpace(""), inode)
             except Exception as err:
                 print("TRIED", inum, tour, err)
                 continue

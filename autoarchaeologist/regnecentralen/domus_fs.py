@@ -182,6 +182,7 @@ class CatEnt(ov.Struct):
             name = self.name.txt,
             parent = pnamespace,
             priv = self,
+            separator = ".",
         )
         if not self.length.val:
             return
@@ -288,7 +289,7 @@ class Domus_Filesystem(disk.Disk):
 
         if not sum(geom):
             return
-        print(this, len(this), geom)
+        # print(this, len(this), geom)
         super().__init__(
             this,
             [ geom ]
@@ -322,7 +323,7 @@ class Domus_Filesystem(disk.Disk):
         if not self.kit:
             return
         self.this.add_type("DOMUS Filesystem")
-        print(this, "IDX", hex(idx), idx // SEC_SIZE, "OFS", self.offset, "Kit", kit)
+        # print(this, "IDX", hex(idx), idx // SEC_SIZE, "OFS", self.offset, "Kit", kit)
 
         self.kit.insert()
         self.set_picture('K', lo=self.kit.lo)

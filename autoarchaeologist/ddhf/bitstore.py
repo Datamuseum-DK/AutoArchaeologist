@@ -3,13 +3,16 @@
    -----------------------------------------------------
 '''
 
+import sys
 import os
 import mmap
 import urllib.request
 
 import ddhf_bitstore_metadata
 
+from ..base import artifact
 from ..base import excavation
+from ..container import simh_tap_file
 from ..container import imd_file
 
 SERVERNAME = os.environ.get("AUTOARCHAEOLOGIST_BITSTORE_HOSTNAME")
@@ -29,7 +32,7 @@ BITSTORE_FORMATS = {
     "MP4": False,
     "BAGIT": False,
     "TAR": True,
-    "SIMH-TAP": True,
+    "SIMH-TAP": simh_tap_file.SimhTapContainer,
     "ASCII": True,
     "ASCII_EVEN": True,
     "ASCII_ODD": True,
@@ -194,20 +197,23 @@ class FromBitStore():
         if handler is not True:
             try:
                 b = handler(b)
+            except AssertionError:
+                raise
             except Exception as err:
                 print(link_summary)
-                print(err)
+                print("Handler", handler.__name__, "failed with", [err])
+                print(repr(sys.exc_info()))
                 return
 
         try:
             this = self.ctx.add_top_artifact(b, description=link_summary)
         except excavation.DuplicateArtifact as why:
-            print(why)
-            print(why.that)
             this = why.that
         except:
             raise
 
+        if handler is not True:
+            this.add_type(handler.__name__)
         self.impose_geometry(meta, this)
         self.set_media_type(meta, this)
 
@@ -266,7 +272,8 @@ class FromBitStore():
 
     def impose_geometry(self, meta, this):
         ''' Impose Media.Geometry as records '''
-        if not hasattr(this, "define_record"):
+        if this._keys:
+            # Probably an aliased artifact
             return
         i = getattr(meta, "Media", None)
         if i is None:
@@ -274,7 +281,6 @@ class FromBitStore():
         i = getattr(i, "Geometry", None)
         if i is None or i.val is None:
             return
-        this.separators = []
         ngeom = []
         for geom in i.val.split(','):
             i = { "c": 1, "h": 1, "s": 1, "b": 0 }
@@ -294,12 +300,16 @@ class FromBitStore():
         ncyl = 0
         nhead = 0
         for i in ngeom:
-            #print("I", this, meta.BitStore.Ident.val, i, maxhead)
             if maxhead == 1 and i["c"] == 1 and i["h"] == 1:
                 for sect in range(i["s"]):
                     chs = (ncyl, nhead, sect + 1)
-                    this.separators.append((ptr, "@c%d,h%d,s%d" % chs))
-                    this.define_record(chs, ptr, ptr + i["b"])
+                    this.define_rec(
+                        artifact.Record(
+                            low=ptr,
+                            frag=this[ptr:ptr+i["b"]],
+                            key=chs,
+                        )
+                    )
                     ptr += i["b"]
                 nhead += 1
                 if nhead == maxhead:
@@ -310,9 +320,13 @@ class FromBitStore():
                     for head in range(i["h"]):
                         for sect in range(i["s"]):
                             chs = (ncyl, head, sect + 1)
-                            #print("CHS", chs, i["b"])
-                            this.separators.append((ptr, "@c%d,h%d,s%d" % chs))
-                            this.define_record(chs, ptr, ptr + i["b"])
+                            this.define_rec(
+                                artifact.Record(
+                                    low=ptr,
+                                    frag=this[ptr:ptr+i["b"]],
+                                    key=chs,
+                                )
+                            )
                             ptr += i["b"]
                     ncyl += 1
 

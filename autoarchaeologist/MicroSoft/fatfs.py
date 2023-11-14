@@ -209,8 +209,8 @@ class DirEnt(ov.Struct):
                 bite = i[:want]
                 if len(bite) > 0:
                     j.append(bite)
-                else:
-                    print(self.this, "Zero Chunk", size, hex(_lo), i, self)
+                #else:
+                #    print(self.this, "Missing Chunk", size, hex(_lo), i, self.name)
                 size -= want
             if j:
                 that = self.tree.this.create(records=j)

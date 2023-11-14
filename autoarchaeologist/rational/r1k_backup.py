@@ -8,6 +8,7 @@
 
 import html
 
+from ..base import namespace
 from . import r1k_backup_objects as objects
 
 def byte_length_int(this):
@@ -57,7 +58,7 @@ def byte_length_bytes(this):
 
 class MetaTapeFile():
     '''
-       All metadata tapefiles (all but "Block Data" are encoded as:
+       All metadata tapefiles (all but "Block Data") are encoded as:
 
 		<length byte> {<length byte> bytes}
     '''
@@ -200,9 +201,10 @@ class Volume():
 
     def __getitem__(self, idx):
         rb = self.rblock[idx][0]
-        b = self.block_data.getblock(rb // 3)
-        j = (rb % 3) << 10
-        return b[j:j+1024]
+        #print("BDK", self.block_data._keys)
+        #b = self.block_data.get_rec(rb // 3)
+        #j = (rb % 3) << 10
+        return self.block_data[(rb<<10):(rb+1)<<10]
 
     def binfo(self, idx):
         return self.rblock[idx]
@@ -229,6 +231,7 @@ class Volume():
         self.space_info.process()
 
     def render_block_data(self, fo, _this):
+        return
         fo.write("<H3>R1K Backup Block Data</H3>\n")
         fo.write("<pre>\n")
         for n, i in zip(self.block_info, self.block_data.iterrecords()):
@@ -246,92 +249,36 @@ class R1kBackup():
 
     def __init__(self, this):
         '''
-           This is very much a universe-of-one way to recognize an
-           entire tape based on the ANSI-labels.  Eventually we may
-           need something general, including support for multi-reel
-           tape-sets, but I dont want to try to generalize that from
-           a single one-reel example.
+           This is complicated...
         '''
 
-        self.enough = False
-        self.expect_next = None
         self.volumes = {}
-        self.void = None
 
-        us = [*this.parents][0].by_class.get(R1kBackup)
-        if us:
-            us.add_tape_file(this)
+        ns = this.has_name('Block Data Vol 1')
+        if not isinstance(ns, namespace.NameSpace):
             return
-        if [*this.parents][0].children[0] != this:
-            # We only care for the first ANSI label on the tape
-            return
-        if not this.has_type("ANSI Tape Label"):
-            return
-        bits = 0
-        for label in this.iterrecords():
-            try:
-                i = label.tobytes().decode("ASCII")
-            except UnicodeDecodeError:
-                return
-            if i[:4] == "VOL1" and i[38:44] == "BACKUP":
-                bits |= 1
-            if i[:40] == "UVL1RATIONAL CHAINED TAPES, PRED VOL ID:":
-                bits |= 2
-            if i[:10] == "UVL2BACKUP":
-                bits |= 4
-            if i[:21] == "HDR1Space Info Vol 1 ":
-                bits |= 8
-            if i[:21] == "HDR3Space Info Vol 1 ":
-                bits |= 16
-            # print("%02x" % bits, i)
-        if bits != 0x1f:
-            return
-        [*this.parents][0].by_class[R1kBackup] = self
-        print(this, "MATCH")
-        self.add_tape_file(this)
-
-    def add_tape_file(self, that):
-        ''' Add a tape-file to our collection '''
-        if that.has_type("ANSI Tape Label"):
-            for label in that.iterrecords():
-                i = label.tobytes().decode("ASCII")
-                if i[:4] == "HDR1":
-                    self.expect_next = i[4:21].split()
-                    return
-            self.expect_next = None
-            return
-        if not self.expect_next:
-            print("GOT", that, that.parents, that.types, that.notes)
-            for i in that.iterrecords():
-                print("Got", len(i), i[:64].tobytes())
-            return
-        assert self.expect_next
-        if self.expect_next[-1] in "1234":
-            volno = int(self.expect_next[-1])
-            self.expect_next.pop(-1)
+        tape_ns = ns.ns_parent
+        for ns in tape_ns:
+            i = {
+                "Vol Info": VolInfo,
+                "VP Info": VpInfo,
+                "DB Backups": DbBackups,
+                "DB Processors": DbProcessors,
+                "DB Disk Volumes": DbDiskVolumes,
+                "DB Tape Volumes": DbTapeVolumes,
+            }.get(ns.ns_name)
+            if i:
+                i(ns.ns_this)
+                continue
+            volno = ns.ns_name[-1]
             if volno not in self.volumes:
                 self.volumes[volno] = Volume(self, volno)
-            if self.expect_next == ["Space", "Info", "Vol"]:
-                self.volumes[volno].add_space_info(that)
-            elif self.expect_next == ["Block", "Info", "Vol"]:
-                self.volumes[volno].add_block_info(that)
-            elif self.expect_next == ["Block", "Data", "Vol"]:
-                self.volumes[volno].add_block_data(that)
-            else:
-                print("unhandled", that, volno, self.expect_next)
-        elif self.expect_next == ["Vol", "Info"]:
-            VolInfo(that)
-        elif self.expect_next == ["VP", "Info"]:
-            VpInfo(that)
-        elif self.expect_next == ["DB", "Backups"]:
-            DbBackups(that)
-        elif self.expect_next == ["DB", "Processors"]:
-            DbProcessors(that)
-        elif self.expect_next == ["DB", "Disk", "Volumes"]:
-            DbDiskVolumes(that)
-        elif self.expect_next == ["DB", "Tape", "Volumes"]:
-            DbTapeVolumes(that)
-        else:
-            print("non-vol", that, self.expect_next)
-            for i in byte_length_bytes(that):
-                print("    ", len(i), i[:64])
+            i = {
+                "Space Info Vol ": self.volumes[volno].add_space_info,
+                "Block Info Vol ": self.volumes[volno].add_block_info,
+                "Block Data Vol ": self.volumes[volno].add_block_data,
+            }.get(ns.ns_name[:-1])
+            if i:
+                i(ns.ns_this)
+                continue
+            print("R1K_Backup: Unknown tapefile", ns)

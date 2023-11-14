@@ -1,4 +1,6 @@
 '''
+Christian Rovsing A/S CR80 Artifacts from Datamuseum.dk's BitStore
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist import ddhf
@@ -10,7 +12,6 @@ from autoarchaeologist.generic import textfiles
 from autoarchaeologist.zilog import mcz
 
 class Cr80Floppy(ddhf.DDHF_Excavation):
-
     ''' CR80 Floppy disk images'''
 
     def __init__(self, **kwargs):

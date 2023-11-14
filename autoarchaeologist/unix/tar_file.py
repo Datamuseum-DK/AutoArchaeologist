@@ -27,7 +27,7 @@ class NameSpace(namespace.NameSpace):
     stat = unix_stat.UnixStat()
 
     def ns_render(self):
-        if self.ns_name[-1] == '/':
+        if 0 and self.ns_name[-1] == '/':
             sfmt = "d"
         else:
             sfmt = "-"
@@ -45,13 +45,13 @@ class TarEntry():
 
     def __init__(self, up, that, offset):
         self.up = up
-        self.hdr = that[offset:offset+512].tobytes()
+        self.hdr = that[offset:offset+512]
         self.parse_header()
         self.filename = that.type_case.decode(self.filename)
-        self.namespace = NameSpace(
-            name = self.filename,
-            parent = up.namespace,
-            separator = "",
+        self.namespace = up.namespace.ns_find(
+            self.filename.split("/"),
+            cls = NameSpace,
+            separator = '/',
             priv = self,
         )
         if self.target:
@@ -73,7 +73,7 @@ class TarEntry():
         self.csum = self.oct(148, 8)
         if self.csum != sum(self.hdr[:148]) + sum(self.hdr[156:]) + 8 * 32:
             raise Invalid("Checsum does not match")
-        self.filename = self.hdr[:100].split(b'\x00')[0]
+        self.filename = bytes(self.hdr[:100]).split(b'\x00')[0]
         self.link = self.oct(156, 1)
         self.mode = 0
         self.uid = 0
@@ -90,29 +90,30 @@ class TarEntry():
             if not self.link:
                 raise
         if self.link:
-            self.target = self.hdr[157:257].split(b'\x00')[0]
+            self.target = bytes(self.hdr[157:257]).split(b'\x00')[0]
         else:
             self.target = None
 
     def oct(self, offset, width):
         ''' Return numeric value of octal field '''
-        try:
-            retval = self.hdr[offset:offset + width]
-            retval = retval.split(b'\x00')[0]
-            retval = retval.decode('ascii')
-            if len(retval) == 0:
-                return 0
-            retval = int(retval, 8)
-            return retval
-        except:
-            raise Invalid(
-                "Bad octal field [%d:%d] %s" % (
-                    offset,
-                    offset + width,
-                    str(self.hdr[offset:offset + width]
+        retval = 0
+        for chr in self.hdr[offset:offset + width]:
+            if chr == 32:
+                continue
+            if chr == 0:
+                break
+            if 0x30 <= chr <= 0x37:
+                retval *= 8
+                retval += chr - 0x30
+            else:
+                raise Invalid(
+                    "Bad octal field [%d:%d] %s" % (
+                        offset,
+                        offset + width,
+                        str(bytes(self.hdr[offset:offset + width]))
                     )
                 )
-            )
+        return retval
 
 class TarFile():
 
@@ -131,7 +132,6 @@ class TarFile():
         try:
             entry = TarEntry(self, this, 0)
         except Invalid as e:
-            # print("TAR", this, e)
             return
         self.children = [entry]
         this.type = "Tar_file"

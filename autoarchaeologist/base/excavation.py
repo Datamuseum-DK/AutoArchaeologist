@@ -12,6 +12,7 @@
 import os
 import mmap
 import hashlib
+import html
 
 from . import artifact
 from . import type_case
@@ -307,6 +308,7 @@ class Excavation():
             fo.write('<H3><A name="IDX_%s">Index: %s</A></H3>\n' % (idxkey, idxkey))
             fo.write("<table>\n")
             for key, entries in sorted(self.index[idxkey].items()):
+                key = html.escape(key)
                 fo.write('<tr>\n')
                 fo.write('<td style="font-size: 80%; vertical-align: top;">\n')
                 fo.write('<A name="IDX_%s">%s</A>' % (key, key))
@@ -416,7 +418,7 @@ class Excavation():
         th {
             border-bottom: 1px solid black;
         }
-        td.l, th.l { text-align: left; }
-        td.r, th.r { text-align: right; }
-        td.c, th.c { text-align: center; }
+        td.l, th.l { vertical-align: top; text-align: left; }
+        td.r, th.r { vertical-align: top; text-align: right; }
+        td.c, th.c { vertical-align: top; text-align: center; }
     '''

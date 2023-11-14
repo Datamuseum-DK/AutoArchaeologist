@@ -23,7 +23,7 @@ def rcsl(a):
                 b[3] = b[3][:n]
                 break
         return "-".join(b[:4])
-    print("RCSL bad", b)
+    #print("RCSL bad", b)
     return None
 
 class RCSL():

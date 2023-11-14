@@ -25,7 +25,7 @@ class TextFile():
 
     VERBOSE = False
 
-    MAX_TAIL = 128
+    MAX_TAIL = 2048
 
     TYPE_CASE = None
 
@@ -56,7 +56,7 @@ class TextFile():
 
     def credible(self):
         ''' Determine if result warrants a new artifact '''
-        if len(self.this) - len(self.txt) > self.MAX_TAIL:
+        if self.MAX_TAIL is not None and len(self.this) - len(self.txt) > self.MAX_TAIL:
             if self.VERBOSE:
                 print(self.this, "TextFile: too long tail", len(self.this) - len(self.txt))
             return False

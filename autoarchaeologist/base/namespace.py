@@ -21,6 +21,8 @@
 
 '''
 
+import html
+
 class NameSpaceError(Exception):
     ''' ... '''
 
@@ -33,6 +35,12 @@ class NameSpace():
 	A node in a NameSpace graph.
 
     '''
+
+    KIND = "Namespace"
+    TABLE = (
+        ("l", "name"),
+        ("l", "artifact"),
+    )
 
     def __init__(
         self,
@@ -61,8 +69,11 @@ class NameSpace():
     def __lt__(self, other):
         return self.ns_path() < other.ns_path()
 
-    def __str__(self):
+    def __repr__(self):
         return '<NS ' + str(self.ns_root) + " " + self.ns_path() + '>'
+
+    def __iter__(self):
+        yield from self.ns_children
 
     def ns_set_root(self, root):
         ''' Set the root artifact '''
@@ -100,7 +111,7 @@ class NameSpace():
         ''' Return path and summary for interpretation table '''
         path = self.ns_path()
         if self.ns_this:
-            return [ path, self.ns_this.summary(notes=True, descriptions=False, types=True) ]
+            return [ html.escape(path), self.ns_this.summary(notes=True, descriptions=False, types=True) ]
         return [ path, None ]
 
     def ns_add_child(self, child):
@@ -118,12 +129,12 @@ class NameSpace():
         for child in sorted(self.ns_children):
             yield from child.ns_recurse(level+1)
 
-    def ns_html_plain(self, fo, _this):
+    def ns_html_plain(self, file, _this):
         ''' Render recursively '''
         if not self.ns_children:
             return
-        fo.write("<H3>" + self.KIND + "</H3>\n")
-        fo.write("<div>")
+        file.write("<H3>" + self.KIND + "</H3>\n")
+        file.write("<div>")
 
         tbl = [x.ns_render() for y, x in self.ns_recurse() if y > 0]
         cols = max(len(x) for x in tbl)
@@ -131,32 +142,50 @@ class NameSpace():
         if i != cols:
             print("WARNING: Namespace as uneven table", min, cols)
 
-        fo.write('<table>\n')
+        file.write('<table>\n')
 
-        if self.TABLE:
-            align = [x[0] for x in self.TABLE]
-            hdr = [x[1] for x in self.TABLE]
-            while len(align) < cols:
-                align.append("l")
-                hdr.append("-")
-            fo.write('  <thead>\n')
-            for a, h in zip(align, hdr):
-                fo.write('      <th class="' + a + '">' + str(h) + '</th>\n')
-            fo.write('  </thead>\n')
-        else:
-            align = ["l"] * cols
+        align = [x[0] for x in self.TABLE]
+        hdr = [x[1] for x in self.TABLE]
+        while len(align) < cols:
+            align.insert(0, "l")
+            hdr.append("-")
+        file.write('  <thead>\n')
+        for algn, hdr in zip(align, hdr):
+            file.write('      <th class="' + algn + '">' + str(hdr) + '</th>\n')
+        file.write('  </thead>\n')
 
-        fo.write('  <tbody>\n')
+        file.write('  <tbody>\n')
         for row in tbl:
-            fo.write('    <tr>\n')
-            for n, col in enumerate(row):
+            file.write('    <tr>\n')
+            for colno, col in enumerate(row):
                 if col is None:
                     col = '-'
-                fo.write('      <td class="' + align[n] + '">' + str(col) + '</td>\n')
-            fo.write('    </tr>\n')
-        fo.write('  </tbody>\n')
-        fo.write('</table>\n')
-        fo.write("</div>")
+                file.write('      <td class="' + align[colno] + '">' + str(col) + '</td>\n')
+            file.write('    </tr>\n')
+        file.write('  </tbody>\n')
+        file.write('</table>\n')
+        file.write("</div>")
 
-    KIND = "Namespace"
-    TABLE = None
+    def ns_find(self, names, cls=None, **kwargs):
+        ''' Find a path, optionally creating nodes '''
+        found = list(self.ns_lookup(names[0]))
+        if not found and cls is None:
+            return None
+        if not found:
+            found = cls(name = names[0], parent = self, **kwargs)
+        else:
+            found = found[0]
+        if len(names) > 1:
+            return found.ns_find(names[1:], cls=cls, **kwargs)
+        return found
+
+    def ns_lookup(self, name):
+        ''' Look a name up in this namespace '''
+        for i in self.ns_children:
+            if i.ns_name == name:
+                yield i
+
+    def ns_lookup_peer(self, name):
+        ''' Look a name up in the parent namespace '''
+        if self.ns_parent:
+            yield from self.ns_parent.ns_lookup(name)

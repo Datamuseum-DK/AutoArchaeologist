@@ -120,7 +120,8 @@ class ImdContainer(artifact.ArtifactFragmented):
                 recs.append((chs, data, mode > 2))
 
         for key, data, deleted in sorted(recs):
-            rec = self.add_part(key, data)
+            rec = artifact.Record(len(self), frag=data, key=key)
+            self.add_fragment(rec)
             rec.deleted = deleted
             if deleted:
                 self.separators.append((rec.lo, "@c%d,h%d,s%d (deleted)" % key))

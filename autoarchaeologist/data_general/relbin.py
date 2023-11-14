@@ -200,10 +200,7 @@ class RelBin():
                 if j in (".ENT",) and k:
                     this.add_note(k)
         if self.r[0].name:
-            try:
-                this.set_name(self.r[0].name.strip())
-            except autoarchaeologist.core_classes.DuplicateName:
-                pass
+            this.add_name(self.r[0].name.strip())
 
     def html_as_interpretation(self, fo, _this):
         ''' List all the records '''

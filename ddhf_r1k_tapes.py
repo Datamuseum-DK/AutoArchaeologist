@@ -1,19 +1,17 @@
 '''
 Rational R1000/400 Tapes from Datamuseum.dk's BitStore
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
 
-from autoarchaeologist.generic.tap_file import TAPfile
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
-from autoarchaeologist.rational.tape_blocks import R1K_Tape_blocks
-from autoarchaeologist.rational.index_data import R1K_Index_Data
+from autoarchaeologist.rational import r1k_archive
 from autoarchaeologist.rational.r1k_assy import R1kAssyFile
-from autoarchaeologist.generic.ascii import Ascii
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.unix.compress import Compress
 from autoarchaeologist.unix.tar_file import TarFile
+from autoarchaeologist.generic import textfiles
 
 class R1K(DDHF_Excavation):
 
@@ -23,14 +21,13 @@ class R1K(DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(TAPfile)
+        self.download_limit = 28922073 + 1
         self.add_examiner(AnsiTapeLabels)
-        self.add_examiner(R1K_Tape_blocks)
-        self.add_examiner(R1K_Index_Data)
+        self.add_examiner(r1k_archive.R1K_Archive)
         self.add_examiner(R1kAssyFile)
         self.add_examiner(Compress)
         self.add_examiner(TarFile)
-        self.add_examiner(Ascii)
+        self.add_examiner(textfiles.TextFile)
         self.add_examiner(SameSame)
 
         self.from_bitstore(
@@ -48,7 +45,7 @@ class R1K(DDHF_Excavation):
             "-30000533",	# ASIS(AIX)
             "-30000544",	# PAM arrival backup, different format.
             "RATIONAL_1000/TAPE",
-            #"30000535",
+            #"30000747",
         )
 
 if __name__ == "__main__":

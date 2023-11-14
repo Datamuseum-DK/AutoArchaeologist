@@ -32,7 +32,7 @@ class FileLike():
     def read(self, howmuch=None):
         if howmuch is None:
             howmuch = len(self.this) - self.pos
-        i = self.this[self.pos:self.pos+howmuch].tobytes()
+        i = bytes(self.this[self.pos:self.pos+howmuch])
         self.pos += howmuch
         return i
 
@@ -52,7 +52,7 @@ class ZipFile():
     ''' General ZIP file '''
 
     def __init__(self, this):
-        if this[:2].tobytes() != b'PK':
+        if bytes(this[:2]) != b'PK':
             return
         try:
             z = zipfile.ZipFile(FileLike(this))

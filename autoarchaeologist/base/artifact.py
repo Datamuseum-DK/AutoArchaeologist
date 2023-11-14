@@ -16,10 +16,34 @@ from . import excavation
 from . import interpretation
 from . import octetview as ov
 from .. import record
-from .. import scattergather
 
-class DuplicateName(Exception):
-    ''' Set names must be unique '''
+class Record(bintree.BinTreeLeaf):
+    '''
+       A piece of an artifact
+       ----------------------
+
+       Used for both fragments and records
+    '''
+
+    def __init__(self, low, high=None, frag=None, key=None):
+        if high is None:
+            assert frag is not None
+            high = low + len(frag)
+        elif frag is not None:
+            assert high == low + len(frag)
+        super().__init__(low, high)
+        self.frag = frag
+        self.key = key
+        self.artifact = None
+
+    def __str__(self):
+        return "<R 0x%x…0x%x=0x%x %s>" % (self.lo, self.hi, self.hi - self.lo, str(self.key))
+
+    def __len__(self):
+        return self.hi - self.lo
+
+    def __getitem__(self, idx):
+        return self.frag[idx]
 
 class ArtifactBase():
 
@@ -52,7 +76,6 @@ class ArtifactBase():
         self.parents = set()
         self.children = []
 
-        self.named = None
         self.interpretations = []
         self.unique = 0
         self.notes = set()
@@ -73,8 +96,8 @@ class ArtifactBase():
         self.names = set()
 
         self.by_class = {} # Experimental extension point
-        self.separators = None
         self._keys = {}
+        self._reclen = 0
 
     def __str__(self):
         if not self.digest:
@@ -94,10 +117,45 @@ class ArtifactBase():
             return 1
         return self.digest < other.digest
 
-    def get_rec(self, nbr):
-        return self._keys[nbr]
+    def iter_bytes(self):
+        ''' iterate bytes in byte-order '''
+
+        if self.byte_order is None:
+            yield from self
+            return
+
+        def group(data, chunk):
+            i = [iter(data)] * chunk
+            return zip_longest(*i, fillvalue=0)
+
+        for chunk in self.iter_chunks():
+            for i in group(chunk, len(self.byte_order)):
+                for j in self.byte_order:
+                    yield i[j]
+
+    def writetofile(self, file):
+        ''' write artifact to a file '''
+        raise NotImplementedError
+
+    def iter_chunks(self):
+        ''' iterate artifact in whatever chunks are convenient '''
+        raise NotImplementedError
+
+    def define_rec(self, rec):
+        ''' Define a record '''
+        assert isinstance(rec, Record)
+        assert rec.key not in self._keys
+        self._keys[rec.key] = rec
+        self._reclen += len(rec)
+        rec.artifact = self
+        return rec
+
+    def get_rec(self, key):
+        ''' Get a Record '''
+        return self._keys[key]
 
     def iter_rec(self):
+        ''' Iterate Records '''
         yield from self._keys.values()
 
     def set_digest(self, digest=None):
@@ -112,9 +170,9 @@ class ArtifactBase():
 
     def get_unique(self):
         ''' Return a unique (increasing) number '''
-        rv = self.unique
+        retval = self.unique
         self.unique += 1
-        return rv
+        return retval
 
     def add_parent(self, parent):
         ''' Attach to parent, and vice-versa '''
@@ -129,25 +187,19 @@ class ArtifactBase():
             self.names.add(namespace.ns_name)
             self.top.add_to_index(namespace.ns_name, self)
 
-    def set_name(self, name, fallback=True):
-        ''' Set a unique name '''
-        if self.named == name:
-            return
-        if self.named is not None:
-            if fallback:
-                self.add_note(name)
-                self.top.add_to_index(name, self)
-                return
-            raise DuplicateName("Name clash '%s' vs '%s'" % (self.named, name))
-        if name in self.top.names:
-            if fallback:
-                self.add_note(name)
-                self.top.add_to_index(name, self)
-                return
-            raise DuplicateName("Name already used '%s'" % name)
-        self.top.names.add(name)
-        self.named = name
-        self.top.add_to_index(name, self)
+    def add_name(self, name):
+        ''' Add a name '''
+        self.names.add(name)
+
+    def has_name(self, name):
+        ''' Return False, True or a NameSpace '''
+        if name not in self.names:
+            return False
+        for nsl in self.namespaces.values():
+            for ns in nsl:
+                if ns.ns_name == name:
+                    return ns
+        return True
 
     def add_type(self, typ):
         ''' Add type designation (also as note) '''
@@ -163,9 +215,11 @@ class ArtifactBase():
         self.interpretations.append((owner, func))
 
     def add_utf8_interpretation(self, title):
+        ''' Add early UTF-8 interpretation '''
         return interpretation.Utf8Interpretation(self, title)
 
     def add_html_interpretation(self, title):
+        ''' Add early HTML interpretation '''
         return interpretation.HtmlInterpretation(self, title)
 
     def add_description(self, desc):
@@ -220,11 +274,11 @@ class ArtifactBase():
 
     def create(self, bits=None, start=None, stop=None, records=None):
         ''' Return a new or old artifact for some bits '''
+        that = None
         if records:
             assert bits is None
-            assert len(records) > 0
-            bits = scattergather.ScatterGather(records)
-            digest = bits.sha256()
+            that = ArtifactFragmented(records)
+            digest = that.digest
         elif isinstance(bits, memoryview):
             digest = hashlib.sha256(bits.tobytes()).hexdigest()
         elif bits:
@@ -235,10 +289,13 @@ class ArtifactBase():
             if not start and stop == len(self):
                 return self
             bits = self[start:stop]
-            digest = hashlib.sha256(bits.tobytes()).hexdigest()
+            digest = hashlib.sha256(bits).hexdigest()
         this = self.top.hashes.get(digest)
         if not this:
-            this = Artifact(digest, bits)
+            if that:
+                this = that
+            else:
+                this = Artifact(digest, bits)
             this.type_case = self.type_case
             self.top.adopt(this)
             this.add_parent(self)
@@ -297,7 +354,7 @@ class ArtifactBase():
                         txt.append(i)
                         j.add(i)
             if names:
-                txt += ["»" + x + "«" for x in sorted(self.names)]
+                txt += ["»" + html.escape(x) + "«" for x in sorted(self.names)]
             if notes:
                 txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
             if not link or not ident or not types or not descriptions:
@@ -305,118 +362,100 @@ class ArtifactBase():
             self.index_representation = nam + ", ".join(txt)
         return self.index_representation
 
-    def html_page(self, fo):
+    def html_page(self, file):
         ''' Produce HTML page '''
-        fo.write("<H2>" + self.summary(link=False) + "</H2>\n")
-        fo.write("<pre>\n")
-        fo.write("    Length: %d (0x%x)\n" % (len(self), len(self)))
+        file.write("<H2>" + self.summary(link=False) + "</H2>\n")
+        file.write("<pre>\n")
+        file.write("    Length: %d (0x%x)\n" % (len(self), len(self)))
         for i in self.descriptions:
-            fo.write("    Description: " + i + "\n")
+            file.write("    Description: " + i + "\n")
         if self.types:
-            fo.write("    Types: " + ", ".join(sorted(self.types)) + "\n")
+            file.write("    Types: " + ", ".join(sorted(self.types)) + "\n")
         if self.notes:
-            fo.write("    Notes: " + ", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
+            file.write("    Notes: " + ", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
         if self.names:
-            fo.write("    Names: " + ", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
-        fo.write("</pre>\n")
+            file.write("    Names: " + ", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
+        file.write("</pre>\n")
 
         if self.top not in self.parents or len(self.parents) > 1:
-            fo.write("<H3>Derivation</H3>\n")
-            fo.write("<pre>\n")
-            self.html_derivation(fo)
-            fo.write("</pre>\n")
+            file.write("<H3>Derivation</H3>\n")
+            file.write("<pre>\n")
+            self.html_derivation(file)
+            file.write("</pre>\n")
 
         if self.children and not self.interpretations:
-            self.html_interpretation_children(fo, self)
+            self.html_interpretation_children(file, self)
 
         if self.comments:
-            fo.write("<H3>NB: Comments at End</H3>\n")
+            file.write("<H3>NB: Comments at End</H3>\n")
 
         if self.interpretations:
             for _owner, func in self.interpretations:
-                fo.write('<div>\n')
-                func(fo, self)
-                fo.write('</div>\n')
+                file.write('<div>\n')
+                func(file, self)
+                file.write('</div>\n')
         else:
-            self.html_default_interpretation(fo, self, max_lines=200)
+            self.html_default_interpretation(file, self, max_lines=200)
 
         if self.comments:
-            fo.write("<H3>Comments</H3>\n")
-            fo.write("<pre>\n")
+            file.write("<H3>Comments</H3>\n")
+            file.write("<pre>\n")
             for i in self.comments:
-                fo.write(i + "\n")
-            fo.write("</pre>\n")
+                file.write(i + "\n")
+            file.write("</pre>\n")
 
-    def html_interpretation_children(self, fo, _this):
+    def html_interpretation_children(self, file, _this):
         ''' Default interpretation list of children'''
 
-        fo.write("<H3>Children</H3>\n")
-        fo.write("<pre>\n")
+        file.write("<H3>Children</H3>\n")
+        file.write("<pre>\n")
         for start, stop, this in sorted(self.layout):
-            fo.write("  0x%08x" % start + "-0x%08x  " % stop)
-            fo.write(this.summary() + "\n")
-        fo.write("</pre>\n")
+            file.write("  0x%08x" % start + "-0x%08x  " % stop)
+            file.write(this.summary() + "\n")
+        file.write("</pre>\n")
 
-    def html_derivation(self, fo, target=True):
+    def html_derivation(self, file, target=True):
         ''' Recursively document how this artifact came to be '''
         prefix = ""
-        for p in sorted(self.parents):
+        for parent in sorted(self.parents):
             descs = self.descriptions
             if not descs:
                 descs = ("",)
             for desc in descs:
-                t = p.html_derivation(fo, target=False)
-                if len(t) > len(prefix):
-                    prefix = t
+                txt = parent.html_derivation(file, target=False)
+                if len(txt) > len(prefix):
+                    prefix = txt
 
                 if target:
                     link = "\u27e6this\u27e7"
                 else:
                     link = self.top.html_link_to(self)
-                v = self.namespaces.get(p)
-                if v:
+                nsps = self.namespaces.get(parent)
+                if nsps:
                     # Not quite: See CBM900 ⟦e681055fa⟧
-                    for ns in sorted(v):
-                        fo.write(t + "└─ " + link + " »" + ns.ns_path() + "« " + desc + '\n')
+                    for nsp in sorted(nsps):
+                        file.write(txt + "└─ " + link + " »" + html.escape(nsp.ns_path()) + "« " + desc + '\n')
                 else:
-                    fo.write(t + "└─" + link + " " + desc + '\n')
+                    file.write(txt + "└─" + link + " " + desc + '\n')
         return prefix + "    "
 
     def html_description(self):
+        ''' Descriptions, one per line '''
         return "<br>\n".join(sorted(self.descriptions))
 
-    def html_default_interpretation(self, fo, this, max_lines=10000, **kwargs):
+    def html_default_interpretation(self, file, this, max_lines=10000, **kwargs):
         ''' Default interpretation is a hexdump '''
 
         tmp = ov.OctetView(this)
-        fo.write("<H3>Hex Dump</H3>\n")
-        fo.write("<pre>\n")
-        for n, line in enumerate(tmp.render(**kwargs)):
-            if max_lines and n > max_lines:
-                fo.write("[…truncated at %d lines…]\n" % max_lines)
+        file.write("<H3>Hex Dump</H3>\n")
+        file.write("<pre>\n")
+        for cnt, line in enumerate(tmp.render(**kwargs)):
+            if max_lines and cnt > max_lines:
+                file.write("[…truncated at %d lines…]\n" % max_lines)
                 break
-            fo.write(html.escape(line) + '\n')
-        fo.write("</pre>\n")
+            file.write(html.escape(line) + '\n')
+        file.write("</pre>\n")
 
-class Record(bintree.BinTreeLeaf):
-    '''
-       A fragment of an artifact
-       -------------------------
-    '''
-
-    def __init__(self, offset, frag, key=None):
-        super().__init__(offset, offset + len(frag))
-        self.frag = frag
-        self.key = key
-
-    def __str__(self):
-        return "<R 0x%x:0x%x %s>" % (self.lo, self.hi, str(self.key))
-
-    def __len__(self):
-        return len(self.frag)
-
-    def __getitem__(self, idx):
-        return self.frag[idx]
 
 class ArtifactStream(ArtifactBase):
 
@@ -428,10 +467,7 @@ class ArtifactStream(ArtifactBase):
     def __init__(self, octets):
         super().__init__()
         assert len(octets) > 0
-        if isinstance(octets, (memoryview, scattergather.ScatterGather)):
-            self.bdx = octets
-        else:
-            self.bdx = memoryview(octets)
+        self.bdx = memoryview(octets).toreadonly()
 
     def __len__(self):
         return len(self.bdx)
@@ -442,25 +478,8 @@ class ArtifactStream(ArtifactBase):
     def __iter__(self):
         yield from self.bdx
 
-    def define_record(self, key, lo, hi):
-        self._keys[key] = Record(lo, self.bdx[lo:hi], key)
-
     def iter_chunks(self):
-        ''' iterate artifact in whatever chunks are convenient '''
         yield self.bdx
-
-    def iter_bytes(self):
-        if self.byte_order is None:
-            yield from self.bdx
-            return
-
-        def group(input, chunk):
-            i = [iter(input)] * chunk
-            return zip_longest(*i, fillvalue=0)
-
-        for i in group(self.bdx, len(self.byte_order)):
-            for j in self.byte_order:
-                yield i[j]
 
     def bits(self, lo, width=None, hi=None):
         ''' Get a slice as a bitstring '''
@@ -489,44 +508,40 @@ class ArtifactStream(ArtifactBase):
         f = e & ((1 << (hi - lo)) - 1)
         return f
 
-    def getblock(self, idx):
-        if isinstance(self.bdx, scattergather.ScatterGather):
-            return self.bdx.block(idx)
-        return None
+    def deprecated_getblock(self, idx):
+        ''' Deprecated '''
 
-    def iterrecords(self):
-        if isinstance(self.bdx, scattergather.ScatterGather):
-            yield from self.bdx.iterrecords()
-        else:
-            yield self.bdx
+    def deprecated_iterrecords(self):
+        ''' Deprecated '''
 
     def tobytes(self):
         return self.bdx.tobytes()
 
-    def writetofile(self, fo):
-        if isinstance(self.bdx, scattergather.ScatterGather):
-            self.bdx.writetofile(fo)
-        else:
-            fo.write(self.bdx)
+    def writetofile(self, file):
+        file.write(self.bdx)
 
     def record(self, layout, **kwargs):
         ''' Extract a compound record '''
         return record.Extract_Record(self, layout, **kwargs)
 
 class ArtifactFragmented(ArtifactBase):
+    '''
+       Artifact consisting of fragments of other artifact(s)
+    '''
 
     def __init__(self, fragments=None):
         super().__init__()
-        self._recs = []
+        self._frags = []
         self._keys = {}
         self._tree = None
         self._len = 0
+        self._reclen = 0
         if fragments:
-            assert parts is None
             for i in fragments:
+                assert len(i) > 0
                 self.add_fragment(i)
-
-        self.completed()
+            assert len(self._frags) > 0
+            self.completed()
 
     def __len__(self):
         return self._len
@@ -536,73 +551,69 @@ class ArtifactFragmented(ArtifactBase):
             i = [*self._tree.find(lo = idx, hi = idx + 1)]
             assert len(i) == 1
             return i[0][idx - i[0].lo]
-        if isinstance(idx, slice):
-            i = [*self._tree.find(lo = idx.start, hi = idx.stop)]
-            if len(i) == 1:
-                start = max(0, idx.start - i[0].lo)
-                stop = min(len(i[0]), idx.stop - i[0].lo)
-                return i[0][start:stop]
-            retval = bytearray()
-            for j in i:
-                if idx.start < j.lo and idx.stop >= j.hi:
-                    retval += j.octets
-                    continue
-                start = max(0, idx.start - j.lo)
-                stop = min(len(j), idx.stop - j.lo)
-                retval += j.octets[start:stop]
-            return retval
-        return self._keys[idx].frag
+        if not isinstance(idx, slice):
+            return self._keys[idx].frag
+        start = idx.start
+        if start is None:
+            start = 0
+        stop = idx.stop
+        if stop is None:
+            stop = self._len
+        i = [*self._tree.find(lo = start, hi = stop)]
+        #print("GI", self, idx.start, idx.stop, start, stop, i)
+        if len(i) == 1:
+            start = max(0, start - i[0].lo)
+            stop = min(len(i[0]), stop - i[0].lo)
+            return i[0][start:stop]
+        retval = bytearray()
+        for j in i:
+            #print("  ", start, stop, j.lo, j.hi, type(j))
+            if start < j.lo and stop >= j.hi:
+                retval += j.frag
+                continue
+            tstart = max(0, start - j.lo)
+            tstop = min(len(j), stop - j.lo)
+            retval += j[tstart:tstop]
+        return retval
 
     def __iter__(self):
-        for rec in self._recs:
+        for rec in self._frags:
             yield from rec.frag
 
     def iter_chunks(self):
-        ''' iterate artifact in whatever chunks are convenient '''
-        for rec in self._recs:
+        for rec in self._frags:
             yield rec.frag
 
-    def iter_bytes(self):
-        if self.byte_order is None:
-            yield from self.__iter__()
-            return
+    def tobytes(self):
+        i = bytearray()
+        for j in self:
+            i.append(j)
+        return i
 
-        def group(input, chunk):
-            i = [iter(input)] * chunk
-            return zip_longest(*i, fillvalue=0)
-
-        for chunk in self.iter_chunks:
-            for i in group(chunk, len(self.byte_order)):
-                for j in self.byte_order:
-                    yield i[j]
 
     def add_fragment(self, frag):
-        assert len(self._keys) == 0
-        self._recs.append(Record(self._len, frag))
+        ''' Append a fragment '''
+        if not isinstance(frag, Record):
+            frag = Record(self._len, frag=frag)
+        assert frag.lo == self._len
+        self._frags.append(frag)
+        frag.artifact = self
         self._len += len(frag)
-
-    def add_part(self, key, frag):
-        assert len(self._keys) == len(self._recs)
-        assert key not in self._keys
-        rec = Record(self._len, frag, key)
-        self._recs.append(rec)
-        self._len += len(rec.frag)
-        self._keys[rec.key] = rec
-        return rec
+        if frag.key is not None:
+            self.define_rec(frag)
 
     def completed(self):
+        ''' Build the tree and digest '''
         self._tree = bintree.BinTree(0, self._len)
         i = hashlib.sha256()
-        for leaf in self._recs:
+        for leaf in self._frags:
             self._tree.insert(leaf)
             i.update(leaf.frag)
         self.set_digest(i.hexdigest())
-        if not self.separators:
-            self.separators = [(x.lo, "@" + str(x.key)) for x in self._tree]
 
-    def writetofile(self, fo):
-        for rec in self._recs:
-            fo.write(rec.frag)
+    def writetofile(self, file):
+        for rec in self._frags:
+            file.write(rec.frag)
 
 class Artifact(ArtifactStream):
     ''' ... '''
@@ -610,4 +621,3 @@ class Artifact(ArtifactStream):
     def __init__(self, digest, payload):
         super().__init__(payload)
         self.set_digest(digest)
-
