@@ -79,10 +79,11 @@ class This(Octets):
 
     def __init__(self, tree, *args, **kwargs):
         super().__init__(tree, *args, **kwargs)
-        self.this = tree.this.create(start=self.lo, stop=self.hi)
+        self.that = tree.this.create(start=self.lo, stop=self.hi)
+        print("This", self.that)
 
     def render(self):
-        yield str(self.this)
+        yield str(self.that)
 
 class Opaque(Octets):
     ''' Hide some octets '''

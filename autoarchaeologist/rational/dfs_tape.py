@@ -100,13 +100,14 @@ class R1K_DFS_Tape(ov.OctetView):
                     name=hdr.name.txt,
                     parent=self.namespace,
                     priv = hdr,
-                    this=y.this,
+                    this=y.that,
                 )
 
                 i = hdr.name.txt.split(".")
-                y.this.add_type(i[-1])
+                y.that.add_type(i[-1])
             else:
                 offset += len(r)
+        this.taken = True
 
         # Comment in for debugging 
         # self.add_interpretation()
