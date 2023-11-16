@@ -33,19 +33,19 @@ class DomusDS2089(type_case.DS2089):
         self.set_slug(0x19, ' ', '«eof»', self.EOF)
         self.set_slug(0x7f, ' ', '')
 
-class NoParTextFile(textfiles.TextFile):
+class TextFile(textfiles.TextFile):
     ''' Non-parity '''
 
     TYPE_CASE = DomusDS2089()
     MAX_TAIL=512*6
 
-class EvenTextFile(textfiles.TextFile):
+class TextFileEven(textfiles.TextFile):
     ''' Even-parity '''
 
     TYPE_CASE = type_case.EvenPar(DomusDS2089())
     MAX_TAIL=512*6
 
-class OddTextFile(textfiles.TextFile):
+class TextFileOdd(textfiles.TextFile):
     ''' Odd-parity '''
 
     TYPE_CASE = type_case.OddPar(DomusDS2089())
@@ -69,9 +69,9 @@ class Rc3600(ddhf.DDHF_Excavation):
         self.add_examiner(bigdigits.BigDigits)
         self.add_examiner(papertapechecksum.DGC_PaperTapeCheckSum)
         self.add_examiner(rcsl.RCSL)
-        self.add_examiner(NoParTextFile)
-        self.add_examiner(EvenTextFile)
-        self.add_examiner(OddTextFile)
+        self.add_examiner(TextFile)
+        self.add_examiner(TextFileEven)
+        self.add_examiner(TextFileOdd)
         self.add_examiner(samesame.SameSame)
 
         self.from_bitstore(
@@ -80,6 +80,7 @@ class Rc3600(ddhf.DDHF_Excavation):
             "RC/RC3600/HW",
             "RC/RC3600/LOADER",
             "RC/RC3600/MUSIL",
+            "RC/RC3600/PAPERTAPE",
         )
 
 if __name__ == "__main__":
