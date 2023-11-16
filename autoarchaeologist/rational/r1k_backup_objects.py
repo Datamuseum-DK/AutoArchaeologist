@@ -126,7 +126,7 @@ class R1kBackupObject():
         self.mgr = self.space_info[9] >> 32
         self.segment = self.space_info[9] & 0xffffffff
         self.obj.add_note("%02x_class" % self.mgr)
-        self.obj.add_note("segment_%d" % self.segment)
+        self.obj.add_note("seg_%06x" % self.segment)
         mgr = {
             0: "NULL",
             1: "ADA",
