@@ -219,7 +219,7 @@ class BitView(bintree.BinTree):
         if lo < self.hi:
             yield from self.pad(lo, self.hi)
 
-    def render(self, title="BitView", maxlines=10000):
+    def render(self, title="BitView", maxlines=1000):
         print(self.this, "Rendering", self.gauge, "bitview-leaves")
         self.tfn = self.this.add_utf8_interpretation(title)
         n = 0

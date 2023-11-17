@@ -84,6 +84,7 @@ class NameSpace():
         if self.ns_parent:
             raise NameSpaceError("Root and Parent are exclusive")
         self.ns_root = root
+        root.ns_roots.append(self)
 
     def ns_set_this(self, this):
         ''' Set this nodes artifact '''

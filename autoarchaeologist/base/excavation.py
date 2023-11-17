@@ -15,6 +15,7 @@ import hashlib
 import html
 
 from . import artifact
+from . import index
 from . import type_case
 
 def dotdotdot(gen, limit=35):
@@ -111,8 +112,6 @@ class Excavation():
         self.examiners = []
         self.names = set()
 
-        self.index = {}
-
         # Duck-type as Artifact
         self.top = self
         self.children = []
@@ -182,12 +181,6 @@ class Excavation():
         )
         return self.add_top_artifact(mapped, description=description, **kwargs)
 
-    def add_to_index(self, key, this):
-        ''' Add things to the index '''
-        i = self.index.setdefault(key[0], dict())
-        j = i.setdefault(key, set())
-        j.add(this)
-
     def start_examination(self):
         ''' As it says on the tin... '''
         self.busy = False
@@ -203,7 +196,6 @@ class Excavation():
                 ex(this)
                 if this.taken:
                     break
-            this.examined()
         self.busy = False
 
     def polish(self):
@@ -218,11 +210,6 @@ class Excavation():
         # Reset summaries to pick it up
         for this in self.hashes.values():
             this.index_representation = None
-
-    def iter_notes(self):
-        ''' Return all notes '''
-        for child in self.children:
-            yield from child.iter_notes(True)
 
     def basename_for(self, this, suf=".html"):
         ''' Come up with a suitable filename related to an artifact '''
@@ -261,10 +248,11 @@ class Excavation():
                 binfile = self.filename_for(this, suf=".bin")
                 this.writetofile(open(binfile.filename, 'wb'))
             fnt = self.filename_for(this)
-            fot = open(fnt.filename, "w")
-            self.html_prefix(fot, this)
-            this.html_page(fot)
-            self.html_suffix(fot)
+            with open(fnt.filename, "w") as fot:
+                self.html_prefix(fot, this)
+                self.html_artifact_head(fot, this)
+                this.html_page(fot)
+                self.html_suffix(fot, this)
 
         return self.filename_for(self).link
 
@@ -277,16 +265,10 @@ class Excavation():
         fo = open(fn.filename, "w")
         self.html_prefix(fo, self)
 
-        fo.write("<H2>Links to index</H2>")
-        fo.write("<table>\n")
-        cols = 48
-        index_keys = sorted(self.index)
-        for row in [index_keys[i:i + cols] for i in range(0, len(index_keys), cols)]:
-            fo.write("<tr>\n")
-            for cell in row:
-                fo.write("<td>" + self.html_link_to(self, cell, anchor="IDX_" + cell) + "</td>\n")
-            fo.write("</tr>\n")
-        fo.write("</table>\n")
+        fo.write("<pre>\n")
+        fo.write(self.html_link_to(self, "top"))
+        fo.write("</pre>\n")
+        index.Index(self).produce(fo)
 
         fo.write("<H2>Top level artifacts</H2>")
         fo.write("<table>\n")
@@ -303,52 +285,7 @@ class Excavation():
             fo.write("</tr>\n")
         fo.write("</table>\n")
 
-        fo.write("<H2>Index</H2>")
-        for idxkey in index_keys:
-            fo.write('<H3><A name="IDX_%s">Index: %s</A></H3>\n' % (idxkey, idxkey))
-            fo.write("<table>\n")
-            for key, entries in sorted(self.index[idxkey].items()):
-                key = html.escape(key)
-                fo.write('<tr>\n')
-                fo.write('<td style="font-size: 80%; vertical-align: top;">\n')
-                fo.write('<A name="IDX_%s">%s</A>' % (key, key))
-                fo.write('</td>\n')
-                fo.write('<td style="font-size: 80%;">')
-
-                if len(entries) < self.spill_index:
-                    for i in sorted(entries):
-                        fo.write("   " + i.summary(notes=True, names=True) + "<br>\n")
-                else:
-                    for i in sorted(entries)[:self.spill_index // 2]:
-                        fo.write("   " + i.summary(notes=True, names=True) + "<br>\n")
-                    link = self.html_index_item(key, entries)
-                    fo.write('   <a href="%s">… full list</a><br>\n' % link)
-                fo.write('</td>\n')
-            fo.write("</table>\n")
-        self.html_suffix(fo)
-
-    def html_index_item(self, key, entries):
-        ''' Spill an index key into a separate HTML file '''
-        safekey = key
-        # XXX: This can cause collisions
-        for c in ''' /<>&*!?'"''':
-            safekey = safekey.replace(c, '_')
-        fnt = self.filename_for(safekey)
-        fot = open(fnt.filename, "w")
-        self.html_prefix(fot, "Index: " + key)
-        fot.write('<H3>Index: %s</H3>\n' % key)
-        fot.write("<table>\n")
-        fot.write('<tr>\n')
-        fot.write('<td style="font-size: 80%; vertical-align: top;">\n')
-        fot.write('<A name="IDX_%s">%s</A>' % (key, key))
-        fot.write('</td>\n')
-        fot.write('<td style="font-size: 80%;">')
-        for x in sorted(entries):
-            fot.write("   " + x.summary(notes=True, names=True) + "<br>\n")
-        fot.write('</td>\n')
-        fot.write("</table>\n")
-        self.html_suffix(fot)
-        return fnt.link
+        self.html_suffix(fo, self)
 
     def html_link_to(self, this, link_text=None, anchor=None, **kwargs):
         ''' Return a HTML link to an artifact '''
@@ -388,13 +325,17 @@ class Excavation():
         fo.write("</head>\n")
         fo.write("<body>\n")
         self.html_prefix_banner(fo, this)
+
+    def html_artifact_head(self, fo, this):
         fo.write("<pre>")
         fo.write(self.html_link_to(self, "top"))
         if not isinstance(this, Excavation) and self.download_links and self.download_limit > len(this):
             fo.write(" - " + self.html_link_to(this, "download", suf=".bin"))
         fo.write("</pre>\n")
+        if this.ns_roots:
+            index.Index(this).produce(fo)
 
-    def html_suffix(self, fo):
+    def html_suffix(self, fo, _this):
         ''' Tail of all the HTML pages '''
         fo.write("</body>\n")
         fo.write("</html>\n")
@@ -404,9 +345,22 @@ class Excavation():
         return ""
 
     def html_prefix_style(self, fo, _target):
-        ''' Duck-type as Artifact'''
+        ''' Duck-type as Artifact '''
         rdir = self.filename_for(self, suf=".css").link
         fo.write('<link rel="stylesheet" href="%s">\n' % rdir)
+
+    def iter_types(self):
+        ''' Duck-type as Artifact '''
+        if False:
+            yield None
+
+    def iter_notes(self):
+        ''' Duck-type as Artifact '''
+        if False:
+            yield None
+
+    def summary(self, *args, **kwargs):
+        return "The entire excavation"
 
     CSS = '''
         body {
@@ -421,4 +375,5 @@ class Excavation():
         td.l, th.l { vertical-align: top; text-align: left; }
         td.r, th.r { vertical-align: top; text-align: right; }
         td.c, th.c { vertical-align: top; text-align: center; }
+        td.s, th.s { font-size: .8em; }
     '''

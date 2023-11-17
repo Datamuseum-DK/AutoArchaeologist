@@ -89,11 +89,11 @@ class ArtifactBase():
 
         self.top = None
 
-        self.index_representation = None
         self.link_to = ""
         self.byte_order = None
         self.namespaces = {}
         self.names = set()
+        self.ns_roots = []
 
         self.by_class = {} # Experimental extension point
         self._keys = {}
@@ -185,7 +185,6 @@ class ArtifactBase():
         self.namespaces.setdefault(namespace.ns_root, []).append(namespace)
         if namespace.ns_name not in self.names:
             self.names.add(namespace.ns_name)
-            self.top.add_to_index(namespace.ns_name, self)
 
     def add_name(self, name):
         ''' Add a name '''
@@ -204,7 +203,6 @@ class ArtifactBase():
     def add_type(self, typ):
         ''' Add type designation (also as note) '''
         self.types.add(typ)
-        self.top.add_to_index(typ, self)
 
     def has_type(self, note):
         ''' Check if not already exists '''
@@ -234,7 +232,6 @@ class ArtifactBase():
     def add_note(self, note):
         ''' Add a note '''
         self.notes.add(note)
-        self.top.add_to_index(note, self)
 
     def has_note(self, note):
         ''' Check if not already exists '''
@@ -290,6 +287,7 @@ class ArtifactBase():
                 return self
             bits = self[start:stop]
             digest = hashlib.sha256(bits).hexdigest()
+        assert digest[:9] != "1db831043"
         this = self.top.hashes.get(digest)
         if not this:
             if that:
@@ -308,24 +306,6 @@ class ArtifactBase():
         this.byte_order = self.byte_order
         return this
 
-    def examined(self):
-        ''' Examination of this artifact is complete '''
-        # XXX: create left over slices
-        lst = []
-        offset = 0
-        for start, stop, _src in sorted(self.layout):
-            if start is None or stop is None:
-                continue
-            if offset < start:
-                lst.append((offset, start))
-            offset = stop
-        if not offset:
-            return
-        if offset != len(self):
-            lst.append((offset, len(self)))
-        for start, stop in lst:
-            self.create(start=start, stop=stop)
-
     def summary(
         self,
         link=True,
@@ -336,31 +316,29 @@ class ArtifactBase():
         names=False,
     ):
         ''' Produce a one-line summary '''
-        if not link or not ident or not self.index_representation:
-            txt = []
-            nam = ""
-            if ident:
-                if link:
-                    nam = self.top.html_link_to(self) + " "
-                else:
-                    nam = str(self) + " "
-            j = set()
-            if descriptions:
-                if self.descriptions:
-                    txt += sorted(self.descriptions)
-            if types:
-                for i in sorted(self.iter_types(False)):
-                    if i not in j:
-                        txt.append(i)
-                        j.add(i)
-            if names:
-                txt += ["»" + html.escape(x) + "«" for x in sorted(self.names)]
-            if notes:
-                txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
-            if not link or not ident or not types or not descriptions:
-                return nam + ", ".join(txt)
-            self.index_representation = nam + ", ".join(txt)
-        return self.index_representation
+        txt = []
+        nam = ""
+        if ident:
+            if link:
+                nam = self.top.html_link_to(self) + " "
+            else:
+                nam = str(self) + " "
+        j = set()
+        if descriptions:
+            if self.descriptions:
+                txt += sorted(self.descriptions)
+        if names:
+            txt += ["»" + html.escape(x) + "«" for x in sorted(self.names)]
+        if types:
+            for i in sorted(self.iter_types(False)):
+                if i not in j:
+                    txt.append(i)
+                    j.add(i)
+        if notes:
+            txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
+        if not link or not ident or not types or not descriptions:
+            return nam + ", ".join(txt)
+        return nam + ", ".join(txt)
 
     def html_page(self, file):
         ''' Produce HTML page '''
