@@ -1,6 +1,4 @@
 
-import os
-
 import autoarchaeologist
 
 from autoarchaeologist.generic.bigdigits import BigDigits
@@ -22,11 +20,6 @@ if __name__ == "__main__":
 
     ctx.start_examination()
 
-    try:
-        os.mkdir("/tmp/_autoarchaologist")
-    except FileExistsError:
-        pass
-
-    ctx.produce_html(html_dir="/tmp/_autoarchaologist")
+    ctx.produce_html()
 
     print("Now point your browser at", ctx.filename_for(ctx).link)
