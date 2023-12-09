@@ -139,13 +139,13 @@ class Disk(ov.OctetView):
             return i + j.ljust(9)
         return i + " " * 9
 
-    def fill_gaps(self):
+    def fill_gaps(self, cls=UnusedSector):
         ''' Fill the gaps with UnusedSector '''
         for lo, hi in list(self.gaps()):
             for i, adr in self.losec.items():
                 j = i + self.width[adr]
                 if i >= lo and j <= hi:
-                    UnusedSector(self, lo=i, hi=j).insert()
+                    cls(self, lo=i, hi=j).insert()
 
     def set_picture(self, what, cyl=None, head=None, sect=None, lo=None):
         if lo is not None:
