@@ -11,12 +11,14 @@ from ..base import type_case
 from ..base import namespace
 from ..base import octetview as ov
 
-N_SECT = 26
-N_TRACK = 77
-SECTOR_LENGTH = 128
+FD_TRACK = 77
+FD_SECT = 26
+FD_BYTES = 128
 
 L_SECTOR_LENGTH = 512
 L_SECTOR_SHIFT = 9
+
+VERBOSE = False
 
 class HomeBlock(ov.Struct):
     '''
@@ -32,7 +34,7 @@ class HomeBlock(ov.Struct):
         super().__init__(
             tree,
             lo,
-            vertical=False,
+            vertical=True,
             label_=ov.Text(16),
             bfdadr_=fe32,
             free_ent_=fe32,
@@ -52,26 +54,26 @@ class HomeBlock(ov.Struct):
         self.tree.set_picture('H', lo=lo)
         self.tree.picture_legend['H'] = 'Home Block'
 
-    def is_sensible(self, xor=0x00, verbose=True):
+    def is_sensible(self, xor=0x00):
         ''' Does this even make sense ?! '''
 
         # This field not in first 128 bytes, so we cannot check it
         # until the interleave has been sorted out.
         #if 0 and self.format.val > 10:
         #    if verbose:
-        #        print(self.tree.this, "-Homeblock.format", hex(self.format.val))
+        #        print("CRFS2", self.tree.this, "-Homeblock.format", hex(self.format.val))
         #    return False
 
         nlba = len(self.tree.this) // L_SECTOR_LENGTH
 
         if not 0 < self.bfdadr.val < nlba:
-            if verbose:
-                print(self.tree.this, "-Homeblock.bfdaddr", hex(self.bfdadr.val))
+            if VERBOSE:
+                print("CRFS2", self.tree.this, "-Homeblock.bfdaddr", hex(self.bfdadr.val))
             return False
 
-        if not 0 < self.sectors.val <= nlba:
-            if verbose:
-                print(self.tree.this, "-Homeblock.sectors", hex(self.sectors.val))
+        if 0 and not 0 < self.sectors.val <= nlba:
+            if VERBOSE:
+                print("CRFS2", self.tree.this, "-Homeblock.sectors", hex(self.sectors.val))
             return False
 
         b = bytearray(x ^ xor for x in self.label.iter_bytes())
@@ -79,8 +81,8 @@ class HomeBlock(ov.Struct):
             b.pop(-1)
 
         if len(b) == 0:
-            if verbose:
-                print(self.tree.this, "-Homeblock.label", [b])
+            if VERBOSE:
+                print("CRFS2", self.tree.this, "-Homeblock.label", [b])
             return False
 
         for i in b:
@@ -91,8 +93,8 @@ class HomeBlock(ov.Struct):
             elif i in (0x2e, 0x5f,):
                 pass
             else:
-                if verbose:
-                    print(self.tree.this, "-Homeblock.label", [b], hex(i))
+                if VERBOSE:
+                    print("CRFS2", self.tree.this, "-Homeblock.label", [b], hex(i))
                 return False
 
         return True
@@ -114,7 +116,7 @@ class CR80_FS2Interleave(ov.OctetView):
     def __init__(self, this):
         if not this.top in this.parents:
             return
-        if len(this) != N_SECT * N_TRACK * SECTOR_LENGTH:
+        if len(this) != FD_TRACK * FD_SECT * FD_BYTES:
             return
 
         super().__init__(this)
@@ -123,10 +125,9 @@ class CR80_FS2Interleave(ov.OctetView):
         obo = this.byte_order
         this.byte_order = [1, 0]
         hb = HomeBlock(self, 0, fe16 = IBe16, fe32 = IRe32)
-        good = hb.is_sensible(0xff, True)
+        good = hb.is_sensible(0xff)
         this.byte_order = obo
-        if not good:
-            print("NOT", this)
+        if not good and self.VERBOSE:
             return
 
         img = bytearray(len(this))
@@ -135,16 +136,16 @@ class CR80_FS2Interleave(ov.OctetView):
                   0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24,
                   1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25,
         ]
-        unread = b'_UNREAD_' * (SECTOR_LENGTH//8)
-        for cyl in range(N_TRACK):
-            for sect in range(N_SECT):
+        unread = b'_UNREAD_' * (FD_BYTES//8)
+        for cyl in range(FD_TRACK):
+            for sect in range(FD_SECT):
                 pcyl = cyl
-                psect = ileave[(cyl * 0 + sect + N_SECT) % N_SECT]
-                padr = pcyl * N_SECT * SECTOR_LENGTH + psect * SECTOR_LENGTH
-                octets = this[padr:padr + SECTOR_LENGTH]
-                lba = cyl * N_SECT * SECTOR_LENGTH + sect * SECTOR_LENGTH
+                psect = ileave[(cyl * 0 + sect + FD_SECT) % FD_SECT]
+                padr = pcyl * FD_SECT * FD_BYTES + psect * FD_BYTES
+                octets = this[padr:padr + FD_BYTES]
+                lba = cyl * FD_SECT * FD_BYTES + sect * FD_BYTES
                 if octets == unread:
-                    img[lba:lba + SECTOR_LENGTH] = unread
+                    img[lba:lba + FD_BYTES] = unread
                 else:
                     for n in range(0, len(octets), 2):
                         x = octets[n] ^ 0xff
@@ -203,10 +204,11 @@ class NameSpace(namespace.NameSpace):
     )
 
     def ns_render(self):
-        sfd = self.ns_priv
-        bfd = sfd.bfd
+        if self.ns_priv is None:
+            return [ "" ] * 14 + super().ns_render()
+        sfd, bfd = self.ns_priv
         return [
-            sfd.file.val,
+            bfd.nbr,
             bfd.ok.val,
             bfd.bfd01.val,
             bfd.bfd02.val,
@@ -229,40 +231,33 @@ class IndexBlock(ov.Struct):
             tree,
             lo,
             vertical=False,
-            pad00_=ov.Le16,
-            pad01_=ov.Le16,
             more=True,
         )
-        self.bfd = bfd
         self.list = []
-        if bfd:
-            nsect = bfd.nsect.val
+        self.bfd = bfd
+
+        if bytes(tree.this[lo:lo+8]) == b'_UNREAD_':
+            print("CRFS2", self.tree.this, "IDXBLK 0x%x UNREAD" % lo)
+            self.addfield("unread", ov.Text(8))
+            nsect = 0
         else:
-            nsect = 5
-        for i in range(nsect):
-            y = self.addfield(None, ov.Le16)
-            self.list.append(y)
-            y = self.addfield(None, ov.Le16)
+            self.addfield("pad00", ov.Le32)
+            if bfd:
+                nsect = bfd.nsect.val
+            else:
+                nsect = 5
+        self.addfield("secno", ov.Array(nsect, ov.Le32))
 
         self.done(pad=0x200)
         self.tree.set_picture('I', lo=lo)
         self.tree.picture_legend['I'] = 'Index Block'
 
     def __getitem__(self, idx):
-        return self.list[idx].val
+        return self.secno[idx].val
 
     def iter_sectors(self):
-        #if self.lo == 0xfb400:
-        #    yield 0x7db
-        #    return
-        for i in self.list:
+        for i in self.secno:
             yield i.val
-
-    def render(self):
-        a = list(super().render())
-        yield a[0]
-        yield "  bfd = " + str(self.bfd)
-        yield from a[1:]
 
 class BasicFileDesc(ov.Struct):
     def __init__(self, tree, nbr, lo):
@@ -289,7 +284,26 @@ class BasicFileDesc(ov.Struct):
             bfd0f_=ov.Le16,
             more=True,
         )
+        self.pseudofields.append(("nbr", "0x%04x" % nbr))
         self.done(pad=0x200)
+        if bytes(tree.this[lo:lo+8]) == b'_UNREAD_':
+            print("CRFS2", self.tree.this, "BFD 0x%x UNREAD" % lo)
+            self.ok.val = 0
+            self.bfd01.val = 0
+            self.bfd02.val = 0
+            self.type.val = 0
+            self.length.val = 0
+            self.bfd05.val = 0
+            self.nsect.val = 0
+            self.bfd07.val = 0
+            self.areasz.val = 0
+            self.sector.val = 0
+            self.bfd0a.val = 0
+            self.bfd0b.val = 0
+            self.flags.val = 0
+            self.bfd0d.val = 0
+            self.min3.val = 0
+            self.bfd0f.val = 0
         self.sfd = None
         self.that = None
         self.block_list = []
@@ -345,22 +359,43 @@ class BasicFileDesc(ov.Struct):
             )
         )
 
-    def render(self):
-        a = list(super().render())
-        yield a[0]
-        yield "  nbr = #0x%x" % self.nbr
-        yield from a[1:]
-
     def iter_sectors(self):
         yield from self.block_list
+
+    def commit(self):
+        ''' ... '''
+        self.taken = True
+        i = self.length.val
+        if i == 0:
+            return None
+        bits = []
+        is_unread = False
+        for sect in self.iter_sectors():
+            lo = sect << L_SECTOR_SHIFT
+            hi = lo + (1 << L_SECTOR_SHIFT)
+            y = DataSector(self.tree, lo=lo, bfdno = self.nbr)
+            is_unread |= y.is_unread
+            bits.append(self.tree.this[lo:hi])
+        if not bits:
+            return None
+        j = (i + 1) & ~1
+        bits = b''.join(bits)[:j]
+        if i & 1:
+            # make sure the padding byte is legal ASCII
+            bits = bits[:-2] + b' ' + bits[-1:]
+        that = self.tree.this.create(bits = bits)
+        if is_unread:
+            that.add_note("UNREAD_DATA_SECTOR")
+        return that
+
 
 class DataSector():
     def __init__(self, tree, lo, bfdno):
         self.is_unread = False
-        for i in range(4):
+        for i in range(L_SECTOR_LENGTH // tree.physsect):
             y = disk.DataSector(
                 tree,
-                lo=lo + i * SECTOR_LENGTH,
+                lo=lo + i * tree.physsect,
             ).insert()
             y.ident = "DataSector[bfd#%d]" % bfdno
             self.is_unread |= y.is_unread
@@ -378,52 +413,38 @@ class SymbolicFileDesc(ov.Struct):
             sfd4_=ov.Le32,
             sfd5_=ov.Le32,
         )
+        if bytes(tree.this[lo:lo+8]) == b'_UNREAD_':
+            print("CRFS2", self.tree.this, "SFD 0x%x UNREAD" % lo)
+            self.valid.val = 0
+            self.fname.txt = "_UNREAD_"
+            self.file.val = 0
+            self.sfd3.val = 0
+            self.sfd4.val = 0
+            self.sfd5.val = 0
         self.dir = None
         self.bfd = None
         self.fname.txt = self.fname.txt.rstrip()
         if self.valid.val != 1:
             self.namespace = None
-            self.bfd = None
         elif self.file.val in tree.bfd:
+            self.bfd = tree.bfd[self.file.val]
+            self.bfd.sfd = self
             self.namespace = NameSpace(
                 name = self.fname.txt,
                 parent = pnamespace,
-                priv = self,
+                priv = (self, self.bfd),
                 separator = "!"
             )
-            self.bfd = tree.bfd[self.file.val]
         else:
-            print(self.tree.this, "SFD has no BFD#", self.file.val)
+            print("CRFS2", self.tree.this, "SFD has no BFD#", self.file.val)
 
     def commit(self):
         ''' ... '''
-        bits = []
-        is_unread = False
-        for sect in self.bfd.iter_sectors():
-            lo = sect << L_SECTOR_SHIFT
-            hi = lo + (1 << L_SECTOR_SHIFT)
-            if self.bfd.type.val != 0xa and self.file.val and not self.bfd.committed:
-                y = DataSector(self.tree, lo=lo, bfdno = self.file.val)
-                self.bfd.committed = True
-                is_unread |= y.is_unread
-            bits.append(self.tree.this[lo:hi])
-        self.bfd.taken = True
         if self.file.val <= 2:
             return
-        i = self.bfd.length.val
-        if i == 0:
-            return
-        if not bits:
-            return
-        j = (i + 1) & ~1
-        bits = b''.join(bits)[:j]
-        if i & 1:
-            # make sure the padding byte is legal ASCII
-            bits = bits[:-2] + b' ' + bits[-1:]
-        that = self.tree.this.create(bits = bits)
-        if is_unread:
-            that.add_note("UNREAD_DATA_SECTOR")
-        self.namespace.ns_set_this(that)
+        that = self.bfd.commit()
+        if that:
+            self.namespace.ns_set_this(that)
 
 class Directory():
     def __init__(self, tree, namespace, bfdno):
@@ -456,7 +477,7 @@ class Directory():
             if sfd.valid.val != 1:
                 continue
             if not sfd.bfd:
-                print(self.tree.this, "NOBFD", sfd)
+                print("CRFS2", self.tree.this, "NOBFD", sfd)
                 continue
             if sfd.dir:
                 sfd.dir.commit()
@@ -465,6 +486,7 @@ class Directory():
 
 class CR80Amos_Ascii(type_case.Ascii):
     ''' ... '''
+
     def __init__(self):
         super().__init__()
         self.set_slug(0x00, ' ', '«nul»')
@@ -472,8 +494,12 @@ class CR80Amos_Ascii(type_case.Ascii):
         self.set_slug(0x02, ' ', '«stx»')
         self.set_slug(0x03, ' ', '«etx»')
         self.set_slug(0x04, ' ', '«eot»')
+        self.set_slug(0x05, ' ', '«enq»')
+        self.set_slug(0x07, ' ', '«bel»')
+        self.set_slug(0x08, ' ', '«bs»')
         self.set_slug(0x1c, ' ', '«fs»')
         self.set_slug(0x0c, ' ', '«ff»')
+        self.set_slug(0xa5, ' ', '«a5»')
 
 
 class CR80_FS2(disk.Disk):
@@ -481,23 +507,25 @@ class CR80_FS2(disk.Disk):
     type_case = CR80Amos_Ascii()
 
     def __init__(self, this):
-        if not ( this.has_type("ileave2") or len(this) == 67420160):
+        if this.has_type("ileave2") and len(this) == 77 * 26 * 128:
+            geometry = [77, 1, 26, 128]
+        elif len(this) == 832 * 5 * 32 * 512:
+            geometry = [832, 5, 32, 512]
+        else:
             return
-        print("CRFS2", this)
+        if VERBOSE:
+            print("CRFS2", this, geometry)
 
         super().__init__(
             this,
-            [ [ N_TRACK, 1, N_SECT, SECTOR_LENGTH ] ],
-            # [ [ 823, 5, 32, 512 ] ],
-            # physsect=512,
+            geometry=[ geometry ],
+            physsect=geometry[-1],
         )
 
         this.type_case = self.type_case
 
-        # y = ov.Opaque(self, 0x00b4b7f0 + (1<<10), hi=len(this)).insert()
-
         self.homeblock = HomeBlock(self, 0x0).insert()
-        if not self.homeblock.is_sensible(0x00, True):
+        if not self.homeblock.is_sensible(0x00):
             return
 
         this.add_note("CR80_Amos_Fs")
@@ -516,19 +544,41 @@ class CR80_FS2(disk.Disk):
             j.insert()
             self.bfd[n] = j
 
-        assert self.bfd[1].type.val == 0x000a
+        if 1 in self.bfd and self.bfd[1].type.val == 0x000a:
 
-        self.root = Directory(self, self.namespace, 1)
-        self.root.commit()
+            self.root = Directory(self, self.namespace, 1)
+            # print("CRFS2", self.this, "ROOT", self.root)
+            self.root.commit()
 
-        this.add_interpretation(self, self.namespace.ns_html_plain)
+            this.add_interpretation(self, self.namespace.ns_html_plain)
 
-        this.add_interpretation(self, self.disk_picture)
+            this.add_interpretation(self, self.disk_picture, more=True)
+
+        self.hunt_orphans()
 
         self.fill_gaps()
 
-        self.add_interpretation()
+        self.add_interpretation(title="Disk View", more=True)
+
+    def hunt_orphans(self):
+
+        orphans = []
+        for bfd in self.bfd.values():
+            if bfd.sfd or bfd.ok.val != 1:
+                continue
+            ns = NameSpace(
+                name = "ORPHAN_0x%04x" % bfd.nbr,
+                parent = self.namespace,
+                priv = (None, bfd),
+                separator = "!"
+            )
+            that = bfd.commit()
+            if that:
+                ns.ns_set_this(that)
+            if bfd.type.val == 0xa:
+                print("CRFS2", self.this, "ORPHAN DIR", bfd)
+
 
     def set_picture(self, what, lo):
-        for i in range(L_SECTOR_LENGTH//SECTOR_LENGTH):
-            super().set_picture(what, lo = lo + i * SECTOR_LENGTH)
+        for i in range(L_SECTOR_LENGTH//self.physsect):
+            super().set_picture(what, lo = lo + i * self.physsect)
