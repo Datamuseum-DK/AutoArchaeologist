@@ -43,6 +43,9 @@ class OutputFile():
         self.filename = filename
         self.link = link
 
+    def __repr__(self):
+        return "<OutputFile '" + self.filename + "'>"
+
 class TempFile():
     ''' Self deleting temporary file '''
     def __init__(self, filename):
@@ -53,6 +56,10 @@ class TempFile():
             os.remove(self.filename)
         except FileNotFoundError:
             pass
+
+    def __repr__(self):
+        return "<TmpFile '" + self.filename + "'>"
+
 
 class Excavation():
 
