@@ -312,6 +312,7 @@ class Struct(Octets):
         self.hi = lo
         self.tree = tree
         self.args = {}
+        self.pseudofields = []
         for name, width in kwargs.items():
             if name[-1] == "_":
                 self.addfield(name[:-1], width)
@@ -365,6 +366,9 @@ class Struct(Octets):
         assert not hasattr(self, "args")
         if not self.vertical:
             i = []
+            for name, obj in self.pseudofields:
+                if name[-1] != "_":
+                    i.append(name + "=" + str(obj))
             for name, obj in self.fields:
                 if name[-1] != "_":
                     i.append(name + "=" + "|".join(obj.render()))
@@ -385,17 +389,40 @@ class Struct(Octets):
 def Array(count, what):
     ''' An array of things '''
 
-    class Array_Class(Struct):
+    if count > 0:
+
+        class Array_Class(Struct):
+            WHAT = what
+            COUNT = count
+    
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, more = True, **kwargs)
+                self._elem = []
+                for i in range(self.COUNT):
+                    f = self.add_field("f%d" % i, self.WHAT)
+                    self._elem.append(f)
+                self.done()
+    
+            def __getitem__(self, idx):
+                return self._elem[idx]
+    
+            def __iter__(self):
+                yield from self._elem
+    
+            def render(self):
+                yield '[' + ", ".join("".join(x.render()) for x in self._elem) + ']'
+    
+        return Array_Class
+
+    class Array_Class():
         WHAT = what
         COUNT = count
 
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, more = True, **kwargs)
+        def __init__(self, tree, lo, *args, **kwargs):
+            self.tree = tree
+            self.lo = lo
+            self.hi = lo
             self._elem = []
-            for i in range(self.COUNT):
-                f = self.add_field("f%d" % i, self.WHAT)
-                self._elem.append(f)
-            self.done()
 
         def __getitem__(self, idx):
             return self._elem[idx]
@@ -404,9 +431,9 @@ def Array(count, what):
             yield from self._elem
 
         def render(self):
-            yield '[' + ", ".join("".join(x.render()) for x in self._elem) + ']'
-
+            yield '[]'
     return Array_Class
+    
 
 class OctetView(bintree.BinTree):
     ''' ... '''
