@@ -172,7 +172,7 @@ class Page():
         i = safe_filename(self.tabs[0].hdr)
         if len(self.tabs) > 1:
             i += "__" + safe_filename(self.tabs[-1].hdr)
-        self.file = this.filename_for("_index_" + i)
+        self.file = this.filename_for("_index_" + i + ".html")
 
     def range(self):
         ''' What's in this page '''
@@ -333,7 +333,7 @@ class Index():
             if not entry.spill:
                 continue
             i = safe_filename(entry.key)
-            entry.file = self.this.filename_for("_index__" + i)
+            entry.file = self.this.filename_for("_index__" + i + ".html")
             with open(entry.file.filename, "w", encoding="utf-8") as file:
                 title = self.title + ": " + html.escape(entry.key)
                 self.this.top.html_prefix(file, title)

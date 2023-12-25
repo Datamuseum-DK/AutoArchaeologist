@@ -13,12 +13,13 @@ if not PYREVENG3 or not os.path.isdir(PYREVENG3):
 if not PYREVENG3 or not os.path.isdir(PYREVENG3):
     PYREVENG3 = str(os.environ.get("HOME")) + "/Proj/PyReveng3/"
 if not PYREVENG3 or not os.path.isdir(PYREVENG3):
+    PYREVENG3 = None
 
 class PyReveng3():
     ''' ... '''
 
     def __init__(self, this, script):
-        if not autoarchaeologist.PYREVENG3:
+        if not PYREVENG3:
             return
 
         tf1 = this.tmpfile_for()

@@ -80,7 +80,6 @@ class This(Octets):
     def __init__(self, tree, *args, **kwargs):
         super().__init__(tree, *args, **kwargs)
         self.that = tree.this.create(start=self.lo, stop=self.hi)
-        print("This", self.that)
 
     def render(self):
         yield str(self.that)

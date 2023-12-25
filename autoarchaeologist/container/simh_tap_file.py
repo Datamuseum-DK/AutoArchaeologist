@@ -20,7 +20,7 @@ class SimhTapContainer(artifact.ArtifactFragmented):
     def __init__(self, octets=None, filename=None, verbose=False):
         super().__init__()
         if octets is None:
-            octets = plain_file.PlainFileArtifact(filename)
+            octets = plain_file.PlainFileArtifact(filename).bdx
         octets = memoryview(octets).toreadonly()
 
         ovt = ov.OctetView(octets)

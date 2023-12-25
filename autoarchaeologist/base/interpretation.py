@@ -35,6 +35,7 @@ class Utf8Interpretation():
         fo.write("<pre>\n")
         for i in fi:
             fo.write(html.escape(i))
+        fo.write("</pre>\n")
         os.remove(self.filename)
 
 

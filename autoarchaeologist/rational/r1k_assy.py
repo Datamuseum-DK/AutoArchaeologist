@@ -10,16 +10,17 @@
 import sys
 import subprocess
 
+from ..generic import pyreveng3
+
 class R1kAssyFile():
     ''' Binary instruction segment '''
 
     def __init__(self, this):
-        return
         if this[:3].tobytes() not in (b'\x00\x0f\x58', b'\x00\x0f\x59',):
             return
         if len(this) > 128<<10:
             return
-        if not autoarchaeologist.PYREVENG3:
+        if not pyreveng3.PYREVENG3:
             return
         print("?R1K_ASSY", this)
         this.add_note(this[2:4].tobytes().hex() + "_R1K_CODE")
@@ -38,7 +39,7 @@ class R1kAssyFile():
             subprocess.run(
                 [
                     "python3",
-                    autoarchaeologist.PYREVENG3 + "/examples/R1000_400/example_ada.py",
+                    pyreveng3.PYREVENG3 + "/examples/R1000_400/example_ada.py",
                     tf1.filename,
                     tf2.filename,
                 ],
