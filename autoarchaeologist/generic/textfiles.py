@@ -65,3 +65,8 @@ class TextFile():
                 print(self.this, "TextFile: no NL")
             return False
         return True
+
+class TextFileVerbose(TextFile):
+    ''' General Text-File-Excavator '''
+
+    VERBOSE = True
