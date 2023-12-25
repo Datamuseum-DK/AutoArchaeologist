@@ -72,6 +72,9 @@ def match_geometry(this, fat0):
     if len(this) in (286464,):
         # HP 150 ?
         return Geometry(66, 1, 16, 256, 1, 2, 4, 128, 3)
+    if fat0 not in GEOMETRIES:
+        print(this, "NoGeom?", hex(fat0), len(this))
+        return None
     for geometry in GEOMETRIES.get(fat0):
         size = geometry.cyl * geometry.hd * geometry.sect * geometry.bps
         if len(this) == size:
@@ -408,10 +411,9 @@ class FatFs(ov.OctetView):
 
         root.commit()
 
-
         this.add_interpretation(self, self.namespace.ns_html_plain)
 
-        self.add_interpretation()
+        self.add_interpretation(more=True)
 
     def get_chain(self, owner, cluster):
         ''' Get contents of a chain '''

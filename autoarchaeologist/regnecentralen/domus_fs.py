@@ -341,8 +341,8 @@ class Domus_Filesystem(disk.Disk):
         self.picture_legend['I'] = "Index"
         self.picture_legend['C'] = "Catalog"
         self.picture_legend['K'] = "Kit"
-        this.add_interpretation(self, self.disk_picture)
+        this.add_interpretation(self, self.disk_picture, more=True)
 
         self.fill_gaps()
 
-        self.add_interpretation()
+        self.add_interpretation(more=True)
