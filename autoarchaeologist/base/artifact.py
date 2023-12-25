@@ -208,17 +208,17 @@ class ArtifactBase():
         ''' Check if not already exists '''
         return note in self.types
 
-    def add_interpretation(self, owner, func):
+    def add_interpretation(self, owner, func, more=False):
         ''' Add an interpretation '''
-        self.interpretations.append((owner, func))
+        self.interpretations.append((owner, func, more))
 
-    def add_utf8_interpretation(self, title):
+    def add_utf8_interpretation(self, title, **kwargs):
         ''' Add early UTF-8 interpretation '''
-        return interpretation.Utf8Interpretation(self, title)
+        return interpretation.Utf8Interpretation(self, title, **kwargs)
 
-    def add_html_interpretation(self, title):
+    def add_html_interpretation(self, title, **kwargs):
         ''' Add early HTML interpretation '''
-        return interpretation.HtmlInterpretation(self, title)
+        return interpretation.HtmlInterpretation(self, title, **kwargs)
 
     def add_description(self, desc):
         ''' Add a description '''
@@ -340,8 +340,8 @@ class ArtifactBase():
             return nam + ", ".join(txt)
         return nam + ", ".join(txt)
 
-    def html_page(self, file):
-        ''' Produce HTML page '''
+    def html_page_head(self, file):
+        ''' Produce HTML page header '''
         file.write("<H2>" + self.summary(link=False) + "</H2>\n")
         file.write("<pre>\n")
         file.write("    Length: %d (0x%x)\n" % (len(self), len(self)))
@@ -354,6 +354,11 @@ class ArtifactBase():
         if self.names:
             file.write("    Names: " + ", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
         file.write("</pre>\n")
+
+    def html_page(self, file, domore=False):
+        ''' Produce HTML page '''
+        retval = False
+        self.html_page_head(file)
 
         if self.top not in self.parents or len(self.parents) > 1:
             file.write("<H3>Derivation</H3>\n")
@@ -368,10 +373,13 @@ class ArtifactBase():
             file.write("<H3>NB: Comments at End</H3>\n")
 
         if self.interpretations:
-            for _owner, func in self.interpretations:
-                file.write('<div>\n')
-                func(file, self)
-                file.write('</div>\n')
+            for _owner, func, more in self.interpretations:
+                if domore or not more:
+                    file.write('<div>\n')
+                    func(file, self)
+                    file.write('</div>\n')
+                if more:
+                    retval = True
         else:
             self.html_default_interpretation(file, self, max_lines=200)
 
@@ -381,6 +389,8 @@ class ArtifactBase():
             for i in self.comments:
                 file.write(i + "\n")
             file.write("</pre>\n")
+
+        return retval
 
     def html_interpretation_children(self, file, _this):
         ''' Default interpretation list of children'''

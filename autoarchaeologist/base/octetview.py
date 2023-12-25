@@ -507,9 +507,9 @@ class OctetView(bintree.BinTree):
         if repeat_line > 0:
             yield " " * (self.adrwidth + 4)  + "[…0x%x…]" % repeat_line
 
-    def add_interpretation(self, title="OctetView", **kwargs):
+    def add_interpretation(self, title="OctetView", more=False, **kwargs):
         ''' Render via UTF-8 file '''
-        tfn = self.this.add_utf8_interpretation(title)
+        tfn = self.this.add_utf8_interpretation(title, more=more)
         with open(tfn.filename, "w", encoding="utf-8") as file:
             for line in self.render(**kwargs):
                 file.write(line + '\n')

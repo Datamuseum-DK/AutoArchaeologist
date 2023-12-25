@@ -254,11 +254,26 @@ class Excavation():
             if self.downloads and len(this) < self.download_limit:
                 binfile = self.filename_for(this, suf=".bin")
                 this.writetofile(open(binfile.filename, 'wb'))
+
             fnt = self.filename_for(this)
+            fmt = None
             with open(fnt.filename, "w") as fot:
                 self.html_prefix(fot, this)
                 self.html_artifact_head(fot, this)
-                this.html_page(fot)
+                more = this.html_page(fot)
+                if more:
+                    fmt = self.filename_for(this, suf="_more.html")
+                    fot.write("<H3>More…</H3>\n")
+                    fot.write('<A href="%s">Full View</A>\n' % fmt.link)
+                self.html_suffix(fot, this)
+            if not more:
+                continue
+            with open(fmt.filename, "w") as fot:
+                self.html_prefix(fot, this)
+                self.html_artifact_head(fot, this)
+                this.html_page(fot, domore=True)
+                fot.write("<H3>Less…</H3>\n")
+                fot.write('<A href="%s">Reduced view</A>\n' % fnt.link)
                 self.html_suffix(fot, this)
 
         return self.filename_for(self).link

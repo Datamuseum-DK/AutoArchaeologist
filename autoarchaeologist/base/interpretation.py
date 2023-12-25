@@ -19,11 +19,11 @@ class Utf8Interpretation():
        hangs around.
     '''
 
-    def __init__(self, this, title):
+    def __init__(self, this, title, more=False):
         self.this = this
         self.title = title
         self.filename = this.tmpfile_for().filename
-        this.add_interpretation(self, self.html_interpretation)
+        this.add_interpretation(self, self.html_interpretation, more=more)
 
     def html_interpretation(self, fo, this):
         try:
@@ -52,11 +52,11 @@ class HtmlInterpretation():
        hangs around.
     '''
 
-    def __init__(self, this, title):
+    def __init__(self, this, title, more=False):
         self.this = this
         self.title = title
         self.filename = this.tmpfile_for().filename
-        this.add_interpretation(self, self.html_interpretation)
+        this.add_interpretation(self, self.html_interpretation, more=more)
 
     def html_interpretation(self, fo, this):
         try:
