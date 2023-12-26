@@ -398,4 +398,5 @@ class Excavation():
         td.r, th.r { vertical-align: top; text-align: right; }
         td.c, th.c { vertical-align: top; text-align: center; }
         td.s, th.s { font-size: .8em; }
+        tr.stripe:nth-child(2n+1) { background-color: #ddffdd; }
     '''

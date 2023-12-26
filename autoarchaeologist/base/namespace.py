@@ -157,7 +157,7 @@ class NameSpace():
 
         file.write('  <tbody>\n')
         for row in tbl:
-            file.write('    <tr>\n')
+            file.write('    <tr class="stripe">\n')
             for colno, col in enumerate(row):
                 if col is None:
                     col = '-'
