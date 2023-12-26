@@ -208,7 +208,7 @@ class NameSpace(namespace.NameSpace):
             return [ "" ] * 14 + super().ns_render()
         sfd, bfd = self.ns_priv
         return [
-            bfd.nbr,
+            "0x%04x" % bfd.nbr,
             bfd.ok.val,
             bfd.bfd01.val,
             bfd.bfd02.val,
@@ -373,6 +373,10 @@ class BasicFileDesc(ov.Struct):
         for sect in self.iter_sectors():
             lo = sect << L_SECTOR_SHIFT
             hi = lo + (1 << L_SECTOR_SHIFT)
+            if hi > len(self.tree.this):
+                 print("CRFS2", self.tree.this, "Illegal sector", hex(sect), self)
+                 bits = []
+                 break
             y = DataSector(self.tree, lo=lo, bfdno = self.nbr)
             is_unread |= y.is_unread
             bits.append(self.tree.this[lo:hi])
@@ -397,7 +401,7 @@ class DataSector():
                 tree,
                 lo=lo + i * tree.physsect,
             ).insert()
-            y.ident = "DataSector[bfd#%d]" % bfdno
+            y.ident = "DataSector[bfd#0x%04x]" % bfdno
             self.is_unread |= y.is_unread
 
 class SymbolicFileDesc(ov.Struct):
@@ -440,7 +444,7 @@ class SymbolicFileDesc(ov.Struct):
 
     def commit(self):
         ''' ... '''
-        if self.file.val <= 2:
+        if self.file.val in (0, 1):
             return
         that = self.bfd.commit()
         if that:
@@ -509,8 +513,8 @@ class CR80_FS2(disk.Disk):
     def __init__(self, this):
         if this.has_type("ileave2") and len(this) == 77 * 26 * 128:
             geometry = [77, 1, 26, 128]
-        elif len(this) == 832 * 5 * 32 * 512:
-            geometry = [832, 5, 32, 512]
+        elif len(this) == 823 * 5 * 32 * 512:
+            geometry = [823, 5, 32, 512]
         else:
             return
         if VERBOSE:
@@ -567,7 +571,7 @@ class CR80_FS2(disk.Disk):
             if bfd.sfd or bfd.ok.val != 1:
                 continue
             ns = NameSpace(
-                name = "ORPHAN_0x%04x" % bfd.nbr,
+                name = "~ORPHAN_0x%04x" % bfd.nbr,
                 parent = self.namespace,
                 priv = (None, bfd),
                 separator = "!"
