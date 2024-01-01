@@ -7,6 +7,8 @@
 import os
 import subprocess
 
+from ..base import octetview as ov
+
 COLORS = [
    # https://betterfigures.org/2015/06/23/picking-a-colour-scale-for-scientific-graphics/
    [ 0, 0, 0],
@@ -19,7 +21,6 @@ COLORS = [
    [ 204, 121, 167],
 ]
 
-from ..base import octetview as ov
 
 class Sector(ov.Octets):
     ''' A sector '''
@@ -51,7 +52,8 @@ class Sector(ov.Octets):
         self.terse = False
 
     def picture(self, what):
-        self.tree.picture[(self.cyl, self.head, self.sect)] = what
+        ''' paint this sector '''
+        self.tree.set_picture(what, lo = self.lo, width = self.hi - self.lo)
 
     def render(self):
         ''' Render respecting byte ordering '''
@@ -162,10 +164,22 @@ class Disk(ov.OctetView):
                 if i >= lo and j <= hi:
                     cls(self, lo=i, hi=j).insert()
 
-    def set_picture(self, what, cyl=None, head=None, sect=None, lo=None):
-        if lo is not None:
-            cyl, head, sect = self.losec[lo]
-        self.picture[(cyl, head, sect)] = what
+    def set_picture(self, what, cyl=None, head=None, sect=None, lo=None, width=None):
+        if lo is None:
+            lo = self.seclo[(cyl, head, sect)]
+        chs = self.losec[lo]
+        if width is None:
+            width = self.width[chs]
+        hi = lo + width
+
+        while lo < hi:
+            try:
+                chs = self.losec[lo]
+            except KeyError:
+                print(self.this, "Disk-picture failed at", hex(lo), what)
+                return
+            self.picture[chs] = what
+            lo += self.width[chs]
 
     def disk_picture_p6(self, file, this):
 
@@ -175,10 +189,10 @@ class Disk(ov.OctetView):
         p6f = this.filename_for(".png")
         ncyl = max(chsb[0] for chsb in self.iter_chsb()) + 1
         nhd = max(chsb[1] for chsb in self.iter_chsb()) + 1
-        minsect = min(chsb[2] for chsb in self.iter_chsb()) + 1
-        maxsect = max(chsb[2] for chsb in self.iter_chsb()) + 1
+        minsect = min(chsb[2] for chsb in self.iter_chsb())
+        maxsect = max(chsb[2] for chsb in self.iter_chsb())
         nsect = 1 + maxsect - minsect
-        print(self.this, p6f.filename)
+        print(self.this, p6f.filename, ncyl, nhd, minsect, maxsect)
         with open(p6f.filename + "_", "wb") as pfile:
             pfile.write(b'P6\n')
             pfile.write(b'%d %d\n' % (ncyl, nhd * (nsect + 1)))
@@ -191,7 +205,7 @@ class Disk(ov.OctetView):
                         pfile.write(cmap[col])
                 for cyl in range(ncyl):
                     pfile.write(bytes((255,255,255)))
-                
+
         if ncyl < 220 and nhd * nsect < 220:
             zoom="400%"
         elif ncyl < 440 and nhd * nsect < 440:
@@ -210,7 +224,7 @@ class Disk(ov.OctetView):
         file.write('<img src="%s"/>\n' % p6f.link)
         file.write('<table>\n')
         for i, j in sorted(self.picture_legend.items()):
-            c = cmap[i]    
+            c = cmap[i]
             file.write('<tr>\n')
             file.write('<td style="background-color: #')
             file.write('%02x%02x%02x' % (c[0], c[1], c[2]))

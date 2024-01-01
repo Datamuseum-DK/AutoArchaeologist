@@ -66,7 +66,7 @@ class Index(ov.Struct):
                 self.addfield("a%03d" % i, Slice)
                 self.slices.append(getattr(self, "a%03d" % i))
         self.done(SEC_SIZE)
-        self.tree.set_picture('I', lo=lo)
+        self.tree.set_picture('I', lo=lo, width=SEC_SIZE)
 
     def __iter__(self):
         for slice in self.slices:
@@ -228,7 +228,7 @@ class Cat():
 
         for i in self.idx:
             off = self.tree.offset + i * SEC_SIZE
-            self.tree.set_picture('C', lo=off)
+            self.tree.set_picture('C', lo=off, width=SEC_SIZE)
             for j in range(0, SEC_SIZE, 32):
                 catent = CatEnt(self.tree, off + j).insert()
                 if catent.attrib.val in (0, 0xe5e5):
@@ -294,6 +294,7 @@ class Domus_Filesystem(disk.Disk):
             this,
             [ geom ]
         )
+        self.psect = geom[-1]
 
         self.kit = None
         for idx in range(0xc00, 128 * SEC_SIZE, SEC_SIZE):  # Largest seen: 76
@@ -326,7 +327,7 @@ class Domus_Filesystem(disk.Disk):
         # print(this, "IDX", hex(idx), idx // SEC_SIZE, "OFS", self.offset, "Kit", kit)
 
         self.kit.insert()
-        self.set_picture('K', lo=self.kit.lo)
+        self.set_picture('K', lo=self.kit.lo, width=SEC_SIZE)
         mapidx = Index(self, self.offset + 7 * SEC_SIZE).insert()
 
         self.namespace = NameSpace(

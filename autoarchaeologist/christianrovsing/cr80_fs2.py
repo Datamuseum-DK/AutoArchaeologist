@@ -583,6 +583,5 @@ class CR80_FS2(disk.Disk):
                 print("CRFS2", self.this, "ORPHAN DIR", bfd)
 
 
-    def set_picture(self, what, lo):
-        for i in range(L_SECTOR_LENGTH//self.physsect):
-            super().set_picture(what, lo = lo + i * self.physsect)
+    def set_picture(self, what, lo, width=None):
+        super().set_picture(what, lo = lo, width=L_SECTOR_LENGTH)
