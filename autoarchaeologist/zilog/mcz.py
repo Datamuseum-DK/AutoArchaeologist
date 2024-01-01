@@ -240,10 +240,13 @@ class MCZRIO(disk.Disk):
         self.dir.insert()
         #print(dir.octets)
 
+        self.picture_legend['L'] = "Label"
+        self.picture_legend['R'] = "Descriptor"
+        self.picture_legend['D'] = "Directory"
         self.fill_gaps()
         this.add_interpretation(self, self.namespace.ns_html_plain)
         this.add_interpretation(self, self.disk_picture)
-        self.add_interpretation()
+        self.add_interpretation(more=True)
 
     def prefix(self, lo, hi):
         ''' Line prefix is hex off set + CHS '''

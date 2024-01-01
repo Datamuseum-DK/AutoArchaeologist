@@ -206,4 +206,4 @@ class IntelIsis(disk.Disk):
         this.add_interpretation(self, self.disk_picture)
 
         self.fill_gaps()
-        self.add_interpretation()
+        self.add_interpretation(more=True)
