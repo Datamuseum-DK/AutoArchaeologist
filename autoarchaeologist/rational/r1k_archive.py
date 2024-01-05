@@ -180,7 +180,7 @@ class R1K_Archive_Pair():
                 self.file.write('   ⇒ ' + str(ns.ns_this) + ' (DUP)\n')
             else:
                 that = ov.This(self.datatree, lo = low, width = width).insert()
-                ns.ns_set_this(that.this)
+                ns.ns_set_this(that.that)
                 self.file.write('   ⇒ ' + str(that.this) + '\n')
         self.pop(0)
 
