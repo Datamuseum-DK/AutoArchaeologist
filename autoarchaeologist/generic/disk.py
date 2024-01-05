@@ -10,15 +10,25 @@ import subprocess
 from ..base import octetview as ov
 
 COLORS = [
+   # Colorblind barrier-free color palette
+   #
+   # From Okabe & Ito (2002):
+   #    Color Universal Design (CUD)
+   #    - How to make figures and presentations that are friendly to Colorblind people
+   #
+   # https://jfly.uni-koeln.de/html/color_blind/
+   #
+   #   via:
    # https://betterfigures.org/2015/06/23/picking-a-colour-scale-for-scientific-graphics/
-   [ 0, 0, 0],
-   [ 230, 159, 0],
-   [ 86, 180, 233],
-   [ 0, 158, 115],
-   [ 240, 228, 66],
-   [ 0, 114, 178],
-   [ 213, 94, 0],
-   [ 204, 121, 167],
+   #
+   [ 0, 0, 0],		# Black
+   [ 230, 159, 0],	# Orange
+   [ 86, 180, 233],	# Sky blue
+   [ 0, 158, 115],	# Bluish green
+   [ 240, 228, 66],	# Yellow
+   [ 0, 114, 178],	# Blue
+   [ 213, 94, 0],	# Vermillion
+   [ 204, 121, 167],	# Reddish purple
 ]
 
 
@@ -146,15 +156,6 @@ class Disk(ov.OctetView):
                 for head in range(nhd):
                     for sec in range(self.SECTOR_OFFSET, nsec + self.SECTOR_OFFSET):
                         yield cyl,head,sec,nbyte
-
-    def prefix(self, lo, hi):
-        ''' Line prefix is hex off set + CHS '''
-        i = super().prefix(lo, hi)
-        j = self.losec.get(lo)
-        if j:
-            j = " %d,%d,%d" % j
-            return i + j.ljust(9)
-        return i + " " * 9
 
     def fill_gaps(self, cls=UnusedSector):
         ''' Fill the gaps with UnusedSector '''

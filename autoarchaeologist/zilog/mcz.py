@@ -248,17 +248,6 @@ class MCZRIO(disk.Disk):
         this.add_interpretation(self, self.disk_picture)
         self.add_interpretation(more=True)
 
-    def prefix(self, lo, hi):
-        ''' Line prefix is hex off set + CHS '''
-        i = super().prefix(lo, hi)
-        if lo in self.losec:
-            j = self.prev_sector(lo)
-            prv = "%d,%d" % (j[0], j[2])
-            j = self.next_sector(lo)
-            nxt = "%d,%d" % (j[0], j[2])
-            return i + prv.ljust(9) + nxt.ljust(9)
-        return i + " " * 18
-
     def next_sector(self, lo):
         assert (lo % 136) == 0
         return (self.this[lo + 133], 0, self.this[lo+132])

@@ -441,6 +441,7 @@ class OctetView(bintree.BinTree):
     def __init__(self, this, max_render=None, default_width=16):
         self.this = this
         self.separators = None
+        self.separators_width = 0
         hi = len(this)
         super().__init__(
             lo = 0,
@@ -454,12 +455,10 @@ class OctetView(bintree.BinTree):
     def pad_from_to(self, lo, hi, pad_width=5):
         ''' yield padding lines '''
         while hi > lo:
-            while self.separators and self.separators[0][0] <= lo:
-                yield self.separators.pop(0)[1]
             i = lo + pad_width
             i -= i % pad_width
             i = min(i, hi)
-            if self.separators:
+            if self.separators and self.separators[0][0] > lo:
                 i = min(i, self.separators[0][0])
             pad = Octets(self, lo, hi=i)
             yield pad
@@ -471,19 +470,29 @@ class OctetView(bintree.BinTree):
         for leaf in self:
             if pad_width:
                 yield from self.pad_from_to(ptr, leaf.lo, pad_width)
-            while self.separators and self.separators[0][0] <= leaf.lo:
-                yield self.separators.pop(0)[1]
             yield leaf
             ptr = leaf.hi
         if pad_width:
             yield from self.pad_from_to(ptr, self.hi, pad_width)
 
     def prefix(self, lo, hi):
-        return "0x" + self.adrfmt % lo + "…" + self.adrfmt % hi
+        if not self.separators:
+            return "0x" + self.adrfmt % lo + "…" + self.adrfmt % hi
+        while self.separators and self.separators[0][0] < lo:
+            self.separators.pop(0)
+        if self.separators and self.separators[0][0] == lo:
+            i = self.separators.pop(0)[1]
+        else:
+            i = ""
+        return "0x" + self.adrfmt % lo + "…" + self.adrfmt % hi + i.ljust(self.separators_width)
 
     def render(self, default_width=32):
         ''' Rendering iterator with padding '''
-        self.separators = [(x.lo, "@" + str(x.key)) for x in self.this.iter_rec() if x.key is not None]
+        self.separators = [(x.lo, " " + str(x.key)) for x in self.this.iter_rec() if x.key is not None]
+        if self.separators:
+            self.separators_width = max(len(y) for x, y in self.separators)
+        else:
+            self.separators_width = 0
         prev_line = None
         repeat_line = 0
         pending = None
