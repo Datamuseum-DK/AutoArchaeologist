@@ -193,7 +193,7 @@ class Disk(ov.OctetView):
         minsect = min(chsb[2] for chsb in self.iter_chsb())
         maxsect = max(chsb[2] for chsb in self.iter_chsb())
         nsect = 1 + maxsect - minsect
-        print(self.this, p6f.filename, ncyl, nhd, minsect, maxsect)
+        print(self.this, p6f.filename, ncyl, nhd, [minsect, maxsect])
         with open(p6f.filename + "_", "wb") as pfile:
             pfile.write(b'P6\n')
             pfile.write(b'%d %d\n' % (ncyl, nhd * (nsect + 1)))
