@@ -5,8 +5,8 @@
    ================
 '''
 
-from ..base import bitview as bv
-from .r1k_disk_defs import OBJECT_FIELDS, SECTBITS, DoubleSectorBitView, ELIDE_FREELIST
+from ...base import bitview as bv
+from .defs import OBJECT_FIELDS, SECTBITS, DoubleSectorBitView, ELIDE_FREELIST
 
 class BitMap(bv.Struct):
     '''

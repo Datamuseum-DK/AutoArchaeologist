@@ -21,8 +21,8 @@
 
 '''
 
-from ..generic import disk
-from ..base import bitview as bv
+from ...generic import disk
+from ...base import bitview as bv
 
 LSECSHIFT = 10
 LSECSIZE = 1 << LSECSHIFT

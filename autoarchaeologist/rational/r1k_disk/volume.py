@@ -5,12 +5,11 @@
    ==============================
 '''
 
-from ..generic import disk
-from ..base import octetview as ov
+from ...generic import disk
+from ...base import octetview as ov
 
-from .r1k_disk_defs import DoubleSectorBitView, LSECSHIFT
-#from .r1k_disk_freelist import *
-from .r1k_disk_superblock import SuperBlock
+from .defs import DoubleSectorBitView, LSECSHIFT
+from .superblock import SuperBlock
 
 class R1KDisk(disk.Disk):
     '''

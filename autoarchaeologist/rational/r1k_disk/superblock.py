@@ -5,10 +5,10 @@
    ===============================================
 '''
 
-from ..base import bitview as bv
+from ...base import bitview as bv
 
-from .r1k_disk_defs import SECTBITS
-from .r1k_disk_freelist import FreeList
+from .defs import SECTBITS
+from .freelist import FreeList
 
 class DiskAddress(bv.Struct):
     '''
