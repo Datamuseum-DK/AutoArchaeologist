@@ -7,8 +7,9 @@
 
 from ...base import bitview as bv
 
-from .defs import SECTBITS
+from .defs import SECTBITS, LSECSHIFT, DoubleSectorBitView
 from .freelist import FreeList
+from .badsect import BadSectorTable
 
 class DiskAddress(bv.Struct):
     '''
@@ -16,26 +17,15 @@ class DiskAddress(bv.Struct):
     -------------------------------------------
     '''
 
-    def __init__(self, up, lo):
+    def __init__(self, tree, lo):
         super().__init__(
-            up,
+            tree,
             lo,
             flg_=-1,
             cyl_=-15,
             hd_=-8,
             sect_=-8
         )
-        self.lba_ = None
-
-    def lba(self):
-        ''' return 1K Logical Block Address, (depending on which field in SB) '''
-        if self.lba_ is None:
-            if self == self.up.sb.geometry:
-                self.lba_ = self.cyl * self.hd * self.sect // 2
-            else:
-                geom = self.up.sb.geometry
-                self.lba_ = ((self.cyl * geom.hd + self.hd) * geom.sect + self.sect) // 2
-        return self.lba_
 
 class Partition(bv.Struct):
     '''
@@ -43,12 +33,14 @@ class Partition(bv.Struct):
     ----------------------------------------------------
     '''
 
-    def __init__(self, up, lo):
-        super().__init__(up, lo, vertical=False, first_=DiskAddress, last_=DiskAddress)
-
-    def lba(self):
-        ''' Return first+last LBA '''
-        return (self.first.lba(), self.last.lba())
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            vertical=False,
+            first_=DiskAddress,
+            last_=DiskAddress
+        )
 
 class DiskPointer(bv.Struct):
     '''
@@ -67,6 +59,19 @@ class DiskPointer(bv.Struct):
 
 #################################################################################################
 
+class VolRec(bv.Struct):
+    '''
+    '''
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            vertical=False,
+            flg_=-10,
+            volid_=-49,
+            f0_=-32,
+        )
+
 class SuperBlock(bv.Struct):
     '''
     The SuperBlock of the disk, shared between DFS and RFS
@@ -74,19 +79,16 @@ class SuperBlock(bv.Struct):
 
     '''
 
-    def __init__(self, tree, lo):
+    def __init__(self, ovtree, lo):
+        sect = DoubleSectorBitView(ovtree, lo, 'SB', 'SuperBlock').insert()
         super().__init__(
-            tree,
-            lo,
+            sect.bv,
+            0,
             vertical=True,
             magic_=-32,				# 0x00007fed
             at0020_const_=32,			# 0x00030000
             geometry_=DiskAddress,
-            part0_=Partition,
-            part1_=Partition,
-            part2_=Partition,
-            part3_=Partition,
-            part4_=Partition,
+            part_=bv.Array(5, Partition, vertical=True),
             at01a0_=-16,
             volserial_=bv.Text(10, rstrip=True),
             at0200_const_=128,			# 0
@@ -103,26 +105,42 @@ class SuperBlock(bv.Struct):
             at05e7_=DiskPointer,
             at0644_=DiskPointer,
             at06a1_=DiskPointer,
-            at06fe_=-49,
-            at072f_=bv.Array(32, -91, vertical=True),
-            at128f_=-69,
-            worldidx_=-24,
-            at12ec_=-69,
-            at1331_=-24,			#stage6_ptr
-            at1349_=-74,
-            syslog_=-24,
-            at13ab_=-69,
-            at13f0_=-24,
+            volid_=-49,
+            voltable_=bv.Array(32, VolRec, vertical=True),
+            worlds_=DiskPointer,
+            at1331_=DiskPointer,		#stage6_ptr
+            at1349_=-5,
+            syslog_=DiskPointer,
+            at13ab_=DiskPointer,
             at1408_=-8,
             snapshot1_=-24,
             reboots_=-16,
             at1438_=-20,
             snapshot2_=-24,
-            at1464_=-149,
-            at14f9_=-156,
-            at1595_=-16,
-            at15a5_=-48,
-            sbmagic_=-32,
+            at1464_=-273,
+            thisvolid_=-49,
+            bootvolid_=-49,
+            sbmagic_=-31,
             more=True,
         )
         self.done(SECTBITS)
+
+    def do_badsect(self, ovtree):
+        i, j = self.partition_span(0)
+        BadSectorTable(ovtree, i << LSECSHIFT, (j+1) << LSECSHIFT).insert()
+
+    def partition_span(self, partno):
+        part = self.part.array[partno]
+        return (
+            self.diskaddress_to_lba(part.first),
+            self.diskaddress_to_lba(part.last),
+        )
+
+    def diskaddress_to_lba(self, da):
+        ''' Convert a 512b CHS to 1k LBA '''
+        lba = da.cyl.val
+        lba *= self.geometry.hd.val
+        lba += da.hd.val
+        lba *= self.geometry.sect.val
+        lba += da.sect.val
+        return lba >> 1

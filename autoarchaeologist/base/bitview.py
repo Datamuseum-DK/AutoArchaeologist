@@ -21,8 +21,12 @@ class OvBits(ov.Octets):
         )
 
     def render(self):
+        l = list(x for x in self.bv.render())
+        if len(l) == 1:
+            yield "BitView = { " + l[0] + " }"
+            return
         yield "BitView = {"
-        for i in self.bv.render():
+        for i in l:
             yield "    " + i
         yield "}"
 

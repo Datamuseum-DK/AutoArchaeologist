@@ -10,8 +10,10 @@ from ...base import octetview as ov
 
 from .defs import DoubleSectorBitView, LSECSHIFT
 from .superblock import SuperBlock
+from .system import add_volume
+from .world import WorldIndex
 
-class R1KDisk(disk.Disk):
+class Volume(disk.Disk):
     '''
     A Single R1K Disk image
     -----------------------
@@ -27,19 +29,41 @@ class R1KDisk(disk.Disk):
             geometry=[[1655, 15, 45, 1024]],
         )
 
-        sbsect = DoubleSectorBitView(self, 2, 'SB', 'SuperBlock').insert()
-        self.sblk = SuperBlock(sbsect.bv, 0).insert()
+        self.sblk = SuperBlock(self, 2).insert()
 
-        self.sblk.freelist.commit(self)
+        if False:
+            self.completed()
+            return
 
-        # Paint the unallocated sectors
-        self.picture_legend['FR'] = "Free in BitMap"
-        for lba in range(self.sblk.part3_lba_first.val, self.sblk.part3_lba_last.val + 1):
-            if self.sblk.freelist.get_bit(lba) == '0':
-                self.set_picture('FR', lo=lba << LSECSHIFT)
+        if True:
+            self.sblk.freelist.commit(self)
+
+            # Paint the unallocated sectors
+            self.picture_legend['FR'] = "Free in BitMap"
+            for lba in range(
+                self.sblk.part3_lba_first.val,
+                self.sblk.part3_lba_last.val + 1
+            ):
+                if self.sblk.freelist.get_bit(lba) == '0':
+                    self.set_picture('FR', lo=lba << LSECSHIFT)
+
+        if True:
+            self.sblk.do_badsect(self)
+
+
+        if True:
+            self.worldindex = None
+            if self.sblk.worlds.lba.val:
+                self.worldindex = WorldIndex(self, self.sblk.worlds.lba.val)
+
+        self.what = {}
+        add_volume(self)
+
+    def completed(self):
 
         for i, j in self.gaps():
             ov.Hidden(self, lo=i, hi=j).insert()
 
-        this.add_interpretation(self, self.disk_picture, more=True)
+        self.this.add_interpretation(self, self.disk_picture, more=True)
         self.add_interpretation(title="Disk View", more=True)
+

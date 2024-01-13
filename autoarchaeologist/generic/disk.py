@@ -29,6 +29,13 @@ COLORS = [
    [ 0, 114, 178],	# Blue
    [ 213, 94, 0],	# Vermillion
    [ 204, 121, 167],	# Reddish purple
+
+   [ 255, 0, 0],
+   [ 0, 255, 0],
+   [ 0, 0, 255],
+   [ 255, 255, 0],
+   [ 255, 0, 255],
+   [ 0, 255, 255],
 ]
 
 
@@ -179,6 +186,8 @@ class Disk(ov.OctetView):
             except KeyError:
                 print(self.this, "Disk-picture failed at", hex(lo), what)
                 return
+            if self.picture[chs] != '?':
+                print(self.this, "Picture Changed", hex(lo), chs, self.picture[chs], what)
             self.picture[chs] = what
             lo += self.width[chs]
 

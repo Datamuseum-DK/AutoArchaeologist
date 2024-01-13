@@ -86,3 +86,23 @@ class DoubleSectorBitView(bv.OvBits):
             lba << LSECSHIFT,
             width = LSECSIZE,
         )
+
+class AdaArray(bv.Struct):
+    ''' ... '''
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            vertical=False,
+            a1_=-32,
+            a2_=-32,
+            a3_=-32,
+            a4_=-32,
+        )
+        assert self.a1.val == 0x40
+        assert self.a3.val == 0x1
+
+    def render(self):
+        yield "0x%x*0x%x" % ((self.a2.val - 0x40) // self.a4.val, self.a4.val)
+
+     
