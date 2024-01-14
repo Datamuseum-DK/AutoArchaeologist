@@ -1,9 +1,21 @@
 
+from ..base import type_case 
+
+class WangTypeCase(type_case.WellKnown):
+
+    def __init__(self, encoding):
+        super().__init__(encoding)
+        for i in range(0x20, 0x7f):
+            self.set_slug(
+                i | 0x80,
+                self[i].short,
+                "\u0332" + self[i].long,
+            )
 
 class WangText():
 
     def __init__(self, this):
-        if not this.has_type("wang_text"):
+        if not this.has_type("Wang Wps File"):
             return
         self.this = this
         tn = this.add_html_interpretation('WangText')
@@ -20,7 +32,7 @@ class WangText():
                 if line[0] in (0x06, 0x86):
                     if line[0] == 0x86:
                         file.write("<hr/><br/>\n")
-                    print("LL", hex(line[0]), line[1], len(line), [line])
+                    # print("LL", hex(line[0]), line[1], len(line), [line])
                     tabs = line[2:]
                     linelen = line[1] + tabs.find(b'\x02')
                     if False:
