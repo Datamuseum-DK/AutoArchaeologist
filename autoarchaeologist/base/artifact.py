@@ -35,6 +35,7 @@ class Record(bintree.BinTreeLeaf):
         self.frag = frag
         self.key = key
         self.artifact = None
+        self.undefined = False
 
     def __str__(self):
         return "<R 0x%x…0x%x=0x%x %s>" % (self.lo, self.hi, self.hi - self.lo, str(self.key))
