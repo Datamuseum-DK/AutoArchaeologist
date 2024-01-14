@@ -270,6 +270,7 @@ class FromBitStore():
             return
         this.add_type(i.val)
 
+    # XXX: On Wang floppies sectors count from zero
     def impose_geometry(self, meta, this):
         ''' Impose Media.Geometry as records '''
         if this._keys:
