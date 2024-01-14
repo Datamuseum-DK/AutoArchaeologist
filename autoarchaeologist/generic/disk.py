@@ -30,6 +30,7 @@ COLORS = [
    [ 213, 94, 0],	# Vermillion
    [ 204, 121, 167],	# Reddish purple
 
+   # More colors...
    [ 255, 0, 0],
    [ 0, 255, 0],
    [ 0, 0, 255],
@@ -137,8 +138,8 @@ class Disk(ov.OctetView):
         self.width = {}
         self.picture = {}
         self.picture_legend = {
-            "?": "Unclaimed",
-            "·": "Data",
+            "?": "Unclaimed",	# Black
+            "U": "Unread",	# Orange
         }
         lo = 0
         for cyl, head, sec, nbyte in self.iter_chsb():
@@ -172,13 +173,15 @@ class Disk(ov.OctetView):
                 if i >= lo and j <= hi:
                     cls(self, lo=i, hi=j).insert()
 
-    def set_picture(self, what, cyl=None, head=None, sect=None, lo=None, width=None):
+    def set_picture(self, what, cyl=None, head=None, sect=None, lo=None, width=None, legend = None):
         if lo is None:
             lo = self.seclo[(cyl, head, sect)]
         chs = self.losec[lo]
         if width is None:
             width = self.width[chs]
         hi = lo + width
+        if legend:
+            self.picture_legend[what] = legend
 
         while lo < hi:
             try:
@@ -203,6 +206,7 @@ class Disk(ov.OctetView):
         maxsect = max(chsb[2] for chsb in self.iter_chsb())
         nsect = 1 + maxsect - minsect
         print(self.this, p6f.filename, ncyl, nhd, [minsect, maxsect])
+        used_legend = set()
         with open(p6f.filename + "_", "wb") as pfile:
             pfile.write(b'P6\n')
             pfile.write(b'%d %d\n' % (ncyl, nhd * (nsect + 1)))
@@ -212,6 +216,7 @@ class Disk(ov.OctetView):
                     for cyl in range(ncyl):
                         chs = (cyl, hd, sec + minsect)
                         col = self.picture.get(chs, '?')
+                        used_legend.add(col)
                         pfile.write(cmap[col])
                 for cyl in range(ncyl):
                     pfile.write(bytes((255,255,255)))
@@ -234,6 +239,8 @@ class Disk(ov.OctetView):
         file.write('<img src="%s"/>\n' % p6f.link)
         file.write('<table>\n')
         for i, j in sorted(self.picture_legend.items()):
+            if i not in used_legend:
+                continue
             c = cmap[i]
             file.write('<tr>\n')
             file.write('<td style="background-color: #')
