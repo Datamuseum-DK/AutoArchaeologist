@@ -49,6 +49,7 @@ class Volume(disk.Disk):
 
         if True:
             self.sblk.do_badsect(self)
+            self.sblk.do_replacesect(self)
 
 
         if True:

@@ -52,7 +52,7 @@ class BitMapSect(bv.Struct):
 
     def render(self):
         if ELIDE_FREELIST:
-            yield self.bt_name
+            yield self.bt_name + "(elided)"
         else:
             yield from super().render()
 
@@ -100,7 +100,7 @@ class FreeMapSect(bv.Struct):
 
     def render(self):
         if ELIDE_FREELIST:
-            yield self.bt_name
+            yield self.bt_name + "(elided)"
         else:
             yield from super().render()
 

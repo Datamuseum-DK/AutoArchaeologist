@@ -37,6 +37,7 @@ OBJECT_FIELDS = {
 }
 
 ELIDE_FREELIST = True
+ELIDE_BADLIST = True
 
 class Doubled(disk.Sector):
     ''' Much of the metadata is redundantly stored in two sectors '''

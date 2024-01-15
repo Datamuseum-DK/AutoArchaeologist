@@ -6,9 +6,10 @@
 '''
 
 from ...base import octetview as ov
+from ...base import bitview as bv
 
 from ...generic import disk
-from .defs import SECTBITS, LSECSHIFT
+from .defs import SECTBITS, LSECSHIFT, DoubleSectorBitView, ELIDE_BADLIST
 from .freelist import FreeList
 
 class BadEntry(ov.Struct):
@@ -69,4 +70,54 @@ class BadSectorTable(ov.Struct):
             
 
     def render(self):
-        yield "BadSectorTable(l=%d)" % len(self.real_bad) + ", ".join(str(x) for x in sorted(self.real_bad.keys()))
+        if ELIDE_BADLIST:
+            yield "BadSectorTable(elided)"
+        else:
+            yield from super().render()
+
+class ReplacementEntry(bv.Struct):
+    '''
+    ...
+    '''
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            info_=-2,
+            lba_=-24,
+            f0_=-38,
+        )
+
+class ReplacementSector(disk.Sector):
+
+    def render(self):
+        yield "ReplacementSector"
+
+class ReplacementSectorTable(bv.Struct):
+    '''
+    ...
+    '''
+    def __init__(self, ovtree, lba):
+        sect = DoubleSectorBitView(ovtree, lba, 'RT', 'ReplacementTable').insert()
+        super().__init__(
+            sect.bv,
+            0,
+            vertical=True,
+            f0_=-8,
+            more=True,
+        )
+        if self.f0.val == 0x84:
+            self.add_field("f1", -24)
+            self.add_field("f2", -32)
+            self.add_field("ary", bv.Array(127, ReplacementEntry)),
+            for repl in self.ary.array:
+                ReplacementSector(ovtree, lo = repl.lba.val << LSECSHIFT).insert()
+                ovtree.set_picture('RS', lo = repl.lba.val << LSECSHIFT, legend = 'Replacement Sector')
+        self.done(SECTBITS)
+
+    def render(self):
+        if ELIDE_BADLIST:
+            yield "ReplacementSectorTable(elided)"
+        else:
+            yield from super().render()
+

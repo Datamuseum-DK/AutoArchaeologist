@@ -9,7 +9,7 @@ from ...base import bitview as bv
 
 from .defs import SECTBITS, LSECSHIFT, DoubleSectorBitView
 from .freelist import FreeList
-from .badsect import BadSectorTable
+from .badsect import BadSectorTable, ReplacementSectorTable
 
 class DiskAddress(bv.Struct):
     '''
@@ -129,6 +129,10 @@ class SuperBlock(bv.Struct):
         i, j = self.partition_span(0)
         BadSectorTable(ovtree, i << LSECSHIFT, (j+1) << LSECSHIFT).insert()
 
+    def do_replacesect(self, ovtree):
+        i, j = self.partition_span(1)
+        for lba in range(i, j + 1, 2):
+            ReplacementSectorTable(ovtree, lba).insert()
     def partition_span(self, partno):
         part = self.part.array[partno]
         return (
