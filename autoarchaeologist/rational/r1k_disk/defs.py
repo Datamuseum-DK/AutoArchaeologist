@@ -37,7 +37,30 @@ OBJECT_FIELDS = {
 }
 
 ELIDE_FREELIST = True
-ELIDE_BADLIST = True
+ELIDE_BADLIST = False
+
+class DiskAddress(bv.Struct):
+    '''
+    A C/H/S 512B disk-address in the superblock
+    -------------------------------------------
+    '''
+
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            flg_=-1,
+            cyl_=-15,
+            hd_=-8,
+            sect_=-8
+        )
+
+    def chs(self):
+        return (self.cyl.val, self.hd.val, self.sect.val)
+
+    def render(self):
+        yield "0x%x(%d/%d/%d)" % (self.flg.val, self.cyl.val, self.hd.val, self.sect.val)
+
 
 class Doubled(disk.Sector):
     ''' Much of the metadata is redundantly stored in two sectors '''

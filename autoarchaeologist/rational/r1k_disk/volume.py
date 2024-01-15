@@ -48,19 +48,19 @@ class Volume(disk.Disk):
                     self.set_picture('FR', lo=lba << LSECSHIFT)
 
         if True:
-            self.sblk.do_badsect(self)
-            self.sblk.do_replacesect(self)
-
-
-        if True:
             self.worldindex = None
             if self.sblk.worlds.lba.val:
                 self.worldindex = WorldIndex(self, self.sblk.worlds.lba.val)
+
+        if True:
+            self.sblk.do_badsect(self)
+            self.sblk.do_replacesect(self)
 
         self.what = {}
         add_volume(self)
 
     def completed(self):
+        ''' Call-back from system once it is done '''
 
         for i, j in self.gaps():
             ov.Hidden(self, lo=i, hi=j).insert()

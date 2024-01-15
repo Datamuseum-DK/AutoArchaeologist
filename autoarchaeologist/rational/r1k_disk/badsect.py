@@ -5,69 +5,39 @@
    =================
 '''
 
-from ...base import octetview as ov
 from ...base import bitview as bv
 
 from ...generic import disk
-from .defs import SECTBITS, LSECSHIFT, DoubleSectorBitView, ELIDE_BADLIST
-from .freelist import FreeList
-
-class BadEntry(ov.Struct):
-    '''
-    ...
-    '''
-    def __init__(self, tree, lo):
-        super().__init__(
-            tree,
-            lo,
-            cyl_=ov.Be16,
-            head_=ov.Octet,
-            sect_=ov.Octet,
-        )
-    def chs(self):
-        return (self.cyl.val & 0xfff, self.head.val, self.sect.val)
-
-    def render(self):
-        yield "0x%x(%d/%d/%d)" % (self.cyl.val >> 12, self.cyl.val & 0xfff, self.head.val, self.sect.val)
+from .defs import SECTBITS, LSECSHIFT, DoubleSectorBitView, ELIDE_BADLIST, DiskAddress
 
 class BadSector(disk.Sector):
+    ''' Flagged bad sector '''
     def render(self):
-        yield "Bad Sector"
+        yield "BadSector"
 
-class BadSectorTable(ov.Struct):
+class BadSectorTable(bv.Struct):
     '''
     ...
     '''
-    def __init__(self, ovtree, lo, hi):
-        nelem = (hi - lo) // 4
-        self.real_bad = {}
+    def __init__(self, ovtree, lba):
+        sect = DoubleSectorBitView(ovtree, lba, 'BT', 'BadSectorTable').insert()
         super().__init__(
-            ovtree,
-            lo,
+            sect.bv,
+            0,
             vertical=True,
-            bad_=ov.Array(nelem, BadEntry, vertical=True)
+            bad_=bv.Array(256, DiskAddress, vertical=True)
         )
-        for i in self.bad.array:
-            self.real_bad[i.chs()] = True
-        del self.real_bad[(0,0,0)]
-
+        while len(self.bad.array) > 1 and self.bad.array[-1].chs() == (0, 0, 0):
+            self.bad.array.pop(-1)
         done = set()
-        ovtree.picture_legend['BS'] = "Bad Sector"
-        for cyl,head,sect in self.real_bad.keys():
-            lba = cyl
-            lba *= ovtree.sblk.geometry.hd.val
-            lba += head
-            lba *= ovtree.sblk.geometry.sect.val
-            lba += sect
-            lba >>= 1
-            if lba not in done:
-                ovtree.set_picture('BS', lo = lba << LSECSHIFT)
-                BadSector(
-                    ovtree,
-                    lo = lba << LSECSHIFT,
-                ).insert()
-                done.add(lba)
-            
+        done.add(0)
+        for bad_entry in self.bad:
+            lba = ovtree.sblk.diskaddress_to_lba(bad_entry)
+            if lba in done:
+                continue
+            done.add(lba)
+            ovtree.set_picture('BS', lo = lba << LSECSHIFT, legend = "Bad Sector")
+            BadSector(ovtree, lo = lba << LSECSHIFT).insert()
 
     def render(self):
         if ELIDE_BADLIST:
@@ -89,7 +59,7 @@ class ReplacementEntry(bv.Struct):
         )
 
 class ReplacementSector(disk.Sector):
-
+    ''' Sector reserved to replace grown bad sectors '''
     def render(self):
         yield "ReplacementSector"
 
@@ -103,16 +73,18 @@ class ReplacementSectorTable(bv.Struct):
             sect.bv,
             0,
             vertical=True,
-            f0_=-8,
+            f0_=-4,
             more=True,
         )
-        if self.f0.val == 0x84:
-            self.add_field("f1", -24)
-            self.add_field("f2", -32)
-            self.add_field("ary", bv.Array(127, ReplacementEntry)),
+        if self.f0.val == 0x8:
+            self.add_field("f2", -4)
+            self.add_field("f3", -24)
+            self.add_field("f4", -32)
+            self.add_field("ary", bv.Array(127, ReplacementEntry))
             for repl in self.ary.array:
-                ReplacementSector(ovtree, lo = repl.lba.val << LSECSHIFT).insert()
-                ovtree.set_picture('RS', lo = repl.lba.val << LSECSHIFT, legend = 'Replacement Sector')
+                offset = repl.lba.val << LSECSHIFT
+                ReplacementSector(ovtree, lo = offset).insert()
+                ovtree.set_picture('RS', lo = offset, legend = 'Replacement Sector')
         self.done(SECTBITS)
 
     def render(self):
@@ -120,4 +92,3 @@ class ReplacementSectorTable(bv.Struct):
             yield "ReplacementSectorTable(elided)"
         else:
             yield from super().render()
-
