@@ -8,7 +8,6 @@
 from ...base import bitview as bv
 
 from .defs import SECTBITS
-from .segment import Segment
 from .world import World
 
 systems = {}
@@ -41,10 +40,12 @@ class R1kSystem():
     def complete(self):
         print("CPL", self.volnos)
         for worldptr in self.worldptrs.values():
-            if worldptr.snapshot.val == 0:
-                continue
             world = World(self.volumes[worldptr.volume.val], worldptr.lba.val)
-            self.worlds.append(world)
+            self.worlds += [x for x in world.iter_worlds()]
+
+        for world in self.worlds:
+            world.commit_segments()
+            
 
         for vol in self.volumes:
             if vol:

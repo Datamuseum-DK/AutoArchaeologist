@@ -7,11 +7,41 @@
 
 from ...generic import disk
 from ...base import octetview as ov
+from ...base import bitview as bv
 
-from .defs import DoubleSectorBitView, LSECSHIFT
+from .defs import DoubleSectorBitView, LSECSHIFT, OBJECT_FIELDS, AdaArray, SECTBITS
 from .superblock import SuperBlock
 from .system import add_volume
 from .world import WorldIndex
+from .syslog import Syslog, DfsLog
+
+
+class Etwas1331(bv.Struct):
+    '''
+    Unknown
+    ---------------
+
+    '''
+
+    def __init__(self, ovtree, lba):
+        sect = DoubleSectorBitView(ovtree, lba, 'XX', "Unknown").insert()
+        super().__init__(
+            sect.bv,
+            0,
+            vertical=False,
+            **OBJECT_FIELDS,
+            sl0_=-16,
+            cnt_=-5,
+            aa_=AdaArray,
+            more=True,
+        )
+        self.add_field(
+            "ary",
+            bv.Array(self.cnt.val, 0x17f, vertical=False)
+        )
+        self.done(SECTBITS)
+        self.insert()
+        self.ovtree = ovtree
 
 class Volume(disk.Disk):
     '''
@@ -34,6 +64,18 @@ class Volume(disk.Disk):
         if False:
             self.completed()
             return
+
+        if True:
+            if self.sblk.at13ab.lba.val:
+                DfsLog(self, self.sblk.at13ab.lba.val)
+
+        if True:
+            if self.sblk.at1331.lba.val:
+                Etwas1331(self, self.sblk.at1331.lba.val)
+
+        if True:
+            if self.sblk.syslog.lba.val:
+                Syslog(self, self.sblk.syslog.lba.val)
 
         if True:
             self.sblk.freelist.commit(self)

@@ -123,6 +123,8 @@ class AdaArray(bv.Struct):
             a3_=-32,
             a4_=-32,
         )
+        if self.a1.val != 0x40 or self.a3.val != 1:
+            print("BAD AA", hex(self.a1.val), hex(self.a3.val))
         assert self.a1.val == 0x40
         assert self.a3.val == 0x1
 

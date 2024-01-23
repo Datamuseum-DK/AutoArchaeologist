@@ -20,26 +20,25 @@ class Extent(bv.Struct):
         )
         self.is_valid = ""
 
-    def check(self, ovtree):
-        if self.lba.val == 0:
-            return
-        bits = ovtree.this.bits(self.lba.val << 13, 128)
-        pat = bin((1<<24)|self.lba.val)[3:]
-        if bits.find(pat) == 70:
-            self.is_valid = "+"
-        else:
-            print("B %06x" % self.lba.val, bits[:70], bits[70:], pat, bits.find(pat))
-            self.is_valid = "-"
+    def is_null(self):
+        return self.flg.val == 0 and self.e0.val == 0 and self.lba.val == 0
 
     def render(self):
-        if self.flg.val or self.e0.val or self.lba.val:
-            yield "E" + self.is_valid + "{%x:%x:%x}" % (self.flg.val, self.e0.val, self.lba.val)
-        else:
+        if self.is_null():
             yield "Ø"
+        else:
+            yield "E" + self.is_valid + "{%x:%x:%x}" % (self.flg.val, self.e0.val, self.lba.val)
+
+class BadIndir(Exception):
+    ''' This is not the indir you are looking for '''
 
 class Indir(bv.Struct):
                 
     def __init__(self, ovtree, lba):
+        id = ovtree.this.bits(lba << 13, 23)
+        if int(id, 2) != 0x125:
+            raise BadIndir("Indir id_kind not 0x125")
+          
         sect = SectorBitView(ovtree, lba, 'IN', "Indirect").insert()
         super().__init__(
             sect.bv,
@@ -53,37 +52,44 @@ class Indir(bv.Struct):
             more=True,
         )
         if self.id_lba.val != lba:
-            print("HH", hex(self.id_lba.val), hex(lba))
-            self.status = '#'
-            return
+            raise BadIndir("wrong id_lba")
         assert self.id_lba.val == lba
-        if self.f2.val != 0x8144:
-            self.add_field("fill", 1024)
-            self.status = '%'
-            return
+        assert self.f0.val == 0x01000000
+        assert self.f1.val == 0
+        assert self.f2.val == 0x8144
         self.add_field("aa", AdaArray)
         self.add_field("ary", bv.Array(162, Extent))
         self.done(SECTBITS)
-        self.insert()
         while self.ary.array:
             if self.ary.array[-1].flg.val != 0:
                 break
             self.ary.array.pop(-1)
-        self.status = '*'
-        if self.multiplier.val > 1:
-            for ext in self.ary:
-                if ext.lba.val == 0:
-                    continue
-                i = ovtree.what.get(ext.lba.val)
-                if i:
-                    #print("Already", hex(ext.lba.val), ovtree.what[ext.lba.val])
-                    ext.is_valid = i.status
-                    continue
-                i = Indir(ovtree, ext.lba.val);
-                ext.is_valid = i.status
-                ovtree.what[ext.lba.val] = i
 
-class Segment(bv.Struct):
+    def expand(self):
+        for extent in self.ary.array:
+            if extent.is_null():
+                yield None
+            else:
+                yield extent
+
+class Indir1(Indir):
+    ''' first level indirect '''
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.multiplier.val != 1:
+            raise BadIndir("Indir1 multiplier not 1")
+
+class Indir2(Indir):
+    ''' second level indirect '''
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.multiplier.val != 0xa2:
+            raise BadIndir("Indir2 multiplier not 0xa2")
+
+
+class SegmentDesc(bv.Struct):
     ''' ... '''
     def __init__(self, tree, lo):
         super().__init__(
@@ -111,6 +117,11 @@ class Segment(bv.Struct):
             mobj_=-32,
             more=True,
         )
+
+        assert self.col5b_.val == 0
+        assert self.other3a_.val == 0x200
+        assert self.other6_.val == 0x2005
+        
         if self.lo + 915 != self.hi:
             print("H", self.hi - self.lo)
         self.done(915)
@@ -119,24 +130,74 @@ class Segment(bv.Struct):
                 break
             self.ary.array.pop(-1)
 
-    def check(self, ovtree):
+    def commit(self, ovtree):
+        retval = []
+        npg = 0
+        lbas = []
         if self.multiplier.val == 1:
-            return
-        for ext in self.ary.array:
-            ext.check(ovtree)
+            for extent in self.ary.array:
+                if extent.is_null():
+                    lbas.append(None)
+                else:
+                    lbas.append(extent)
+                    npg += 1
+            if npg == self.npg.val:
+                return []
+        elif self.multiplier.val == 0xa2:
+            indirs = []
+            retval.append("  S " + str(self))
+            for extent in self.ary.array:
+                retval.append("  E " + str(extent))
+                if extent.is_null():
+                    lbas += [None] * self.multiplier.val
+                    continue
+                try:
+                    indir = Indir1(ovtree, extent.lba.val)
+                except BadIndir as err:
+                    retval.append("   LBA is not Indir1 " + hex(extent.lba.val) + " " + str(err))
+                    return retval
+                indirs.append(indir)
+                retval.append("    I " + str(indir))
+                lbas += [x for x in indir.expand()]
+            if (len(lbas) - lbas.count(None)) == self.npg.val:
+                retval = []
+                for indir in indirs:
+                    indir.insert()
+            return retval
+        elif self.multiplier.val == 0xa2 * 0xa2:
+            indirs = []
+            retval.append("  S " + str(self))
+            for extent2 in self.ary.array:
+                retval.append("  E " + str(extent2))
+                if extent2.is_null():
+                    lbas += [None] * self.multiplier.val
+                    continue
+                try:
+                    indir2 = Indir2(ovtree, extent2.lba.val)
+                except BadIndir as err:
+                    retval.append("   LBA is not Indir2 " + hex(extent2.lba.val) + " " + str(err))
+                    return retval
+                indirs.append(indir2)
+                retval.append("    I2 " + str(indir2))
+                for extent1 in indir2.expand():
+                    if extent1 is None:
+                        lbas += [None] * 0xa2
+                        continue
+                    try:
+                        indir1 = Indir1(ovtree, extent1.lba.val)
+                    except BadIndir as err:
+                        retval.append("      LBA is not Indir2-1 " +  hex(extent1.lba.val) + " " + str(err))
+                        return retval
+                    indirs.append(indir1)
+                    retval.append("      I1 " + str(indir1))
+                    lbas += [x for x in indir1.expand()]
+            if (len(lbas) - lbas.count(None)) == self.npg.val:
+                retval = []
+                for indir in indirs:
+                    indir.insert()
+            return retval
 
-    def traverse(self, ovtree):
-        if self.multiplier.val == 1:
-            return
-        for ext in self.ary.array:
-            if ext.lba.val == 0:
-                continue
-            if ext.lba.val in ovtree.what:
-                continue
-            if ext.is_valid != '+':
-                continue
-            i = Indir(ovtree, ext.lba.val);
-            ext.is_valid = i.status
-            ovtree.what[ext.lba.val] = i
-
-
+        print("  S", self)
+        for extent in self.ary.array:
+            print("    E", extent)
+        return []
