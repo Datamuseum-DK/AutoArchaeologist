@@ -38,6 +38,8 @@ class BinTreeLeaf():
         return self.hi < other.hi
 
     def __eq__(self, other):
+        if other is None:
+            return False
         return self.lo == other.lo and self.hi == other.hi
 
 class BinTree():
