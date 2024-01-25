@@ -40,6 +40,8 @@ class NameSpace(namespace.NameSpace):
               03-0072-01A-Z80_RIO Operating System Users Manual Sep78, pg 116
         '''
         head = self.ns_priv
+        if head is None:
+            return [ "" ] * 23 + super().ns_render()
         return [
             head.f00.txt,
             head.f01.txt,
@@ -184,7 +186,7 @@ class WangDocumentHead(ov.Struct):
         super().__init__(
             tree,
             lo,
-            vertical=True,
+            vertical=False,
             hdr_=WangSectHead,
             f00_=ov.Text(6),
             f01_=ov.Text(26),
@@ -234,6 +236,9 @@ class WangDocumentBody(ov.Struct):
         if self.hi < self.lo + 256:
             self.add_field("f99", self.lo + 256 - self.hi)
         self.done(256)
+
+    def render(self):
+        yield self.__class__.__name__
 
 class WangDocument(ov.Struct):
 
@@ -291,6 +296,21 @@ class WangDocument(ov.Struct):
             this = that,
         )
 
+class SpelunkSector():
+    ''' ... '''
+
+    def __init__(self, tree, lo):
+        self.tree = tree
+        self.lo = lo
+        self.prev = None
+        self.next = None
+        self.chs = None
+        self.nchs = (tree.this[lo], 0, tree.this[lo + 1])
+        self.key = tree.this[lo+4:lo+6]
+
+    def __repr__(self):
+        return "SPS " + str(self.chs) + " " + str(self.nchs)
+
 class WangWps(disk.Disk):
 
     SECTOR_OFFSET = 0
@@ -337,16 +357,78 @@ class WangWps(disk.Disk):
         for document in documents:
             document.commit()
 
+        self.spelunk()
         self.fill_gaps(FillSector)
         this.add_interpretation(self, self.namespace.ns_html_plain)
         this.add_interpretation(self, self.disk_picture)
         self.add_interpretation(more=True)
         # self.make_bitstore_metadata()
 
+    def spelunk(self):
+        by_lo = {}
+        for i, j in self.gaps():
+            i = (i + 0xff) & ~0xff
+            j = j & ~0xff
+            for lo in range(i, j, 0x100):
+                if lo < 0x1000:
+                    continue
+                if self.this[lo + 6] != 0x41:
+                    continue
+                spsect = SpelunkSector(self, lo)
+                by_lo[lo] = spsect   
+        by_chs = {}
+        for i in self.this.iter_rec():
+            j = by_lo.get(i.lo)
+            if j is None:
+                continue
+            j.chs = i.key
+            by_chs[j.chs] = j
+        for j in by_chs.values():
+            k = by_chs.get(j.nchs)
+            if k is None or k.key != j.key:
+                continue
+            k.prev = j
+            j.next = k
+        done = set()
+        for j in by_chs.values():
+            if j.prev is not None:
+                continue
+            parts = []
+            i = j
+            key = i.key
+            while i and i.key == key and i.chs not in done:
+                last = self.this[i.lo+2]
+                print(i, self.this[i.lo:i.lo+7].hex(), last)
+                if last > 7:
+                    parts.append(self.this[i.lo+7:i.lo+last])
+                done.add(i.chs)
+                i = i.next
+            if not parts:
+                continue
+            if self.this[j.lo+3] == 0x41:
+                head = WangDocumentHead(self, j.lo).insert()
+                parts.pop(0)
+            else:
+                head = None
+            print("JJ", j, parts, sum(len(x) for x in parts))
+            that = self.this.create(records=parts)
+            that.add_type("Wang Wps File")
+            that.add_note("Spelunked")
+            namespace = NameSpace(
+                name = "~ORPHAN%02d.%02d" % (j.chs[0], j.chs[2]),
+                parent = self.namespace,
+                priv = head,
+                this = that,
+            )
+
+        print("DD", len(done), len(by_chs), len(by_lo))
+        for j in by_chs.values():
+            if j.chs not in done:
+                print("  d", j)
 
     def make_bitstore_metadata(self):
 
-        date = "20240114"
+        date = "20240125"
 
         filename = self.this.descriptions[0]
         if "/critter/DDHF/2024/Wang" not in filename:
@@ -357,15 +439,26 @@ class WangWps(disk.Disk):
         genstand = {
             "bog1": "11002393",
             "bog2": "11002394",
+            "bog3": "11002398",
+            "bog3b": "11002399",
+            "bog4": "11002401",
+            "bog5": "11002402",
         }[book]
         papers = {
             "bog1": "30005801",
             "bog2": "30005800",
+            "bog3": "30005997",
+            "bog3b": "30005998",
+            "bog4": "30006033",
+            "bog5": "30006050",
         }[book]
         diskid = set()
         for i in sorted(self.namespace):
             j = [x for x in i.ns_render()]
-            diskid.add(j[15])
+            did = j[15].strip()
+            if did:
+                diskid.add(did)
+        print(diskid)
         assert len(diskid) == 1
         diskid = list(diskid)[0].strip()
         filename = "/tmp/" + book + "/" + basename + ".flp.meta"
@@ -389,7 +482,8 @@ class WangWps(disk.Disk):
             for i in sorted(self.namespace):
                 j = [x for x in i.ns_render()]
                 txt = "".join(j[:4]).rstrip()
-                fo.write("\t\t" + txt + "\n")
+                if txt:
+                    fo.write("\t\t" + txt + "\n")
             fo.write("\t\n")
             fo.write("\tSe også papirer fra samme ringbind: [[Bits:%s]]\n" % papers)
             fo.write("\n")
@@ -400,42 +494,3 @@ class WangWps(disk.Disk):
         for i, j in enumerate(bits):
             if j == '0':
                 self.set_picture('F', lo=i << 8, legend='Marked Free')
-
-    def hunt_chains(self):
-
-        chains = {}
-        for sect in sectors.values():
-            if len(sect.prev) > 0:
-                continue
-            if sum(sect.next) == 0:
-                continue
-            l = list()
-            chains[sect.chs] = l
-            l.append(sect)
-            while sum(sect.next) > 0:
-                sect = sectors.get(sect.next)
-                if sect:
-                    l.append(sect)
-                else:
-                    break
-
-        print("=" * 80)
-        for chs, chain in chains.items():
-            print("CHAIN", chs, hex(chs[0]))
-        for chs, chain in chains.items():
-            print("=" * 80)
-            for ln in chain:
-                print("", ln.chs, "\t", ln.this[ln.lo:ln.lo+7].tobytes().hex())
-            t = ""
-            for ln in chain:
-                txt = ln.this[ln.lo + 7:ln.hi].tobytes()
-                for i in txt:
-                    if 32 <= i <= 126:
-                        t += "%c" % i
-                    elif i == 3:
-                        print('  ', t)
-                        t = ''
-                    else:
-                        t += " "
-            print('  ', t)
-
