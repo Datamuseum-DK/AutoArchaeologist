@@ -7,7 +7,7 @@
 
 from ...base import bitview as bv
 
-from .defs import SECTBITS, LSECSHIFT, DoubleSectorBitView, DiskAddress
+from .defs import SECTBITS, DoubleSectorBitView, DiskAddress
 from .freelist import FreeList
 from .badsect import BadSectorTable, ReplacementSectorTable
 
@@ -95,10 +95,10 @@ class SuperBlock(bv.Struct):
             at1331_=DiskPointer,		#stage6_ptr
             at1349_=-5,
             syslog_=DiskPointer,
-            at13ab_=DiskPointer,
+            logsects_=DiskPointer,
             at1408_=-8,
             snapshot1_=-24,
-            reboots_=-16,
+            boot_number_=-16,			# See [[Bits:30003857]] pg 134
             at1438_=-20,
             snapshot2_=-24,
             at1464_=-273,

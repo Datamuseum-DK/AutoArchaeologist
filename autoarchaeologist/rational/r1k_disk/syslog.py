@@ -7,7 +7,8 @@
 
 from ...base import bitview as bv
 
-from .defs import SECTBITS, AdaArray, SectorBitView, DoubleSectorBitView, LSECSHIFT, OBJECT_FIELDS
+from .defs import SECTBITS, AdaArray
+from .object import ObjSector
 
 class LogEntry(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -18,14 +19,15 @@ class LogEntry(bv.Struct):
             txt_=bv.Text(80),
         )
 
-class LogSect(bv.Struct):
-    def __init__(self, ovtree, lo):
-        sect = DoubleSectorBitView(ovtree, lo, 'SL', 'Syslog').insert()
+class LogSect(ObjSector):
+    def __init__(self, ovtree, lba):
         super().__init__(
-            sect.bv,
-            0,
-            vertical=False,
-            **OBJECT_FIELDS,
+            ovtree,
+            lba,
+            duplicated=True,
+            what="SL",
+            legend="Syslog",
+            vertical=True,
             ls0_=-15,
             cnt_=-4,
             aa_=AdaArray,
@@ -47,20 +49,20 @@ class SyslogRec(bv.Struct):
             lba_=-24
         )
 
-class Syslog(bv.Struct):
+class Syslog(ObjSector):
     '''
     A Syslog sector
     ---------------
-
     '''
 
     def __init__(self, ovtree, lba):
-        sect = DoubleSectorBitView(ovtree, lba, 'SL', "Syslog").insert()
         super().__init__(
-            sect.bv,
-            0,
-            vertical=False,
-            **OBJECT_FIELDS,
+            ovtree,
+            lba,
+            duplicated=True,
+            what="SL",
+            legend="Syslog",
+            vertical=True,
             sl0_=-19,
             cnt_=-8,
             aa_=AdaArray,
@@ -72,35 +74,6 @@ class Syslog(bv.Struct):
         )
         self.done(SECTBITS)
         self.insert()
-        self.ovtree = ovtree
 
         for slr in self.syslogrecs:
             LogSect(ovtree, slr.lba.val)
-
-class DfsLog(bv.Struct):
-    '''
-    Unknown
-    ---------------
-
-    '''
-
-    def __init__(self, ovtree, lba):
-        sect = DoubleSectorBitView(ovtree, lba, 'XX', "Unknown").insert()
-        super().__init__(
-            sect.bv,
-            0,
-            vertical=False,
-            **OBJECT_FIELDS,
-            sl0_=15,
-            cnt_=-4,
-            aa_=AdaArray,
-            more=True,
-        )
-        self.add_field(
-            "ary",
-            bv.Array(self.cnt.val, LogEntry, vertical=False)
-        )
-        self.done(SECTBITS)
-        self.insert()
-        self.ovtree = ovtree
-

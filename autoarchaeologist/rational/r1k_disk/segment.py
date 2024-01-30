@@ -4,8 +4,9 @@
    Worlds and trees thereof
    ========================
 '''
-    
-from .defs import AdaArray, OBJECT_FIELDS, SectorBitView, SECTBITS, AdaArray
+
+from .defs import AdaArray, SECTBITS
+from .object import ObjSector, BadObject
 from ...base import bitview as bv
 
 class Extent(bv.Struct):
@@ -27,36 +28,32 @@ class Extent(bv.Struct):
         if self.is_null():
             yield "Ø"
         else:
-            yield "E" + self.is_valid + "{%x:%x:%x}" % (self.flg.val, self.e0.val, self.lba.val)
+            yield "E" + self.is_valid + "{%x:%x:%06x}" % (self.flg.val, self.e0.val, self.lba.val)
 
 class BadIndir(Exception):
     ''' This is not the indir you are looking for '''
 
-class Indir(bv.Struct):
-                
+class Indir(ObjSector):
+
     def __init__(self, ovtree, lba):
-        id = ovtree.this.bits(lba << 13, 23)
-        if int(id, 2) != 0x125:
-            raise BadIndir("Indir id_kind not 0x125")
-          
-        sect = SectorBitView(ovtree, lba, 'IN', "Indirect").insert()
         super().__init__(
-            sect.bv,
-            0,
+            ovtree,
+            lba,
+            what="IN",
+            legend="Indirect",
             vertical=False,
-            **OBJECT_FIELDS,
             f0_=-32,
             f1_=-32,
             f2_=-32,
             multiplier_=-30,
             more=True,
         )
-        if self.id_lba.val != lba:
-            raise BadIndir("wrong id_lba")
-        assert self.id_lba.val == lba
-        assert self.f0.val == 0x01000000
-        assert self.f1.val == 0
-        assert self.f2.val == 0x8144
+        if self.f0.val != 0x01000000:
+            raise BadIndir("Indir wrong f0 (0x%x)" % self.f0.val)
+        if self.f1.val != 0:
+            raise BadIndir("Indir wrong f1 (0x%x)" % self.f1.val)
+        if self.f2.val != 0x8144:
+            raise BadIndir("Indir wrong f2 (0x%x)" % self.f2.val)
         self.add_field("aa", AdaArray)
         self.add_field("ary", bv.Array(162, Extent))
         self.done(SECTBITS)
@@ -104,7 +101,7 @@ class SegmentDesc(bv.Struct):
             other3a__=-17,	# 0x00200
             vol_=-4,
             other3c_=-13,
-            col5a_=-10,
+            bootno_=-10,
             col5b__=-10,	# 0x000
             col5d_=-32,
             other5_=-22,
@@ -117,11 +114,12 @@ class SegmentDesc(bv.Struct):
             mobj_=-32,
             more=True,
         )
+        self.bad = False
 
         assert self.col5b_.val == 0
         assert self.other3a_.val == 0x200
         assert self.other6_.val == 0x2005
-        
+
         if self.lo + 915 != self.hi:
             print("H", self.hi - self.lo)
         self.done(915)
@@ -153,17 +151,21 @@ class SegmentDesc(bv.Struct):
                     continue
                 try:
                     indir = Indir1(ovtree, extent.lba.val)
+                except BadObject as err:
+                    retval.append("   " + str(err))
+                    self.bad = True
+                    return retval
                 except BadIndir as err:
                     retval.append("   LBA is not Indir1 " + hex(extent.lba.val) + " " + str(err))
+                    self.bad = True
                     return retval
                 indirs.append(indir)
                 retval.append("    I " + str(indir))
-                lbas += [x for x in indir.expand()]
+                lbas += list(indir.expand())
             if (len(lbas) - lbas.count(None)) == self.npg.val:
                 retval = []
                 for indir in indirs:
                     indir.insert()
-            return retval
         elif self.multiplier.val == 0xa2 * 0xa2:
             indirs = []
             retval.append("  S " + str(self))
@@ -174,8 +176,13 @@ class SegmentDesc(bv.Struct):
                     continue
                 try:
                     indir2 = Indir2(ovtree, extent2.lba.val)
+                except BadObject as err:
+                    retval.append("   " + str(err))
+                    self.bad = True
+                    return retval
                 except BadIndir as err:
                     retval.append("   LBA is not Indir2 " + hex(extent2.lba.val) + " " + str(err))
+                    self.bad = True
                     return retval
                 indirs.append(indir2)
                 retval.append("    I2 " + str(indir2))
@@ -185,19 +192,28 @@ class SegmentDesc(bv.Struct):
                         continue
                     try:
                         indir1 = Indir1(ovtree, extent1.lba.val)
+                    except BadObject as err:
+                        retval.append("   " + str(err))
+                        self.bad = True
+                        return retval
                     except BadIndir as err:
                         retval.append("      LBA is not Indir2-1 " +  hex(extent1.lba.val) + " " + str(err))
+                        self.bad = True
                         return retval
                     indirs.append(indir1)
                     retval.append("      I1 " + str(indir1))
-                    lbas += [x for x in indir1.expand()]
+                    lbas += list(x for x in indir1.expand())
             if (len(lbas) - lbas.count(None)) == self.npg.val:
                 retval = []
                 for indir in indirs:
                     indir.insert()
-            return retval
+        if retval:
+            self.bad = True
+        return retval
 
-        print("  S", self)
-        for extent in self.ary.array:
-            print("    E", extent)
-        return []
+    def render(self):
+        if not self.bad:
+            yield from super().render()
+        else:
+            for i in super().render():
+                yield i + " BAD"

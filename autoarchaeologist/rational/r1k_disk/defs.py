@@ -24,20 +24,13 @@
 from ...generic import disk
 from ...base import bitview as bv
 
+ELIDE_FREELIST = False
+ELIDE_BADLIST = False
+
 LSECSHIFT = 10
 LSECSIZE = 1 << LSECSHIFT
 SECTSHIFT = LSECSHIFT + 3
 SECTBITS = 1 << SECTSHIFT
-
-OBJECT_FIELDS = {
-    "id_kind_": -23,
-    "id_word_": -42,
-    "id_vol_": -5,
-    "id_lba_": -24,
-}
-
-ELIDE_FREELIST = True
-ELIDE_BADLIST = False
 
 class DiskAddress(bv.Struct):
     '''
@@ -130,5 +123,3 @@ class AdaArray(bv.Struct):
 
     def render(self):
         yield "0x%x*0x%x" % ((self.a2.val - 0x40) // self.a4.val, self.a4.val)
-
-     

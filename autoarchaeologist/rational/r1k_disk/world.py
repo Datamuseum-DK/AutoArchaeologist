@@ -7,8 +7,8 @@
 
 from ...base import bitview as bv
 
-from .defs import SECTBITS, AdaArray, SectorBitView, LSECSHIFT, OBJECT_FIELDS
-from .freelist import FreeList
+from .defs import SECTBITS, AdaArray
+from .object import ObjSector
 from .segment import SegmentDesc
 
 class WorldIndexRec(bv.Struct):
@@ -22,7 +22,7 @@ class WorldIndexRec(bv.Struct):
             lba_=-24,
         )
 
-class WorldIndex(bv.Struct):
+class WorldIndex(ObjSector):
     '''
     A node in the world tree
     ------------------------
@@ -30,12 +30,12 @@ class WorldIndex(bv.Struct):
     '''
 
     def __init__(self, ovtree, lba):
-        sect = SectorBitView(ovtree, lba, 'WT', "WorldTree").insert()
         super().__init__(
-            sect.bv,
-            0,
+            ovtree,
+            lba,
             vertical=False,
-            **OBJECT_FIELDS,
+            what="W",
+            legend="World",
             f0_=-8,
             f1_=10,
             cnt_=-7,
@@ -72,7 +72,7 @@ class WorldListRec(bv.Struct):
             f4_=-1,
         )
 
-class WorldList(bv.Struct):
+class WorldList(ObjSector):
     '''
     A node in the world tree
     ------------------------
@@ -80,12 +80,12 @@ class WorldList(bv.Struct):
     '''
 
     def __init__(self, ovtree, lba):
-        sect = SectorBitView(ovtree, lba, 'WT', "WorldTree").insert()
         super().__init__(
-            sect.bv,
-            0,
+            ovtree,
+            lba,
+            what="W",
+            legend="World",
             vertical=False,
-            **OBJECT_FIELDS,
             f0_=-8,
             f1_=-9,
             cnt_=-6,
@@ -114,7 +114,7 @@ class WorldPtr(bv.Struct):
             lba_=-24,
         )
 
-class World(bv.Struct):
+class World(ObjSector):
     '''
     A node in the world tree
     ------------------------
@@ -122,21 +122,19 @@ class World(bv.Struct):
     '''
 
     def __init__(self, ovtree, lba):
-        sect = SectorBitView(ovtree, lba, 'W', "World").insert()
         super().__init__(
-            sect.bv,
-            0,
-            vertical=False,
-            **OBJECT_FIELDS,
+            ovtree,
+            lba,
+            what="W",
+            legend="World",
+            vertical=True,
             wl0_=-9,
             more=True,
         )
-        if self.id_kind.val not in (0x0, 0x92, 0xbe, 0x125):
-            print("BAD WORLD KIND", hex(self.id_kind.val))
-        if self.id_lba.val != lba:
-            print("BAD WORLD LBA", hex(lba), hex(self.id_lba.val))
+        assert self.wl0.val in (1, 2)
         if self.wl0.val == 1:
             self.add_field("wl1", -9)
+            assert self.wl1.val == 0x57
             self.add_field("cnt", -7)
             self.add_field("aa", AdaArray)
             self.add_field(
@@ -145,6 +143,7 @@ class World(bv.Struct):
             )
         elif self.wl0.val == 2:
             self.add_field("wl2", -6)
+            assert self.wl2.val == 0x28
             self.add_field("cnt", -4)
             self.add_field("aa", AdaArray)
             self.add_field(
@@ -159,6 +158,7 @@ class World(bv.Struct):
 
 
     def iter_worlds(self):
+        ''' ... '''
         yield self
         if self.wl0.val != 1:
             return
@@ -166,13 +166,13 @@ class World(bv.Struct):
             world = World(self.ovtree, wptr.lba.val)
             yield from world.iter_worlds()
 
-    def commit_segments(self):
+    def commit_segments(self, volumes):
+        ''' ... '''
         if self.wl0.val != 2:
             return
         for segdesc in self.worlds2:
-            i = segdesc.commit(self.ovtree)
+            i = segdesc.commit(volumes[segdesc.vol.val])
             if i:
                 print("W", self)
                 for j in i:
-                    print(j)
-            
+                    print(">", j)

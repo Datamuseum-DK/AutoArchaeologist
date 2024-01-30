@@ -7,41 +7,13 @@
 
 from ...generic import disk
 from ...base import octetview as ov
-from ...base import bitview as bv
 
-from .defs import DoubleSectorBitView, LSECSHIFT, OBJECT_FIELDS, AdaArray, SECTBITS
+from .defs import LSECSHIFT
 from .superblock import SuperBlock
 from .system import add_volume
 from .world import WorldIndex
-from .syslog import Syslog, DfsLog
-
-
-class Etwas1331(bv.Struct):
-    '''
-    Unknown
-    ---------------
-
-    '''
-
-    def __init__(self, ovtree, lba):
-        sect = DoubleSectorBitView(ovtree, lba, 'XX', "Unknown").insert()
-        super().__init__(
-            sect.bv,
-            0,
-            vertical=False,
-            **OBJECT_FIELDS,
-            sl0_=-16,
-            cnt_=-5,
-            aa_=AdaArray,
-            more=True,
-        )
-        self.add_field(
-            "ary",
-            bv.Array(self.cnt.val, 0x17f, vertical=False)
-        )
-        self.done(SECTBITS)
-        self.insert()
-        self.ovtree = ovtree
+from .syslog import Syslog
+from .etwas import Etwas6a1, Etwas58a, Etwas5e7, Etwas644, Etwas1331
 
 class Volume(disk.Disk):
     '''
@@ -60,22 +32,30 @@ class Volume(disk.Disk):
         )
 
         self.sblk = SuperBlock(self, 2).insert()
+        self.volnbr = self.sblk.volnbr.val
+
+        if True:
+            if self.sblk.at1331.lba.val:
+                Etwas1331(self, self.sblk.at1331.lba.val, duplicated=True).insert()
+
+        if True:
+            if self.sblk.syslog.lba.val:
+                Syslog(self, self.sblk.syslog.lba.val)
+
+        if True:
+            if self.sblk.at058a.lba.val:
+                Etwas58a(self, self.sblk.at058a.lba.val, duplicated=True, span=213).insert()
+            if self.sblk.at05e7.lba.val:
+                Etwas5e7(self, self.sblk.at05e7.lba.val, duplicated=True, span=213).insert()
+            if self.sblk.at0644.lba.val:
+                Etwas644(self, self.sblk.at0644.lba.val, duplicated=True, span=213).insert()
+            if self.sblk.at06a1.lba.val:
+                Etwas6a1(self, self.sblk.at06a1.lba.val).insert()
 
         if False:
             self.completed()
             return
 
-        if True:
-            if self.sblk.at13ab.lba.val:
-                DfsLog(self, self.sblk.at13ab.lba.val)
-
-        if True:
-            if self.sblk.at1331.lba.val:
-                Etwas1331(self, self.sblk.at1331.lba.val)
-
-        if True:
-            if self.sblk.syslog.lba.val:
-                Syslog(self, self.sblk.syslog.lba.val)
 
         if True:
             self.sblk.freelist.commit(self)
@@ -109,4 +89,3 @@ class Volume(disk.Disk):
 
         self.this.add_interpretation(self, self.disk_picture, more=True)
         self.add_interpretation(title="Disk View", more=True)
-

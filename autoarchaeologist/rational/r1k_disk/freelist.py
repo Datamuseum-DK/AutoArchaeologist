@@ -6,7 +6,8 @@
 '''
 
 from ...base import bitview as bv
-from .defs import OBJECT_FIELDS, SECTBITS, DoubleSectorBitView, ELIDE_FREELIST
+from .defs import SECTBITS, ELIDE_FREELIST
+from .object import ObjSector
 
 class BitMap(bv.Struct):
     '''
@@ -27,19 +28,21 @@ class BitMap(bv.Struct):
         ''' Get status of bit of sector lba '''
         return self.bits.bits()[lba]
 
-class BitMapSect(bv.Struct):
+class BitMapSect(ObjSector):
     '''
     A sector with 7 bitmaps
     -----------------------
     '''
 
-    def __init__(self, tree, lo, **kwargs):
+    def __init__(self, ovtree, lba, **kwargs):
         super().__init__(
-            tree,
-            lo,
-            **OBJECT_FIELDS,
-            flg_=1,
+            ovtree,
+            lba,
+            what="FL",
+            legend="Free List",
+            duplicated=True,
             vertical=True,
+            flg_=1,
             map_=bv.Array(7, BitMap, vertical=True),
             more = True,
             **kwargs,
@@ -70,19 +73,21 @@ class FreeMapEntry(bv.Struct):
             lba_=-24
         )
 
-class FreeMapSect(bv.Struct):
+class FreeMapSect(ObjSector):
     '''
     A sector full of FreeMapEntry's
     -------------------------------
     '''
 
-    def __init__(self, tree, lo, **kwargs):
+    def __init__(self, ovtree, lba, **kwargs):
         super().__init__(
-            tree,
-            lo,
-            **OBJECT_FIELDS,
-            f0_=-0x20,
+            ovtree,
+            lba,
+            what="FL",
+            legend="Free List",
+            duplicated=True,
             vertical=True,
+            f0_=-0x20,
             fme_=bv.Array(237, FreeMapEntry, vertical=True),
             more = True,
             **kwargs,
@@ -141,22 +146,10 @@ class FreeList(bv.Struct):
     def commit(self, ovtree):
         ''' Commit the tree of bitmaps '''
         for freehead in self.fh:
-            fmsect = DoubleSectorBitView(
-                ovtree,
-                freehead.lba.val,
-                'FM',
-                'FreeMap',
-            ).insert()
-            freemap = FreeMapSect(fmsect.bv, 0).insert()
+            freemap = FreeMapSect(ovtree, freehead.lba.val).insert()
             self.fms.append(freemap)
             for fme in freemap.fme:
-                bmsect = DoubleSectorBitView(
-                    ovtree,
-                    fme.lba.val,
-                    'BM',
-                    'BitMap',
-                ).insert()
-                bitmap = BitMapSect(bmsect.bv, 0).insert()
+                bitmap = BitMapSect(ovtree, fme.lba.val).insert()
                 self.bms.append(bitmap)
 
     def get_bit(self, lba):
