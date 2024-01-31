@@ -87,5 +87,5 @@ class Volume(disk.Disk):
         for i, j in self.gaps():
             ov.Hidden(self, lo=i, hi=j).insert()
 
-        self.this.add_interpretation(self, self.disk_picture, more=True)
+        self.this.add_interpretation(self, self.disk_picture)
         self.add_interpretation(title="Disk View", more=True)

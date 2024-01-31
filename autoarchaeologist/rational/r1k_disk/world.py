@@ -171,8 +171,4 @@ class World(ObjSector):
         if self.wl0.val != 2:
             return
         for segdesc in self.worlds2:
-            i = segdesc.commit(volumes[segdesc.vol.val])
-            if i:
-                print("W", self)
-                for j in i:
-                    print(">", j)
+            segdesc.commit(volumes[segdesc.vol.val])

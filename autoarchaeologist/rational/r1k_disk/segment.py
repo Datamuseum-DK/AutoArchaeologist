@@ -5,7 +5,7 @@
    ========================
 '''
 
-from .defs import AdaArray, ELIDE_INDIR
+from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT
 from .object import ObjSector, BadObject
 from ...base import bitview as bv
 
@@ -42,25 +42,21 @@ class Indir(ObjSector):
             what="IN",
             legend="Indirect",
             vertical=False,
-            f0_=-32,
-            f1_=-32,
-            f2_=-32,
+            f0__=-32,
+            f1__=-32,
+            f2__=-32,
             multiplier_=-30,
             more=True,
         )
-        if self.f0.val != 0x01000000:
-            raise BadIndir("Indir wrong f0 (0x%x)" % self.f0.val)
-        if self.f1.val != 0:
-            raise BadIndir("Indir wrong f1 (0x%x)" % self.f1.val)
-        if self.f2.val != 0x8144:
-            raise BadIndir("Indir wrong f2 (0x%x)" % self.f2.val)
+        if self.f0_.val != 0x01000000:
+            raise BadIndir("Indir wrong f0_ (0x%x)" % self.f0_.val)
+        if self.f1_.val != 0:
+            raise BadIndir("Indir wrong f1_ (0x%x)" % self.f1_.val)
+        if self.f2_.val != 0x8144:
+            raise BadIndir("Indir wrong f2_ (0x%x)" % self.f2_.val)
         self.add_field("aa", AdaArray)
         self.add_field("ary", bv.Array(162, Extent))
         self.done()
-        while self.ary.array:
-            if self.ary.array[-1].flg.val != 0:
-                break
-            self.ary.array.pop(-1)
 
     def expand(self):
         for extent in self.ary.array:
@@ -90,7 +86,6 @@ class Indir2(Indir):
         super().__init__(*args, **kwargs)
         if self.multiplier.val != 0xa2:
             raise BadIndir("Indir2 multiplier not 0xa2")
-
 
 class SegmentDesc(bv.Struct):
     ''' ... '''
@@ -132,9 +127,8 @@ class SegmentDesc(bv.Struct):
             self.ary.array.pop(-1)
 
     def commit(self, ovtree):
-        retval = []
         if self.other3c.val:
-            return retval
+            return
         npg = 0
         lbas = []
         if self.multiplier.val == 1:
@@ -144,77 +138,33 @@ class SegmentDesc(bv.Struct):
                 else:
                     lbas.append(extent)
                     npg += 1
-            if npg == self.npg.val:
-                return []
         elif self.multiplier.val == 0xa2:
-            indirs = []
-            retval.append("  S " + str(self))
             for extent in self.ary.array:
-                retval.append("  E " + str(extent))
                 if extent.is_null():
                     lbas += [None] * self.multiplier.val
-                    continue
-                try:
-                    indir = Indir1(ovtree, extent.lba.val)
-                except BadObject as err:
-                    retval.append("   " + str(err))
-                    self.bad = True
-                    return retval
-                except BadIndir as err:
-                    retval.append("   LBA is not Indir1 " + hex(extent.lba.val) + " " + str(err))
-                    self.bad = True
-                    return retval
-                indirs.append(indir)
-                retval.append("    I " + str(indir))
-                lbas += list(indir.expand())
-            if (len(lbas) - lbas.count(None)) == self.npg.val:
-                retval = []
-                for indir in indirs:
-                    indir.insert()
+                else:
+                    indir = Indir1(ovtree, extent.lba.val).insert()
+                    lbas += list(indir.expand())
         elif self.multiplier.val == 0xa2 * 0xa2:
-            indirs = []
-            retval.append("  S " + str(self))
             for extent2 in self.ary.array:
-                retval.append("  E " + str(extent2))
                 if extent2.is_null():
                     lbas += [None] * self.multiplier.val
-                    continue
-                try:
-                    indir2 = Indir2(ovtree, extent2.lba.val)
-                except BadObject as err:
-                    retval.append("   " + str(err))
-                    self.bad = True
-                    return retval
-                except BadIndir as err:
-                    retval.append("   LBA is not Indir2 " + hex(extent2.lba.val) + " " + str(err))
-                    self.bad = True
-                    return retval
-                indirs.append(indir2)
-                retval.append("    I2 " + str(indir2))
-                for extent1 in indir2.expand():
-                    if extent1 is None:
-                        lbas += [None] * 0xa2
-                        continue
-                    try:
-                        indir1 = Indir1(ovtree, extent1.lba.val)
-                    except BadObject as err:
-                        retval.append("   " + str(err))
-                        self.bad = True
-                        return retval
-                    except BadIndir as err:
-                        retval.append("      LBA is not Indir2-1 " +  hex(extent1.lba.val) + " " + str(err))
-                        self.bad = True
-                        return retval
-                    indirs.append(indir1)
-                    retval.append("      I1 " + str(indir1))
-                    lbas += list(x for x in indir1.expand())
-            if (len(lbas) - lbas.count(None)) == self.npg.val:
-                retval = []
-                for indir in indirs:
-                    indir.insert()
-        if retval:
-            self.bad = True
-        return retval
+                else:
+                    indir2 = Indir2(ovtree, extent2.lba.val).insert()
+                    for extent1 in indir2.expand():
+                        if extent1 is None:
+                            lbas += [None] * 0xa2
+                        else:
+                            indir1 = Indir1(ovtree, extent1.lba.val).insert()
+                            lbas += list(x for x in indir1.expand())
+        else:
+            raise BadIndir("Wrong multiplier")
+
+        if (len(lbas) - lbas.count(None)) != self.npg.val:
+            raise BadIndir("Wrong npg")
+        for lba in lbas:
+            if lba is not None:
+                ovtree.set_picture('D', lo=lba.lba.val << LSECSHIFT, legend="Data")
 
     def render(self):
         if not self.bad:
