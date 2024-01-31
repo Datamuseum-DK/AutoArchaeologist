@@ -5,7 +5,7 @@
    ========================
 '''
 
-from .defs import AdaArray, SECTBITS
+from .defs import AdaArray, ELIDE_INDIR
 from .object import ObjSector, BadObject
 from ...base import bitview as bv
 
@@ -56,7 +56,7 @@ class Indir(ObjSector):
             raise BadIndir("Indir wrong f2 (0x%x)" % self.f2.val)
         self.add_field("aa", AdaArray)
         self.add_field("ary", bv.Array(162, Extent))
-        self.done(SECTBITS)
+        self.done()
         while self.ary.array:
             if self.ary.array[-1].flg.val != 0:
                 break
@@ -68,6 +68,12 @@ class Indir(ObjSector):
                 yield None
             else:
                 yield extent
+
+    def render(self):
+        if ELIDE_INDIR:
+            yield self.bt_name + "(Indir elided)"
+        else:
+            yield from super().render()
 
 class Indir1(Indir):
     ''' first level indirect '''
@@ -112,17 +118,14 @@ class SegmentDesc(bv.Struct):
             ary_=bv.Array(10, Extent, vertical=False),
             mgr_=-8,
             mobj_=-32,
-            more=True,
         )
+        assert self.lo + 915 == self.hi
         self.bad = False
 
         assert self.col5b_.val == 0
         assert self.other3a_.val == 0x200
         assert self.other6_.val == 0x2005
 
-        if self.lo + 915 != self.hi:
-            print("H", self.hi - self.lo)
-        self.done(915)
         while self.ary.array:
             if self.ary.array[-1].flg.val != 0:
                 break
@@ -130,6 +133,8 @@ class SegmentDesc(bv.Struct):
 
     def commit(self, ovtree):
         retval = []
+        if self.other3c.val:
+            return retval
         npg = 0
         lbas = []
         if self.multiplier.val == 1:

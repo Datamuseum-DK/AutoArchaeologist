@@ -7,7 +7,7 @@
 
 from ...base import bitview as bv
 
-from .defs import SECTBITS, AdaArray
+from .defs import AdaArray
 from .object import ObjSector
 from .segment import SegmentDesc
 
@@ -46,7 +46,7 @@ class WorldIndex(ObjSector):
             "worldlists",
             bv.Array(self.cnt.val, WorldIndexRec, vertical=True)
         )
-        self.done(SECTBITS)
+        self.done()
         self.insert()
         for wir in self.worldlists:
             wir.obj = WorldList(ovtree, wir.lba.val)
@@ -96,7 +96,7 @@ class WorldList(ObjSector):
             "worlds",
             bv.Array(self.cnt.val, WorldListRec, vertical=True)
         )
-        self.done(SECTBITS)
+        self.done()
         self.insert()
 
     def __iter__(self):
@@ -152,7 +152,7 @@ class World(ObjSector):
             )
         else:
             print("BAD WL0", self.wl0.val, self)
-        self.done(SECTBITS)
+        self.done()
         self.insert()
         self.ovtree = ovtree
 

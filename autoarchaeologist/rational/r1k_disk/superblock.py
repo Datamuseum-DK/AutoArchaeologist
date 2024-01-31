@@ -107,7 +107,7 @@ class SuperBlock(bv.Struct):
             sbmagic_=-31,
             more=True,
         )
-        self.done(SECTBITS)
+        self.done(SECTBITS * 2)
 
     def do_badsect(self, ovtree):
         i, j = self.partition_span(0)

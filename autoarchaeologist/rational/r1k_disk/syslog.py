@@ -7,7 +7,7 @@
 
 from ...base import bitview as bv
 
-from .defs import SECTBITS, AdaArray
+from .defs import AdaArray, ELIDE_SYSLOG
 from .object import ObjSector
 
 class LogEntry(bv.Struct):
@@ -37,8 +37,14 @@ class LogSect(ObjSector):
             "logsectrec",
             bv.Array(self.cnt.val, LogEntry, vertical=True)
         )
-        self.done(SECTBITS)
+        self.done()
         self.insert()
+
+    def render(self):
+        if ELIDE_SYSLOG:
+            yield self.bt_name + "(LogSect elided)"
+        else:
+            yield from super().render()
 
 class SyslogRec(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -72,8 +78,14 @@ class Syslog(ObjSector):
             "syslogrecs",
             bv.Array(self.cnt.val, SyslogRec, vertical=True)
         )
-        self.done(SECTBITS)
+        self.done()
         self.insert()
 
         for slr in self.syslogrecs:
             LogSect(ovtree, slr.lba.val)
+
+    def render(self):
+        if ELIDE_SYSLOG:
+            yield self.bt_name + "(Syslog elided)"
+        else:
+            yield from super().render()

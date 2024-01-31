@@ -47,7 +47,7 @@ class Etwas(ObjSector):
             self.add_field("cnt", -cntwidth)
             self.add_field("aa", AdaArray)
             self.add_field("ary", bv.Array(self.cnt.val, -width, vertical=True))
-            self.done(SECTBITS)
+            self.done()
             return
 
         if span == 0:
@@ -58,7 +58,7 @@ class Etwas(ObjSector):
                 bv.Array((SECTBITS - self.hi)//span, span, vertical=True)
             )
         self.add_field("q99", SECTBITS - self.hi)
-        self.done(SECTBITS)
+        self.done()
 
 ##################################################################################
 
@@ -107,6 +107,6 @@ class Etwas6a1(ObjSector):
             "ary",
             bv.Array(self.cnt.val, Etwas6a1Entry, vertical=True)
         )
-        self.done(SECTBITS)
+        self.done()
         for i in self.ary:
             Etwas6a1Child(ovtree, i.lba.val, duplicated=True).insert()

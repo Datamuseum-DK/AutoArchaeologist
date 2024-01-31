@@ -21,11 +21,12 @@
 
 '''
 
-from ...generic import disk
 from ...base import bitview as bv
 
-ELIDE_FREELIST = False
-ELIDE_BADLIST = False
+ELIDE_FREELIST = True
+ELIDE_BADLIST = True
+ELIDE_SYSLOG = True
+ELIDE_INDIR = True
 
 LSECSHIFT = 10
 LSECSIZE = 1 << LSECSHIFT
@@ -55,40 +56,16 @@ class DiskAddress(bv.Struct):
         yield "0x%x(%d/%d/%d)" % (self.flg.val, self.cyl.val, self.hd.val, self.sect.val)
 
 
-class Doubled(disk.Sector):
-    ''' Much of the metadata is redundantly stored in two sectors '''
-
-    def render(self):
-        yield "Doubled"
-
-def double_sector(obj, tree, lba, picture):
-    '''
-       Claim & color two sectors, check they are identical
-    '''
-    lo = lba << LSECSHIFT
-    sec0 = tree.this[lo : lo + LSECSIZE]
-    sec1 = tree.this[lo + LSECSIZE : lo + LSECSIZE * 2]
-    if sec0 != sec1:
-        print("Double Fault", hex(lo), type(obj))
-        print("  ", sec0.hex())
-        print("  ", sec1.hex())
-    y = Doubled(tree, lo = lo + LSECSIZE).insert()
-    y.picture(picture)
-    tree.set_picture(picture, lo=lo)
-
 class SectorBitView(bv.OvBits):
     '''
        A bitview of a single sector
     '''
 
     def __init__(self, tree, lba, picture, legend):
+        lo = lba << LSECSHIFT
         tree.picture_legend[picture] = legend
-        tree.set_picture(picture, lo=lba << LSECSHIFT)
-        super().__init__(
-            tree,
-            lba << LSECSHIFT,
-            width = LSECSIZE,
-        )
+        tree.set_picture(picture, lo=lo)
+        super().__init__(tree, lo, width = LSECSIZE)
 
 class DoubleSectorBitView(bv.OvBits):
     '''
@@ -96,13 +73,17 @@ class DoubleSectorBitView(bv.OvBits):
     '''
 
     def __init__(self, tree, lba, picture, legend):
+        lo = lba << LSECSHIFT
+        sec0 = tree.this[lo : lo + LSECSIZE]
+        sec1 = tree.this[lo + LSECSIZE : lo + LSECSIZE * 2]
+        if sec0 != sec1:
+            print("Double Fault lba=", hex(lba), picture, legend)
+            print("  ", sec0.hex())
+            print("  ", sec1.hex())
         tree.picture_legend[picture] = legend
-        double_sector(self, tree, lba, picture)
-        super().__init__(
-            tree,
-            lba << LSECSHIFT,
-            width = LSECSIZE,
-        )
+        tree.set_picture(picture, lo=lo)
+        tree.set_picture(picture, lo=lo + LSECSIZE)
+        super().__init__(tree, lo, width = LSECSIZE * 2)
 
 class AdaArray(bv.Struct):
     ''' ... '''

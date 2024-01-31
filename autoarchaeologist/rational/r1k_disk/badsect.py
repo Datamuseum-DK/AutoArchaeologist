@@ -25,8 +25,10 @@ class BadSectorTable(bv.Struct):
             sect.bv,
             0,
             vertical=True,
-            bad_=bv.Array(256, DiskAddress, vertical=True)
+            bad_=bv.Array(256, DiskAddress, vertical=True),
+            more=True,
         )
+        self.done(SECTBITS * 2)
         while len(self.bad.array) > 1 and self.bad.array[-1].chs() == (0, 0, 0):
             self.bad.array.pop(-1)
         done = set()
@@ -85,7 +87,7 @@ class ReplacementSectorTable(bv.Struct):
                 offset = repl.lba.val << LSECSHIFT
                 ReplacementSector(ovtree, lo = offset).insert()
                 ovtree.set_picture('RS', lo = offset, legend = 'Replacement Sector')
-        self.done(SECTBITS)
+        self.done(SECTBITS * 2)
 
     def render(self):
         if ELIDE_BADLIST:

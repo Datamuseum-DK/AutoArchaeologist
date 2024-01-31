@@ -57,12 +57,12 @@ class ObjSector(bv.Struct):
         **kwargs
     ):
         if duplicated:
-            sect = DoubleSectorBitView(ovtree, lba, what, legend)
+            self.sect = DoubleSectorBitView(ovtree, lba, what, legend)
         else:
-            sect = SectorBitView(ovtree, lba, what, legend)
-        sect.insert()
+            self.sect = SectorBitView(ovtree, lba, what, legend)
+        self.sect.insert()
         super().__init__(
-            sect.bv,
+            self.sect.bv,
             0,
             obj_=ObjHead,
             **kwargs,
@@ -73,3 +73,6 @@ class ObjSector(bv.Struct):
         if self.obj.lba.val != lba:
             raise BadObject(
                 "Bad Object: lba is 0x%x should be 0x%x" % (self.obj.lba.val, lba))
+
+    def done(self):
+        super().done(len(self.sect) << 3)

@@ -6,7 +6,7 @@
 '''
 
 from ...base import bitview as bv
-from .defs import SECTBITS, ELIDE_FREELIST
+from .defs import ELIDE_FREELIST
 from .object import ObjSector
 
 class BitMap(bv.Struct):
@@ -47,7 +47,7 @@ class BitMapSect(ObjSector):
             more = True,
             **kwargs,
         )
-        self.done(SECTBITS)
+        self.done()
 
     def get_bit(self, lba):
         ''' Get status of bit of sector lba '''
@@ -55,7 +55,7 @@ class BitMapSect(ObjSector):
 
     def render(self):
         if ELIDE_FREELIST:
-            yield self.bt_name + "(elided)"
+            yield self.bt_name + "(BitMapSect elided)"
         else:
             yield from super().render()
 
@@ -92,7 +92,7 @@ class FreeMapSect(ObjSector):
             more = True,
             **kwargs,
         )
-        self.done(SECTBITS)
+        self.done()
 
         # Prune unused entries in the array
         while self.fme.array:
@@ -105,7 +105,7 @@ class FreeMapSect(ObjSector):
 
     def render(self):
         if ELIDE_FREELIST:
-            yield self.bt_name + "(elided)"
+            yield self.bt_name + "(FreeMapSect elided)"
         else:
             yield from super().render()
 
