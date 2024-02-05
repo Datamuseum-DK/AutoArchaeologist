@@ -34,7 +34,10 @@ class WangText():
                         file.write("<hr/><br/>\n")
                     # print("LL", hex(line[0]), line[1], len(line), [line])
                     tabs = line[2:]
-                    linelen = line[1] + tabs.find(b'\x02')
+                    try:
+                        linelen = line[1] + tabs.find(b'\x02')
+                    except Exception as err:
+                        print(this, "WANTTEXT", "linelen", err)
                     if False:
                         for i in tabs:
                             if i == 0x20:
