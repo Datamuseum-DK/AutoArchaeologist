@@ -287,6 +287,7 @@ class WangDocument(ov.Struct):
             that.add_type("Wang Wps File")
             if not all_present:
                 that.add_note("Missing sectors")
+            that.add_note(self.head.f01.txt)
         else:
             that = None
         self.namespace = NameSpace(
@@ -362,7 +363,7 @@ class WangWps(disk.Disk):
         this.add_interpretation(self, self.namespace.ns_html_plain)
         this.add_interpretation(self, self.disk_picture)
         self.add_interpretation(more=True)
-        # self.make_bitstore_metadata()
+        #self.make_bitstore_metadata()
 
     def spelunk(self):
         by_lo = {}
@@ -428,7 +429,7 @@ class WangWps(disk.Disk):
 
     def make_bitstore_metadata(self):
 
-        date = "20240125"
+        date = "20240204"
 
         filename = self.this.descriptions[0]
         if "/critter/DDHF/2024/Wang" not in filename:
@@ -443,6 +444,11 @@ class WangWps(disk.Disk):
             "bog3b": "11002399",
             "bog4": "11002401",
             "bog5": "11002402",
+            "bogx": "11002404",
+            "bog7": "11002405",
+            "bog8": "11002406",
+            "ils1": "11002408",
+            "ils2": "11002409",
         }[book]
         papers = {
             "bog1": "30005801",
@@ -451,6 +457,11 @@ class WangWps(disk.Disk):
             "bog3b": "30005998",
             "bog4": "30006033",
             "bog5": "30006050",
+            "bogx": "30006065",
+            "bog7": "30006078",
+            "bog8": "30006096",
+            "ils1": "30006128",
+            "ils2": "30006129",
         }[book]
         diskid = set()
         for i in sorted(self.namespace):
@@ -458,6 +469,7 @@ class WangWps(disk.Disk):
             did = j[15].strip()
             if did:
                 diskid.add(did)
+        diskid = list(diskid)[:1]
         print(diskid)
         assert len(diskid) == 1
         diskid = list(diskid)[0].strip()
