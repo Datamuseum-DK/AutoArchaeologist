@@ -110,12 +110,28 @@ OK_ENVS = {
     "AUTOARCHAEOLOGIST_BITSTORE_CACHE": "ddhf_bitstore_cache",
 }
 
-def main(job, html_subdir="tmp", **kwargs):
+def parse_arguments(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--out', default='/tmp/_autoarchaologist')
+
+    args = parser.parse_args(args=argv)
+    if args.out == '.':
+        args.out = os.path.join(os.getcwd(), "_autoarchaologist")
+    return args
+
+def main(job, html_subdir, **kwargs):
+    args = parse_arguments()
+    kwargs["html_dir"] = args.out
+
     ''' A standard main routine to reduce boiler-plate '''
     for key in os.environ:
         i = OK_ENVS.get(key)
         if i:
             kwargs[i] = os.environ[key]
+
+    if 'html_dir' not in kwargs:
+        raise AttributeError("missing: html_dir")
+
 
     kwargs['html_dir'] = os.path.join(kwargs['html_dir'], html_subdir)
     kwargs.setdefault('download_links', True)
