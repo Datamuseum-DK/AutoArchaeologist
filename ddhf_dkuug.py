@@ -5,16 +5,13 @@ DKUUG and EUUG Conference tapes
 
 from autoarchaeologist import ddhf
 
+from autoarchaeologist.base import excavation
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.unix import tar_file
 from autoarchaeologist.unix import compress
 
-class DkuugEuug(ddhf.DDHF_Excavation):
-
-    '''
-    DKUUG and EUUG Conference tapes
-    '''
+class DkuugEuug(excavation.Excavation):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -23,6 +20,15 @@ class DkuugEuug(ddhf.DDHF_Excavation):
         self.add_examiner(tar_file.TarFile)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
+
+class DDHF_DkuugEuug(ddhf.DDHF_Excavation):
+
+    '''
+    DKUUG and EUUG Conference tapes
+    '''
+
+    def __init__(self, **kwargs):
+        super().__init__(DkuugEuug, **kwargs)
 
         self.from_bitstore(
             "30001252",

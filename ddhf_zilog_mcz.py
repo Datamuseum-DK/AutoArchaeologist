@@ -7,8 +7,9 @@ from autoarchaeologist import ddhf
 
 from autoarchaeologist.zilog import mcz
 from autoarchaeologist.generic import textfiles
+from autoarchaeologist.base import excavation
 
-class ZilogMCZ(ddhf.DDHF_Excavation):
+class ZilogMCZ(excavation.Excavation):
 
     ''' Zilog MCZ Floppy Disks '''
 
@@ -17,6 +18,10 @@ class ZilogMCZ(ddhf.DDHF_Excavation):
 
         self.add_examiner(mcz.MCZRIO)
         self.add_examiner(textfiles.TextFile)
+
+class DDHF_ZilogMCZ(ddhf.DDHF_Excavation):
+    def __init__(self, **kwargs):
+        super().__init__(ZilogMCZ, **kwargs)
 
         self.from_bitstore(
             "COMPANY/ZILOG",

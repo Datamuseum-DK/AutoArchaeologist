@@ -36,8 +36,7 @@ class TypeCase(type_case.Ascii):
         super().__init__()
         self.set_slug(0, ' ', '«nul»', self.EOF)
 
-class R1KDFS(ddhf.DDHF_Excavation):
-    ''' Rational R1000/400 DFS tapes '''
+class R1kDFS(ddhf.DDHF_Excavation):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -54,6 +53,13 @@ class R1KDFS(ddhf.DDHF_Excavation):
 
         self.type_case = TypeCase()
 
+class DDHF_R1KDFS(ddhf.DDHF_Excavation):
+
+    ''' Rational R1000/400 DFS tapes '''
+
+    def __init__(self, **kwargs):
+        super().__init__(R1kDFS, **kwargs)
+
         self.from_bitstore(
             "30000744",   # precise file sizes
             "30000407",   # precise file sizes
@@ -65,7 +71,7 @@ class R1KDFS(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        R1KDFS,
+        DDHF_R1KDFS,
         html_subdir="r1k_dfs",
         ddhf_topic = "Rational R1000/400 DFS Tapes",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',

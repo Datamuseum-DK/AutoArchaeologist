@@ -3,16 +3,14 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+from autoarchaeologist import ddhf, Excavation
+from autoarchaeologist.ddhf.cpm_excavator import Cpm
 
-class Butler(ddhf.DDHF_Excavation):
+class DDHF_Butler(ddhf.DDHF_Excavation):
     ''' All Butler artifacts '''
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        cpm_exc.std_cpm_excavation(self)
+        super().__init__(Cpm, **kwargs)
 
         self.from_bitstore(
             "COMPANY/BOGIKA",
@@ -20,7 +18,7 @@ class Butler(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        Butler,
+        DDHF_Butler,
         html_subdir="butler",
         ddhf_topic = 'Bogika Butler',
         ddhf_topic_link = 'https://datamuseum.dk/wiki/BDS_Butler'

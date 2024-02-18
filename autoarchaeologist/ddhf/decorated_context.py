@@ -19,6 +19,7 @@ class DDHF_Excavation(excavation.Excavation):
 
     def __init__(
         self,
+        Excavation,
         ddhf_topic=None,
         ddhf_topic_link=None,
         ddhf_bitstore_cache=None,
@@ -30,6 +31,9 @@ class DDHF_Excavation(excavation.Excavation):
             ddhf_bitstore_cache = "/tmp/_bitstore_cache"
         self.ddhf_bitstore_cache = ddhf_bitstore_cache
         super().__init__(**kwargs)
+
+        # apply the configuration of the chosen excavation
+        Excavation.__init__(self, **kwargs)
 
     def html_prefix_banner(self, file, _this):
         ''' Emit the banner for this excavation '''

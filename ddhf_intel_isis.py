@@ -7,8 +7,9 @@ from autoarchaeologist import ddhf
 
 from autoarchaeologist.intel import isis
 from autoarchaeologist.generic import textfiles
+from autoarchaeologist.base import excavation
 
-class IntelISIS(ddhf.DDHF_Excavation):
+class IntelISIS(excavation.Excavation):
     ''' Intel ISIS Floppy Disks '''
 
     def __init__(self, **kwargs):
@@ -16,6 +17,12 @@ class IntelISIS(ddhf.DDHF_Excavation):
 
         self.add_examiner(isis.IntelIsis)
         self.add_examiner(textfiles.TextFile)
+
+class DDHF_IntelISIS(ddhf.DDHF_Excavation):
+    ''' Intel ISIS Floppy Disks '''
+
+    def __init__(self, **kwargs):
+        super().__init__(IntelISIS, **kwargs)
 
         self.from_bitstore(
             "COMPANY/INTEL/ISIS",

@@ -3,7 +3,7 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+from autoarchaeologist import ddhf
 
 from autoarchaeologist.generic import ansi_tape_labels
 from autoarchaeologist.rational.r1k_backup import R1kBackup
@@ -11,6 +11,7 @@ from autoarchaeologist.rational.r1k_e3_objects import R1kE3Objects
 from autoarchaeologist.rational.r1k_assy import R1kAssyFile
 from autoarchaeologist.rational.r1k_6zero import R1k6ZeroSegment
 from autoarchaeologist.rational.r1k_seg_heap import R1kSegHeap
+from autoarchaeologist.base import excavation
 from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic.samesame import SameSame
@@ -36,9 +37,7 @@ class TypeCase(type_case.Ascii):
         super().__init__()
         self.set_slug(0, ' ', '«nul»', self.EOF)
 
-class R1KBACKUP(DDHF_Excavation):
-
-    ''' Rational R1000/400 Backup tape '''
+class R1kBackup(excavation.Excavation):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -57,13 +56,20 @@ class R1KBACKUP(DDHF_Excavation):
         self.add_examiner(TextFile)
         self.add_examiner(SameSame)
 
+class DDHF_R1KBACKUP(ddhf.DDHF_Excavation):
+
+    ''' Rational R1000/400 Backup tape '''
+
+    def __init__(self, **kwargs):
+        super().__init__(R1kBackup, **kwargs)
+
         self.from_bitstore(
             "30000544",	# PAM arrival backup
         )
 
 if __name__ == "__main__":
-    main(
-        R1KBACKUP,
+    ddhf.main(
+        R1kBackup,
         html_subdir="r1k_backup",
         ddhf_topic = "Rational R1000/400",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',

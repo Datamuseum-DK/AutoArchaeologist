@@ -2,11 +2,19 @@ import argparse
 import os
 import sys
 
+from autoarchaeologist import excavators
 from autoarchaeologist.base.excavation import Excavation as ExcavationBase
+
+def action_for_args(args):
+    if args.excavator is not None:
+        return ("excavator", excavators.excavator_by_name(args.excavator))
+    else:
+        raise argparse.ArgumentError(None, "no valid excavation was requsted")
 
 def parse_arguments(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dir", default="/tmp/_autoarchaologist")
+    parser.add_argument('--excavator', choices=excavators.__all__)
     parser.add_argument('filename')
 
     return parser.parse_args(args=argv)
@@ -43,6 +51,6 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-    ctx = perform_excavation(args, ("none", None))
+    ctx = perform_excavation(args, action_for_args(args))
     ctx.produce_html()
     print("Now point your browser at", ctx.filename_for(ctx).link)

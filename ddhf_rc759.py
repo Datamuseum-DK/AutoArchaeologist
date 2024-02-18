@@ -4,16 +4,14 @@
 '''
 
 from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+from autoarchaeologist.ddhf.cpm_excavator import Cpm
 
-class Rc759(ddhf.DDHF_Excavation):
+class DDHF_Rc759(ddhf.DDHF_Excavation):
 
     ''' All RC759 artifacts '''
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        cpm_exc.std_cpm_excavation(self)
+        super().__init__(Cpm, **kwargs)
 
         self.from_bitstore(
             "-30002875",
@@ -22,7 +20,7 @@ class Rc759(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        Rc759,
+        DDHF_Rc759,
         html_subdir="rc759",
         ddhf_topic = 'RegneCentralen RC759 "Piccoline"',
         ddhf_topic_link = 'https://datamuseum.dk/wiki/RC_Piccoline'
