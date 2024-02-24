@@ -392,6 +392,7 @@ class Excavation():
             padding: 0 10px 0; 
         }
         th {
+            position: sticky; top: 0; background-color: #eeeeee;
             border-bottom: 1px solid black;
         }
         td.l, th.l { vertical-align: top; text-align: left; }
