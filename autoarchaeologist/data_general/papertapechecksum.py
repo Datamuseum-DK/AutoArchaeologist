@@ -22,7 +22,7 @@ class DGC_PaperTapeCheckSum():
         start = this.tobytes().rfind(b'\xaa\x55\xaa\x55\xaa\x55\xaa\x55')
         if start < 0:
             return
-        last = this[start:].tobytes().find(b'\x00')
+        last = bytes(this[start:]).find(b'\x00')
         if last < 0:
             stop = start + len(this[start:])
         else:
