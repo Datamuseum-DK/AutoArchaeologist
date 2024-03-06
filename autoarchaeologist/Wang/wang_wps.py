@@ -399,7 +399,7 @@ class WangWps(disk.Disk):
             key = i.key
             while i and i.key == key and i.chs not in done:
                 last = self.this[i.lo+2]
-                print(i, self.this[i.lo:i.lo+7].hex(), last)
+                # print(i, self.this[i.lo:i.lo+7].hex(), last)
                 if last > 7:
                     parts.append(self.this[i.lo+7:i.lo+last])
                 done.add(i.chs)
@@ -411,7 +411,6 @@ class WangWps(disk.Disk):
                 parts.pop(0)
             else:
                 head = None
-            print("JJ", j, parts, sum(len(x) for x in parts))
             that = self.this.create(records=parts)
             that.add_type("Wang Wps File")
             that.add_note("Spelunked")
@@ -429,7 +428,7 @@ class WangWps(disk.Disk):
 
     def make_bitstore_metadata(self):
 
-        date = "20240204"
+        date = "20240222"
 
         filename = self.this.descriptions[0]
         if "/critter/DDHF/2024/Wang" not in filename:
@@ -449,6 +448,13 @@ class WangWps(disk.Disk):
             "bog8": "11002406",
             "ils1": "11002408",
             "ils2": "11002409",
+            "bog12": "11002411",
+            "bog11": "11002412",
+            "ils3": "11002413",
+            "ktldils": "11002410",
+            "en": "11002414",
+            "pc": "11002468",
+            "aircan": "11002469",
         }[book]
         papers = {
             "bog1": "30005801",
@@ -462,6 +468,13 @@ class WangWps(disk.Disk):
             "bog8": "30006096",
             "ils1": "30006128",
             "ils2": "30006129",
+            "bog12": "30006152",
+            "bog11": "30006150",
+            "ils3": "30006151",
+            "ktldils": "30006153",
+            "en": "30006154",
+            "pc": "30006235",
+            "aircan": "30006234",
         }[book]
         diskid = set()
         for i in sorted(self.namespace):
