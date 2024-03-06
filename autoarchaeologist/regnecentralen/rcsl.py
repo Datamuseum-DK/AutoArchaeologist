@@ -33,7 +33,7 @@ class RCSL():
 
         i = 0
         while True:
-            j = this[i:].tobytes().find(b'RCSL')
+            j = bytes(this[i:]).find(b'RCSL')
             if j == -1:
                 break
             i += j
