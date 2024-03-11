@@ -1,43 +1,38 @@
-
-import argparse
 import os
-import sys
+from run import process_arguments, perform_excavation
+from types import SimpleNamespace
 
-import autoarchaeologist
-
+from autoarchaeologist.base.excavation import Excavation
 from autoarchaeologist.generic.bigdigits import BigDigits
 from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.data_general.absbin import AbsBin
 from autoarchaeologist.data_general.papertapechecksum import DGC_PaperTapeCheckSum
 
-def parse_arguments(argv=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--dir", default="/tmp/_autoarchaologist")
+EXAMPLES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
 
-    args = parser.parse_args(args=argv)
-    if args.dir == ".":
-        args.dir = os.path.join(os.getcwd(), "_autoarchaologist")
-    return args
+class ExampleExcavation(Excavation):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-if __name__ == "__main__":
-    args = parse_arguments()
+        self.add_examiner(BigDigits)
+        self.add_examiner(AbsBin)
+        self.add_examiner(DGC_PaperTapeCheckSum)
+        self.add_examiner(SameSame)
+
+def process_example(*, html_dir):
+    example_arguments = SimpleNamespace()
+    example_arguments.dir = html_dir
+    example_arguments.filename = os.path.join(EXAMPLES_DIR, "30001393.bin")
+    args = process_arguments(example_arguments)
 
     try:
         os.mkdir(args.dir)
     except FileExistsError:
         pass
 
-    ctx = autoarchaeologist.Excavation(html_dir=args.dir)
+    return perform_excavation(args, ("excavator", ExampleExcavation))
 
-    ctx.add_examiner(BigDigits)
-    ctx.add_examiner(AbsBin)
-    ctx.add_examiner(DGC_PaperTapeCheckSum)
-    ctx.add_examiner(SameSame)
-
-    ff = ctx.add_file_artifact("examples/30001393.bin")
-
-    ctx.start_examination()
-
+if __name__ == "__main__":
+    ctx = process_example(html_dir=".")
     ctx.produce_html()
-
     print("Now point your browser at", ctx.filename_for(ctx).link)
