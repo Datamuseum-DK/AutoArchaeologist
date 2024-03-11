@@ -12,3 +12,4 @@ venv/
 # Temporary files
 _.*
 /output/
+/tests/_scratch/
