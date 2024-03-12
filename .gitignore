@@ -8,3 +8,5 @@ docs/_build/
 
 # Temporary files
 _.*
+_autoarchaologist/
+tests/_scratch/

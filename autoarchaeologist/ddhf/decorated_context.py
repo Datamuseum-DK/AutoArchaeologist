@@ -6,6 +6,7 @@
 
 '''
 
+import argparse
 import os
 
 from ..base import excavation
@@ -18,6 +19,7 @@ class DDHF_Excavation(excavation.Excavation):
 
     def __init__(
         self,
+        Excavation,
         ddhf_topic=None,
         ddhf_topic_link=None,
         ddhf_bitstore_cache=None,
@@ -29,6 +31,9 @@ class DDHF_Excavation(excavation.Excavation):
             ddhf_bitstore_cache = "/tmp/_bitstore_cache"
         self.ddhf_bitstore_cache = ddhf_bitstore_cache
         super().__init__(**kwargs)
+
+        # apply the configuration of the chosen excavation
+        Excavation.__init__(self, **kwargs)
 
     def html_prefix_banner(self, file, _this):
         ''' Emit the banner for this excavation '''
@@ -84,12 +89,28 @@ OK_ENVS = {
     "AUTOARCHAEOLOGIST_BITSTORE_CACHE": "ddhf_bitstore_cache",
 }
 
-def main(job, html_subdir="tmp", **kwargs):
+def parse_arguments(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--out', default='/tmp/_autoarchaologist')
+
+    args = parser.parse_args(args=argv)
+    if args.out == '.':
+        args.out = os.path.join(os.getcwd(), "_autoarchaologist")
+    return args
+
+def main(job, html_subdir, **kwargs):
+    args = parse_arguments()
+    kwargs["html_dir"] = args.out
+
     ''' A standard main routine to reduce boiler-plate '''
     for key in os.environ:
         i = OK_ENVS.get(key)
         if i:
             kwargs[i] = os.environ[key]
+
+    if 'html_dir' not in kwargs:
+        raise AttributeError("missing: html_dir")
+
 
     kwargs['html_dir'] = os.path.join(kwargs['html_dir'], html_subdir)
     kwargs.setdefault('download_links', True)

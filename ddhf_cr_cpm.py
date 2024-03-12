@@ -4,16 +4,14 @@
 '''
 
 from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+from autoarchaeologist.ddhf.cpm_excavator import Cpm
 
-class CrCpm(ddhf.DDHF_Excavation):
+class DDHF_CrCpm(ddhf.DDHF_Excavation):
 
     ''' All CR8 artifacts '''
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        cpm_exc.std_cpm_excavation(self)
+        super().__init__(Cpm, **kwargs)
 
         self.from_bitstore(
             "CR/CR7",
@@ -23,7 +21,7 @@ class CrCpm(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        CrCpm,
+        DDHF_CrCpm,
         html_subdir="cr_cpm",
         ddhf_topic = 'Christian Rovsing CR7, CR8 & CR16 CP/M',
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Christian_Rovsing_A/S'

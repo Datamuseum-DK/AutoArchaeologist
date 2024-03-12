@@ -8,8 +8,6 @@ import os
 import mmap
 import urllib.request
 
-import ddhf_bitstore_metadata
-
 from ..base import artifact
 from ..base import excavation
 from ..container import simh_tap_file
@@ -163,10 +161,6 @@ class FromBitStore():
         metatxt = self.fetch_meta(arg)
         if metatxt is None:
             print("Could not fetch", arg)
-            return
-
-        meta = ddhf_bitstore_metadata.internals.metadata.MetadataBase(metatxt)
-        if meta is None:
             return
 
         if self.media_types and not self.check_media_type(meta):

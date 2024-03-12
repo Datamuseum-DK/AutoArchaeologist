@@ -8,6 +8,35 @@ computers, in a convenient and user-friendly way.
 The AutoArchaeologist is a framework where plugins can be written to take
 apart and present old data media, in a browser-friendly fashion.
 
+## Getting started
+
+To get a feel for how this works and ensure you've got everything set up,
+we've included a sample file that can be excavated as an example:
+
+```sh
+python3 run_example.py
+```
+
+When you're ready to for further and process you own images use `run.py`.
+
+## Using run.py
+
+The various utilities that allow the extraction and processing of data are
+designed to be composed into an Excavation that can be run against binary
+images of disks and other media. Some standard excavations have been put
+together in bundles ad exposed via a single `run` command.
+
+Performing an exavation of a file is as simple as the following:
+
+```sh
+python3 run.py --excavator <excavator> <filename>
+```
+
+Usage information including the list of excavatos that are avalable as well as
+other options will be output when running without arguments: `python3 run.py`.
+
+## From the DDHF
+
 # First Example: Commodore CBM900 Harddisk
 
 Our first historic use of the AutoArchaeologist is now online:

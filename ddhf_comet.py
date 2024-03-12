@@ -4,16 +4,14 @@
 '''
 
 from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+from autoarchaeologist.ddhf.cpm_excavator import Cpm
 
-class Comet(ddhf.DDHF_Excavation):
+class DDHF_Comet(ddhf.DDHF_Excavation):
 
     ''' All Comet artifacts '''
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        cpm_exc.std_cpm_excavation(self)
+        super().__init__(Cpm, **kwargs)
 
         self.from_bitstore(
             "COMPANY/ICL/COMET",
@@ -21,7 +19,7 @@ class Comet(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        Comet,
+        DDHF_Comet,
         html_subdir="comet",
         ddhf_topic = 'ICL Comet',
         ddhf_topic_link = 'https://datamuseum.dk/wiki/ICL_Comet'

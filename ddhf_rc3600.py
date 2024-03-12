@@ -5,6 +5,7 @@
 
 from autoarchaeologist import ddhf
 
+from autoarchaeologist.base import excavation
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.regnecentralen import domus_fs
@@ -51,9 +52,7 @@ class TextFileOdd(textfiles.TextFile):
     TYPE_CASE = type_case.OddPar(DomusDS2089())
     MAX_TAIL=512*6
 
-class Rc3600(ddhf.DDHF_Excavation):
-
-    ''' All RC3600 artifacts '''
+class Rc3600(excavation.Excavation):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -74,6 +73,13 @@ class Rc3600(ddhf.DDHF_Excavation):
         self.add_examiner(TextFileOdd)
         self.add_examiner(samesame.SameSame)
 
+class DDHF_Rc3600(ddhf.DDHF_Excavation):
+
+    ''' All RC3600 artifacts '''
+
+    def __init__(self, **kwargs):
+        super().__init__(Rc3600, **kwargs)
+
         self.from_bitstore(
             "-30001762",		# Defective
             "RC/RC3600/DOMUS",
@@ -85,7 +91,7 @@ class Rc3600(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        Rc3600,
+        DDHF_Rc3600,
         html_subdir="rc3600",
         ddhf_topic = "RegneCentralen RC3600/RC7000",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/RC/RC7000',

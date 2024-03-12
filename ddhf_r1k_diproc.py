@@ -5,13 +5,21 @@ Rational R1000/400 Diag Processor Firmware from Datamuseum.dk's BitStore
 from autoarchaeologist import ddhf
 
 from autoarchaeologist.rational import r1k_diag
+from autoarchaeologist.base import excavation
 
-class R1KDIPROC(ddhf.DDHF_Excavation):
+class R1kDiag(excavation.Excavation):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.add_examiner(r1k_diag.R1kDiagFirmWare)
+
+class DDHF_R1KDIPROC(ddhf.DDHF_Excavation):
 
     ''' Rational R1000/400 Diag Processor firmware '''
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(R1kDiag, **kwargs)
 
         self.add_examiner(r1k_diag.R1kDiagFirmWare)
 
@@ -22,7 +30,7 @@ class R1KDIPROC(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        R1KDIPROC,
+        DDHF_R1KDIPROC,
         html_subdir="r1k_diproc",
         ddhf_topic = "Rational R1000/400 Diag Processor Firmware",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/Rational/R1000s400',
