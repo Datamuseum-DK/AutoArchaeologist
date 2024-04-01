@@ -124,6 +124,9 @@ class Excavation(result_page.ResultPage):
         self.examiners = []
         self.names = set()
 
+        # Free for all dictionary for joining multi-volume artifacts.
+        self.multivol = {}
+
         # Duck-type as Artifact
         self.top = self
         self.children = []
