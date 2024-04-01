@@ -135,6 +135,19 @@ class ArtifactBase(result_page.ResultPage):
                 for j in self.byte_order:
                     yield i[j]
 
+    def bits(self, lo=None, width=None, hi=None):
+        ''' Get all bits as bitstring '''
+        assert lo is None
+        assert hi is None
+        assert width is None
+        lo = 0
+        hi = len(self) << 3
+        retval = []
+        for chunk in self.iter_chunks():
+            for i in chunk:
+                retval.append(bin(256 | i)[-8:])
+        return "".join(retval)[lo & 7:hi - (lo & ~7)]
+
     def writetofile(self, file):
         ''' write artifact to a file '''
         raise NotImplementedError
@@ -448,8 +461,12 @@ class ArtifactStream(ArtifactBase):
     def iter_chunks(self):
         yield self.bdx
 
-    def bits(self, lo, width=None, hi=None):
+    def bits(self, lo=None, width=None, hi=None):
         ''' Get a slice as a bitstring '''
+        if lo is None:
+            lo = 0
+        if hi is None and width is None:
+            hi = len(self) << 3
         if hi is None:
             assert width is not None
             hi = lo + width
