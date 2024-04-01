@@ -142,6 +142,12 @@ class NameSpace():
         i = min(len(x) for x in tbl)
         if i != cols:
             print("WARNING: Namespace as uneven table", min, cols)
+            for x in tbl:
+                while len(x) < cols:
+                    x.append("UNEVEN_TBL")
+        colwidth = []
+        for i in range(cols):
+            colwidth.append(max(len(str(x[i])) for x in tbl))
 
         file.write('<table>\n')
 
@@ -151,7 +157,11 @@ class NameSpace():
             align.insert(0, "l")
             hdr.append("-")
         file.write('  <thead>\n')
+        n = 0
         for algn, hdr in zip(align, hdr):
+            if len(str(hdr)) > colwidth[n] + 3:
+                algn = "v"
+            n += 1
             file.write('      <th class="' + algn + '">' + str(hdr) + '</th>\n')
         file.write('  </thead>\n')
 

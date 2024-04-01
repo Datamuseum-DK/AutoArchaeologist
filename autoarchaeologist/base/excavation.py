@@ -394,10 +394,15 @@ class Excavation():
         th {
             position: sticky; top: 0; background-color: #eeeeee;
             border-bottom: 1px solid black;
+            padding: 5px;
         }
-        td.l, th.l { vertical-align: top; text-align: left; }
-        td.r, th.r { vertical-align: top; text-align: right; }
-        td.c, th.c { vertical-align: top; text-align: center; }
+        th.v { writing-mode: sideways-rl; vertical-align: bottom;}
+        th.l { vertical-align: bottom; text-align: left; }
+        th.r { vertical-align: bottom; text-align: right; }
+        th.c { vertical-align: bottom; text-align: center; }
+        td.l { vertical-align: top; text-align: left; }
+        td.r { vertical-align: top; text-align: right; }
+        td.c { vertical-align: top; text-align: center; }
         td.s, th.s { font-size: .8em; }
         tr.stripe:nth-child(2n+1) { background-color: #ddffdd; }
     '''
