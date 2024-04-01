@@ -22,12 +22,15 @@ class BinTreeLeaf():
     Leaves of the tree
     ------------------
     '''
-    def __init__(self, lo, hi):
+    def __init__(self, lo, hi, name=None):
         assert isinstance(lo, int)
         assert isinstance(hi, int)
         assert lo < hi
         self.lo = lo
         self.hi = hi
+        if name is None:
+           name = self.__class__.__name__
+        self.bt_name = name
 
     def __repr__(self):
         return "<BinTreeLeaf 0x%x-0x%x>" % (self.lo, self.hi)
@@ -65,6 +68,7 @@ class BinTree():
         self.separators = []
         self.separators_width = 0
         self.base_leaf = leaf
+        self.todo = []
 
     def __repr__(self):
         return "<BinTree 0x%x-0x%x-0x%x>" % (self.lo, self.mid, self.hi)
@@ -186,10 +190,23 @@ class BinTree():
                     prev_line = line
                     yield self.prefix(leaf.lo, leaf.hi) + " " + line
             else:
+                print("BTP", type(leaf), [leaf])
                 pending = "  " + leaf
         if repeat_line > 0:
             yield " " * (self.adrwidth + 4)  + "[…0x%x…]" % repeat_line
 
+    def points_to(self, lo, cls):
+        for i in self.find(lo, lo + 1):
+            return i
+        first = len(self.todo) == 0
+        self.todo.append((lo, cls))
+        if not first:
+            return
+        while self.todo:
+            lo, cls = self.todo[0]
+            if not list(self.find(lo, lo + 1)):
+                i = cls(self, lo).insert()
+            self.todo.pop(0)
 
 class Struct():
     '''
@@ -282,14 +299,14 @@ class Struct():
         ''' Struct is complete, finish up '''
         if pad:
             if (self.lo + pad) < self.hi:
-               print(
-                   self.bt_name,
-                   [ hex(self.lo), hex(self.hi) ],
-                   "Padding to less than current size",
-                   hex(pad),
-                   "vs",
-                   hex(self.hi - self.lo),
-               )
+                print(
+                    self.bt_name,
+                    [ hex(self.lo), hex(self.hi) ],
+                    "Padding to less than current size",
+                    hex(pad),
+                    "vs",
+                    hex(self.hi - self.lo),
+                )
             assert self.lo + pad >= self.hi
             if self.lo + pad != self.hi:
                 self.add_field("pad_at%x_" % self.hi, self.lo + pad - self.hi)
@@ -348,7 +365,7 @@ def Array(struct_class, count, what, vertical=None):
         class Array_Class(struct_class):
             WHAT = what
             COUNT = count
-    
+
             def __init__(self, *args, **kwargs):
                 if vertical:
                     kwargs["vertical"] = vertical
@@ -358,13 +375,13 @@ def Array(struct_class, count, what, vertical=None):
                     f = self.add_field("f%d" % i, self.WHAT)
                     self.array.append(f)
                 self.done()
-    
+
             def __getitem__(self, idx):
                 return self.array[idx]
-    
+
             def __iter__(self):
                 yield from self.array
-    
+
             def render(self):
                 if not self.vertical:
                     yield '[' + ", ".join("".join(x.render()) for x in self.array) + "]"
@@ -376,7 +393,7 @@ def Array(struct_class, count, what, vertical=None):
                         for j in i.render():
                             yield fmt % n + j
                     yield ']'
-    
+
         return Array_Class
 
     class Array_Class():
@@ -399,7 +416,6 @@ def Array(struct_class, count, what, vertical=None):
             yield '[]'
 
     return Array_Class
-    
 
 def test_tree():
     ''' Minimal test cases '''
