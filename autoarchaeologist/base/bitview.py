@@ -38,11 +38,7 @@ class Bits(bintree.BinTreeLeaf):
             hi = lo + width
         assert hi > lo
         self.tree = tree
-        if name is None:
-            name = self.__class__.__name__
-        self.bv_name = name
-        self.bt_name = name
-        super().__init__(lo, hi)
+        super().__init__(lo, hi, name=name)
 
     def __len__(self):
         return self.hi - self.lo
@@ -91,7 +87,7 @@ class BitView(bintree.BinTree):
 class Opaque(Bits):
 
     def render(self):
-        yield "Opaque"
+        yield self.__class__.__name__
 
 class Number(Bits):
 
@@ -145,4 +141,54 @@ def Text(width, glyph_width=8, rstrip = False):
             yield "»" + self.txt + "«"
 
     return Text_Class
+
+class Pointer_Class(Bits):
+            
+    TARGET = None
+            
+    def __init__(self, bvtree, lo, width=None):
+        if width is None:
+            width = bvtree.POINTER_WIDTH
+        super().__init__(bvtree, lo, width=width)
+        self.val = int(self.bits(), 2)
+        self.cached_dst = None
+        if self.TARGET is not None:
+            bvtree.points_to(self.val, self.TARGET)
+
+    def dst(self):
+        if self.cached_dst is None:
+            i = list(self.tree.find(self.val, self.val+1))
+            assert len(i) in (0, 1)
+            if len(i) == 1:
+                self.cached_dst = i[0]
+        return self.cached_dst
+            
+    def render(self):
+        if not self.val:
+            yield "∅"
+            return
+        i = self.dst()
+        if i is None:
+            yield "0x" + self.tree.adrfmt % self.val + "→NOTHING"
+            return
+        yield "0x" + self.tree.adrfmt % self.val + "→" + i.bt_name
+            
+def Pointer(cls=None):
+        
+    class ClsPointer(Pointer_Class):
+        TARGET = cls
+            
+    return ClsPointer
+
+def Constant(width=32, value=0):
+    class ClsConstant(Bits):
+        def __init__(self, bvtree, lo, width=width, value=value):
+            super().__init__(bvtree, lo, width=width)
+            self.val = int(self.bits(), 2)
+            assert self.val == value
+            
+        def render(self):
+            yield "CONST(0x%x)" % self.val
+
+    return ClsConstant
 

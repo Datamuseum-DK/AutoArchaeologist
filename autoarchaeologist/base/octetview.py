@@ -22,11 +22,7 @@ class Octets(bintree.BinTreeLeaf):
         assert hi > lo
         self.tree = tree
         self.this = tree.this
-        if name is None:
-            name = self.__class__.__name__
-        self.ov_name = name
-        self.bt_name = name
-        super().__init__(lo, hi)
+        super().__init__(lo, hi, name=name)
 
     def __len__(self):
         return self.hi - self.lo
