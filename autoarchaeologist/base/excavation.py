@@ -17,6 +17,7 @@ import html
 from . import artifact
 from . import index
 from . import type_case
+from . import result_page
 
 def dotdotdot(gen, limit=35):
     ''' Return a limited number of elements, and mark as truncated if so. '''
@@ -61,7 +62,7 @@ class TempFile():
         return "<TmpFile '" + self.filename + "'>"
 
 
-class Excavation():
+class Excavation(result_page.ResultPage):
 
     '''
         Excavation
@@ -77,6 +78,9 @@ class Excavation():
 
     '''
 
+    # How much to hexdump of unexplored artifacts
+    MAX_LINES = 200
+
     def __init__(
         self,
         digest_prefix=9,           # SHA256 length in links/filenames
@@ -88,6 +92,7 @@ class Excavation():
         spill_index=10,		   # Spill limit for index lines
     ):
 
+        super().__init__()
         # Sanitize parameters
 
         os.makedirs(html_dir, exist_ok=True)
@@ -240,9 +245,7 @@ class Excavation():
             os.path.join(self.link_prefix, base),
         )
 
-    def produce_html(
-        self,
-    ):
+    def produce_html(self):
         ''' Produce default HTML pages '''
 
         self.polish()
@@ -306,6 +309,8 @@ class Excavation():
             fo.write("</td>\n")
             fo.write("</tr>\n")
         fo.write("</table>\n")
+
+        self.emit_interpretations(fo, domore=True)
 
         self.html_suffix(fo, self)
 

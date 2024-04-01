@@ -15,6 +15,7 @@ from . import bintree
 from . import excavation
 from . import interpretation
 from . import octetview as ov
+from . import result_page
 from .. import record
 
 class Record(bintree.BinTreeLeaf):
@@ -46,7 +47,7 @@ class Record(bintree.BinTreeLeaf):
     def __getitem__(self, idx):
         return self.frag[idx]
 
-class ArtifactBase():
+class ArtifactBase(result_page.ResultPage):
 
     '''
         ArtifactBase
@@ -72,13 +73,13 @@ class ArtifactBase():
 
     def __init__(self):
 
+        super().__init__()
+
         self.digest = None
 
         self.parents = set()
         self.children = []
 
-        self.interpretations = []
-        self.unique = 0
         self.notes = set()
         self.types = set()
         self.descriptions = []
@@ -169,12 +170,6 @@ class ArtifactBase():
         else:
             self.digest = digest
 
-    def get_unique(self):
-        ''' Return a unique (increasing) number '''
-        retval = self.unique
-        self.unique += 1
-        return retval
-
     def add_parent(self, parent):
         ''' Attach to parent, and vice-versa '''
         assert self != parent
@@ -208,18 +203,6 @@ class ArtifactBase():
     def has_type(self, note):
         ''' Check if not already exists '''
         return note in self.types
-
-    def add_interpretation(self, owner, func, more=False):
-        ''' Add an interpretation '''
-        self.interpretations.append((owner, func, more))
-
-    def add_utf8_interpretation(self, title, **kwargs):
-        ''' Add early UTF-8 interpretation '''
-        return interpretation.Utf8Interpretation(self, title, **kwargs)
-
-    def add_html_interpretation(self, title, **kwargs):
-        ''' Add early HTML interpretation '''
-        return interpretation.HtmlInterpretation(self, title, **kwargs)
 
     def add_description(self, desc):
         ''' Add a description '''
@@ -367,22 +350,15 @@ class ArtifactBase():
             self.html_derivation(file)
             file.write("</pre>\n")
 
-        if self.children and not self.interpretations:
-            self.html_interpretation_children(file, self)
-
         if self.comments:
             file.write("<H3>NB: Comments at End</H3>\n")
 
-        if self.interpretations:
-            for _owner, func, more in self.interpretations:
-                if domore or not more:
-                    file.write('<div>\n')
-                    func(file, self)
-                    file.write('</div>\n')
-                if more:
-                    retval = True
-        else:
-            self.html_default_interpretation(file, self, max_lines=200)
+        if not self.rp_interpretations:
+            self.html_default_interpretation(file, self)
+            if self.children:
+                self.html_interpretation_children(file, self)
+        elif self.emit_interpretations(file, domore):
+            retval = True
 
         if self.comments:
             file.write("<H3>Comments</H3>\n")
@@ -432,9 +408,11 @@ class ArtifactBase():
         ''' Descriptions, one per line '''
         return "<br>\n".join(sorted(self.descriptions))
 
-    def html_default_interpretation(self, file, this, max_lines=10000, **kwargs):
+    def html_default_interpretation(self, file, this, max_lines=None, **kwargs):
         ''' Default interpretation is a hexdump '''
 
+        if max_lines is None:
+            max_lines = self.top.MAX_LINES
         tmp = ov.OctetView(this)
         file.write("<H3>Hex Dump</H3>\n")
         file.write("<pre>\n")
