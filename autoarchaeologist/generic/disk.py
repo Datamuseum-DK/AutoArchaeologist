@@ -192,7 +192,7 @@ class Disk(ov.OctetView):
             except KeyError:
                 print(self.this, "Disk-picture failed at", hex(lo), what)
                 return
-            if self.picture[chs] != '?':
+            if self.picture[chs] not in ('?', what):
                 print(self.this, "Picture Changed", hex(lo), chs, self.picture[chs], what)
             self.picture[chs] = what
             lo += self.width[chs]
