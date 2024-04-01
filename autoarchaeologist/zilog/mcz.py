@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 '''
-   MCZ floppies
-
+   Zilog MCZ floppies
+   ~~~~~~~~~~~~~~~~~~
 '''
 
 from ..generic import disk
@@ -25,7 +25,7 @@ class DataSector(Sector):
     ident = "DataSector"
 
 class Chain():
-    def __init__(self, tree, chs, stype=None):
+    def __init__(self, tree, chs, stype=None, reclen=128):
         if stype == None:
             stype = Sector
         self.tree = tree
@@ -34,11 +34,28 @@ class Chain():
         octets = []
         self.chs = []
         while chs != (255,0,255):
-            sect = stype(self.tree, *chs)
-            self.sectors.append(sect)
-            octets.append(sect.this[sect.lo+2:sect.lo+130])
+            if chs == (65, 0, 69):
+                # __UNREAD__
+                self.octets = b''
+                return
+            done = 0
+            while True:
+                try:
+                    sect = stype(self.tree, *chs)
+                except KeyError:
+                    print(tree.this, "Could not find chs", chs, self)
+                    break
+                # print("  c", chs, reclen, sect, hex(sect.lo), sect.next_sector)
+                self.sectors.append(sect)
+                octets.append(sect.this[sect.lo+2:sect.lo+130])
+                done += 128
+                if done >= reclen:
+                    break
+                chs = list(chs)
+                chs[2] += 1
             chs = sect.next_sector
         self.octets = b''.join(octets)
+        # print("CL", self, len(octets), len(self.octets))
 
     def insert(self):
         for sect in self.sectors:
@@ -165,14 +182,20 @@ class DirEnt(ov.Struct):
         )
         sect = Sector(self.tree, self.track.val, 0, self.sector.val)
         sect.picture('R')
+        #print("DE", self.name.txt, sect)
         self.desc = DescRec(self.tree, lo = sect.lo + 2)
         self.desc.insert()
 
-        self.chain = Chain(self.tree, sect.next_sector, stype=DataSector)
+        self.chain = Chain(self.tree, sect.next_sector, stype=DataSector,reclen=self.desc.reclen.val)
+        #print("L", len(self.chain.octets))
         self.chain.insert()
         self.chain.picture('·')
-        i = 128 - self.desc.lastbytes.val
-        if i:
+        if len(self.chain.octets) == 0:
+            return
+        i = self.desc.reclen.val - self.desc.lastbytes.val
+        if i == len(self.chain.octets):
+            return
+        elif i:
             that = self.tree.this.create(bits=self.chain.octets[:-i])
         else:
             that = self.tree.this.create(bits=self.chain.octets)
