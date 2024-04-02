@@ -9,35 +9,6 @@
 import os
 import html
 
-class Utf8Interpretation():
-    '''
-       Some examinations can output a HTML representation during
-       the examination and we can save VM by storing it in a temporary
-       file.
-
-       Using Pythons tempfile does not work, because the file(handle)
-       hangs around.
-    '''
-
-    def __init__(self, this, title, more=False):
-        self.this = this
-        self.title = title
-        self.filename = this.tmpfile_for().filename
-        this.add_interpretation(self, self.html_interpretation, more=more)
-
-    def html_interpretation(self, fo, this):
-        try:
-            fi = open(self.filename)
-        except FileNotFoundError as err:
-            print(this, "Could not open output file:", err)
-            return
-        fo.write("<H3>" + self.title + "</H3>\n")
-        fo.write("<pre>\n")
-        for i in fi:
-            fo.write(html.escape(i))
-        fo.write("</pre>\n")
-        os.remove(self.filename)
-
 
 class HtmlInterpretation():
     '''
@@ -48,7 +19,7 @@ class HtmlInterpretation():
        It is important that the HTML does not contain any links to
        other artifacts, as those may not have been fully examined yet.
 
-       Using Pythons tempfile does not work, because the file(handle)
+       Using Pythons tempfile does not work, because the open file(handle)
        hangs around.
     '''
 
@@ -56,15 +27,50 @@ class HtmlInterpretation():
         self.this = this
         self.title = title
         self.filename = this.tmpfile_for().filename
+        self.file = None
         this.add_interpretation(self, self.html_interpretation, more=more)
 
-    def html_interpretation(self, fo, this):
-        try:
-            fi = open(self.filename)
-        except FileNotFoundError as err:
-            print(this, "Could not open output file:", err)
-            return
-        fo.write("<H3>" + self.title + "</H3>\n")
-        for i in fi:
-            fo.write(i)
+    def __enter__(self):
+        self.file = open(self.filename, 'w', encoding="utf8")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file.close()
+        self.file = None
+
+    def __del__(self):
         os.remove(self.filename)
+
+    def write(self, *args, **kwargs):
+        ''' ... '''
+        if self.file is None:
+            raise SyntaxError("Not inside with … as …:")
+        self.file.write(*args, **kwargs)
+
+    def html_interpretation(self, fo, _this):
+        ''' ... '''
+        with open(self.filename, encoding="utf8") as file:
+            fo.write("<H3>" + self.title + "</H3>\n")
+            for i in file:
+                fo.write(i)
+
+class Utf8Interpretation(HtmlInterpretation):
+    '''
+       Some examinations can output a UTF8 representation during
+       the examination and we can save VM by storing it in a temporary
+       file.
+
+       The UTF8 is html.escape()'d and wrapped in a <pre>
+
+       Using Pythons tempfile does not work, because the open file(handle)
+       hangs around.
+    '''
+
+    def html_interpretation(self, fo, _this):
+        ''' ... '''
+        with open(self.filename, encoding="utf8") as file:
+            fo.write("<H3>" + self.title + "</H3>\n")
+            fo.write("<pre>\n")
+            for i in file:
+                fo.write(html.escape(i))
+            fo.write("</pre>\n")
