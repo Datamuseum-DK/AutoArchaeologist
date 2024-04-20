@@ -282,8 +282,13 @@ class FromBitStore():
         i = getattr(i, "Geometry", None)
         if i is None or i.val is None:
             return
+        impose_bitstore_geometry(this, i.val)
+
+
+def impose_bitstore_geometry(this, gspec):
+
         ngeom = []
-        for geom in i.val.split(','):
+        for geom in gspec.split(','):
             i = { "c": 1, "h": 1, "s": 1, "b": 0 }
             for j in geom.split():
                 i[j[-1]] = int(j[:-1])
