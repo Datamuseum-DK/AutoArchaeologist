@@ -58,7 +58,10 @@ class MainCat():
         acc = start
         while True:
             ptr -= 0x10
-            y = DirEnt(self.tree, ptr).insert()
+            y = DirEnt(self.tree, ptr)
+            if y.f00.val != 0x0 or y.name.txt[0] == ' ':
+                break
+            y.insert()
             if y.name.txt == "$FREE   ":
                 break
             y.kind = 'D'
@@ -100,14 +103,15 @@ class LogicalDisk():
             if y.f02.val <= 0x80:
                 y.kind = 'S'
                 sstop += y.f02.val
-                z = ov.This(tree, lo=sstart, hi=sstop).insert()
-                z.that.add_note(y.name.txt)
-                ns.ns_set_this(z.that)
+                if sstart < sstop:
+                    z = ov.This(tree, lo=sstart, hi=sstop).insert()
+                    z.that.add_note(y.name.txt)
+                    ns.ns_set_this(z.that)
                 if y.f02.val < 0x80:
                     ov.Opaque(tree, lo=sstop, width=0x80-y.f02.val).insert()
             else:
                 y.kind = 'R'
-                recsize = 0xffff - y.f02.val
+                recsize = 0x10000 - y.f02.val
                 reccount = y.f01.val
                 z = ov.This(tree, lo=sstart, width=recsize*reccount).insert()
                 ns.ns_set_this(z.that)
@@ -159,6 +163,7 @@ class LdFs(disk.Disk):
         )
 
         print(this, self.__class__.__name__)
+        this.add_note("logical_disk")
 
         self.namespace = NameSpace(
             name = '',
