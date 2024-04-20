@@ -286,7 +286,6 @@ class OctetView(bintree.BinTree):
 
     def add_interpretation(self, title="OctetView", more=False, **kwargs):
         ''' Render via UTF-8 file '''
-        tfn = self.this.add_utf8_interpretation(title, more=more)
-        with open(tfn.filename, "w", encoding="utf-8") as file:
+        with self.this.add_utf8_interpretation(title, more=more) as file:
             for line in self.render(**kwargs):
                 file.write(line + '\n')
