@@ -11,6 +11,7 @@ from autoarchaeologist.regnecentralen import domus_fs
 from autoarchaeologist.regnecentralen import rc3600_fdtape
 from autoarchaeologist.regnecentralen import rc3600_fcopy
 from autoarchaeologist.regnecentralen import rc7000_comal
+from autoarchaeologist.regnecentralen import rc3600_ldfs
 from autoarchaeologist.generic import bigdigits
 from autoarchaeologist.data_general import absbin
 from autoarchaeologist.data_general import relbin
@@ -63,6 +64,7 @@ class Rc3600(ddhf.DDHF_Excavation):
         self.add_examiner(domus_fs.Domus_Filesystem)
         self.add_examiner(rc3600_fdtape.RC3600_FD_Tape)
         self.add_examiner(rc3600_fcopy.Domus_FCOPY)
+        self.add_examiner(rc3600_ldfs.LdFs)
         self.add_examiner(rc7000_comal.ComalSaveFile)
         self.add_examiner(absbin.AbsBin)
         self.add_examiner(relbin.RelBin)
