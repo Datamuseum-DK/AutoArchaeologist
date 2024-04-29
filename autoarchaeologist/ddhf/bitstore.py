@@ -287,53 +287,14 @@ class FromBitStore():
 
 def impose_bitstore_geometry(this, gspec):
 
-        ngeom = []
-        for geom in gspec.split(','):
-            i = { "c": 1, "h": 1, "s": 1, "b": 0 }
-            for j in geom.split():
-                i[j[-1]] = int(j[:-1])
-            ngeom.append(i)
-
-        # The Media.Geometry format is ambigous :-(
-        #    1c 1h 10s 128b, 1c 1h 5s 256b
-        # does not tell if the disk is single or double sided.
-        # This heuristic finds the max #head and assumes that
-        # applies to the full media.
-        # Maybe this could work better ?
-        #    c=0 h=0 10s 128b, c=0 h=1 5s 256b
-        maxhead = max(x["h"] for x in ngeom)
-        ptr = 0
-        ncyl = 0
-        nhead = 0
-        for i in ngeom:
-            if maxhead == 1 and i["c"] == 1 and i["h"] == 1:
-                for sect in range(i["s"]):
-                    chs = (ncyl, nhead, sect + 1)
-                    this.define_rec(
-                        artifact.Record(
-                            low=ptr,
-                            frag=this[ptr:ptr+i["b"]],
-                            key=chs,
-                        )
-                    )
-                    ptr += i["b"]
-                nhead += 1
-                if nhead == maxhead:
-                    nhead = 0
-                    ncyl += 1
-            else:
-                for cyl in range(i["c"]):
-                    for head in range(i["h"]):
-                        for sect in range(i["s"]):
-                            chs = (ncyl, head, sect + 1)
-                            this.define_rec(
-                                artifact.Record(
-                                    low=ptr,
-                                    frag=this[ptr:ptr+i["b"]],
-                                    key=chs,
-                                )
-                            )
-                            ptr += i["b"]
-                    ncyl += 1
-
-
+    geom = ddhf_bitstore_metadata.sections.media.ParseGeometry(gspec)
+    off = 0
+    for chs, sector_size in geom:
+        this.define_rec(
+            artifact.Record(
+                low=off,
+                frag=this[off:off+sector_size],
+                key=chs,
+            )
+        )
+        off += sector_size
