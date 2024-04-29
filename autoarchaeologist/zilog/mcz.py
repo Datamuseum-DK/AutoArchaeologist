@@ -115,7 +115,7 @@ class NameSpace(namespace.NameSpace):
             desc.reclen.val,
             desc.blklen.val,
             desc.prop.val,
-            desc.adr.val,
+            hex(desc.adr.val),
             desc.lastbytes.val,
             desc.created.txt,
             desc.modified.txt,
