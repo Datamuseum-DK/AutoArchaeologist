@@ -6,6 +6,7 @@
 from autoarchaeologist import ddhf
 
 from autoarchaeologist.zilog import mcz
+from autoarchaeologist.zilog import zdos_basic
 from autoarchaeologist.generic import textfiles
 
 class ZilogMCZ(ddhf.DDHF_Excavation):
@@ -16,6 +17,7 @@ class ZilogMCZ(ddhf.DDHF_Excavation):
         super().__init__(**kwargs)
 
         self.add_examiner(mcz.MCZRIO)
+        self.add_examiner(zdos_basic.ZdosBasic)
         self.add_examiner(textfiles.TextFile)
 
         self.from_bitstore(
