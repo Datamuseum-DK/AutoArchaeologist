@@ -27,6 +27,8 @@ class HtmlInterpretation():
         self.this = this
         self.title = title
         self.filename = this.tmpfile_for().filename
+        with open(self.filename, 'w', encoding="utf8") as file:
+             file.write("Content generation probably failed\n")
         self.file = None
         this.add_interpretation(self, self.html_interpretation, more=more)
 
