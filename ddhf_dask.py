@@ -8,6 +8,7 @@ from autoarchaeologist import ddhf
 from autoarchaeologist.regnecentralen import gier_text
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
+from autoarchaeologist.base import excavation
 from autoarchaeologist.base import type_case
 
 class DaskTegn(textfiles.TextFile):
@@ -35,12 +36,10 @@ class DaskTc(type_case.TypeCase):
         self.set_slug(0x10, "*", "*")
         self.set_slug(0x1e, " ", "«stop»")
 
-class DASK(ddhf.DDHF_Excavation):
-
-    ''' All DASK artifacts '''
+class Dask(excavation.Excavation):
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(Dask, **kwargs)
 
         self.type_case = DaskTc()
 
@@ -48,13 +47,20 @@ class DASK(ddhf.DDHF_Excavation):
         self.add_examiner(samesame.SameSame)
         self.add_examiner(DaskTegn)
 
+class DDHF_DASK(ddhf.DDHF_Excavation):
+
+    ''' All DASK artifacts '''
+
+    def __init__(self, **kwargs):
+        super().__init__(Dask, **kwargs)
+
         self.from_bitstore(
             "DASK/SW",
         )
 
 if __name__ == "__main__":
     ddhf.main(
-        DASK,
+        DDHF_DASK,
         html_subdir="dask",
         ddhf_topic = "RegneCentralen DASK Computer",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/DASK',

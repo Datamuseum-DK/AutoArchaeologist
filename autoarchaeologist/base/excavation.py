@@ -397,7 +397,7 @@ class Excavation(result_page.ResultPage):
             font-family: "Inconsolata", "Courier New", mono-space;
         }
         td,th {
-            padding: 0 10px 0; 
+            padding: 0 10px 0;
         }
         th {
             position: sticky; top: 0; background-color: #eeeeee;

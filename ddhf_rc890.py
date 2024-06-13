@@ -4,16 +4,14 @@
 '''
 
 from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+from autoarchaeologist.ddhf.cpm_excavator import Cpm
 
-class Rc890(ddhf.DDHF_Excavation):
+class DDHF_Rc890(ddhf.DDHF_Excavation):
 
     ''' All RC890 artifacts '''
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-        cpm_exc.std_cpm_excavation(self)
 
         self.from_bitstore(
             "RC/RC890",
@@ -21,7 +19,7 @@ class Rc890(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        Rc890,
+        DDHF_Rc890,
         html_subdir="rc890",
         ddhf_topic = 'RegneCentralen RC890',
         ddhf_topic_link = 'https://datamuseum.dk/wiki/RC890'

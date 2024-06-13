@@ -4,16 +4,14 @@
 '''
 
 from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+from autoarchaeologist.ddhf.cpm_excavator import Cpm
 
-class Rc700(ddhf.DDHF_Excavation):
+class DDHF_Rc700(ddhf.DDHF_Excavation):
 
     ''' All RC700 artifacts '''
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        cpm_exc.std_cpm_excavation(self)
+        super().__init__(Cpm, **kwargs)
 
         self.from_bitstore(
             "-30003268", # Ligner CP/M men med COMAL-80 navne semantik
@@ -23,7 +21,7 @@ class Rc700(ddhf.DDHF_Excavation):
 
 if __name__ == "__main__":
     ddhf.main(
-        Rc700,
+        DDHF_Rc700,
         html_subdir="rc700",
         ddhf_topic = 'RegneCentralen RC700 "Piccolo"',
         ddhf_topic_link = 'https://datamuseum.dk/wiki/RC700_Piccolo'

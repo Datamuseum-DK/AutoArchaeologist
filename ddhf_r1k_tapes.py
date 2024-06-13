@@ -3,7 +3,7 @@ Rational R1000/400 Tapes from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+from autoarchaeologist import ddhf
 
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
 from autoarchaeologist.rational import r1k_archive
@@ -12,12 +12,10 @@ from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.unix.compress import Compress
 from autoarchaeologist.unix.tar_file import TarFile
 from autoarchaeologist.generic import textfiles
+from autoarchaeologist.base import excavation
 
-class R1K(DDHF_Excavation):
+class R1k(excavation.Excavation):
 
-    '''
-    Rational R1000/400 tapes except DFS and backup tapes
-    '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -29,6 +27,16 @@ class R1K(DDHF_Excavation):
         self.add_examiner(TarFile)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(SameSame)
+
+
+class R1K(ddhf.DDHF_Excavation):
+
+    '''
+    Rational R1000/400 tapes except DFS and backup tapes
+    '''
+
+    def __init__(self, **kwargs):
+        super().__init__(R1k, **kwargs)
 
         self.from_bitstore(
             "-30000530",	# == 30000409
@@ -49,7 +57,7 @@ class R1K(DDHF_Excavation):
         )
 
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         R1K,
         html_subdir="r1k_tapes",
         ddhf_topic = "Rational R1000/400 Tapes",
