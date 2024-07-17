@@ -9,6 +9,7 @@ import mmap
 import urllib.request
 
 import ddhf_bitstore_metadata
+import ddhf_bitstore_metadata.sections.media as media
 
 from ..base import artifact
 from ..base import excavation
@@ -287,14 +288,17 @@ class FromBitStore():
 
 def impose_bitstore_geometry(this, gspec):
 
-    geom = ddhf_bitstore_metadata.sections.media.ParseGeometry(gspec)
-    off = 0
-    for chs, sector_size in geom:
-        this.define_rec(
-            artifact.Record(
-                low=off,
-                frag=this[off:off+sector_size],
-                key=chs,
+    geom = media.ParseGeometry(gspec, tolerant=True)
+    try:
+        off = 0
+        for chs, sector_size in geom:
+            this.define_rec(
+                artifact.Record(
+                    low=off,
+                    frag=this[off:off+sector_size],
+                    key=chs,
+                )
             )
-        )
-        off += sector_size
+            off += sector_size
+    except:
+        print(this, "Geometry Trouble", geom)
