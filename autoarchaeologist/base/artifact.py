@@ -367,9 +367,9 @@ class ArtifactBase(result_page.ResultPage):
             file.write("<H3>NB: Comments at End</H3>\n")
 
         if not self.rp_interpretations:
-            self.html_default_interpretation(file, self)
             if self.children:
                 self.html_interpretation_children(file, self)
+            self.html_default_interpretation(file, self)
         elif self.emit_interpretations(file, domore):
             retval = True
 
@@ -579,6 +579,8 @@ class ArtifactFragmented(ArtifactBase):
         ''' Append a fragment '''
         if not isinstance(frag, Record):
             frag = Record(self._len, frag=frag)
+        else:
+            frag = Record(self._len, frag=frag.frag, key=frag.key)
         assert frag.lo == self._len
         self._frags.append(frag)
         frag.artifact = self
