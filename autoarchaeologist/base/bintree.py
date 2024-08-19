@@ -289,6 +289,7 @@ class Struct():
                 self.args[name] = width
         if not more:
             self.done(pad=pad)
+
     def __getattr__(self, what):
         ''' Silence pylint E1101 '''
         raise AttributeError(
