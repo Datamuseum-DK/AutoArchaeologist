@@ -1,11 +1,11 @@
 '''
-   RC8000 Save Tapes
-   -----------------
+   RC4000/RC8000/RC9000 Save & Dump Tapes
+   --------------------------------------
+
 '''
 
 import time
-
-from ..generic import hexdump
+import html
 
 from ..base import octetview as ov
 from ..base import namespace
@@ -14,58 +14,29 @@ class Rc489kNameSpace(namespace.NameSpace):
     ''' ... '''
 
     TABLE = (
-        ( "r", "dump_type"),
-        ( "r", "entry_no"),
-        ( "r", "num_segs"),
-        ( "l", "volume"),
-        ( "r", "tail0"),
-        ( "r", "tail1"),
-        ( "r", "tail2"),
-        ( "r", "tail3"),
-        ( "r", "tail4"),
+        ( "r", "mode"),
+        ( "r", "kind"),
         ( "r", "key"),
-        ( "r", "bs_dev"),
-        ( "r", "entry_base"),
+        ( "r", "nseg"),
+        ( "l", "date"),
+        ( "l", "docname"),
+        ( "r", "w7"),
+        ( "r", "w8"),
+        ( "r", "w9"),
+        ( "r", "w10"),
         ( "l", "name"),
         ( "l", "artifact"),
     )
 
     def ns_render(self):
         meta = self.ns_priv
-        if isinstance(meta, Rc489kSubCatEnt):
-            return [
-                "",
-                "",
-                meta.entry_tail.nrec.val,
-                meta.entry_tail.volume.txt,
-                str(meta.entry_tail.tail0),
-                str(meta.entry_tail.tail1),
-                hex(meta.entry_tail.tail2.val),
-                hex(meta.entry_tail.tail3.val),
-                hex(meta.entry_tail.tail4.val),
-                "",
-                "",
-                "",
-            ] + super().ns_render()
-        if isinstance(meta, Rc489kDumpEntryRec):
-            return [
-                hex(meta.dump_type.val),
-                hex(meta.entry_no.val),
-                meta.num_segs.val,
-                meta.entry_tail.volume.txt,
-                str(meta.entry_tail.tail0),
-                str(meta.entry_tail.tail1),
-                hex(meta.entry_tail.tail2.val),
-                hex(meta.entry_tail.tail3.val),
-                hex(meta.entry_tail.tail4.val),
-                str(meta.key),
-                meta.bs_dev_spec.txt.strip(),
-                str(meta.entry_base),
-            ] + super().ns_render()
-        return ["-"] * (len(self.TABLE)-2) + super().ns_render()
-
+        if hasattr(meta, "ns_render"):
+            return meta.ns_render() + super().ns_render()
+        return [html.escape(str(type(meta)))] + ["-"] * (len(self.TABLE)-3) + super().ns_render()
 
 class DWord(ov.Struct):
+    ''' A double word '''
+
     def __init__(self, up, lo):
         super().__init__(
             up,
@@ -78,31 +49,73 @@ class DWord(ov.Struct):
         yield "(0x%x" % self.w0.val + ",0x%x)" % self.w1.val
 
 class ShortClock(ov.Be24):
+    '''
+       Time is kept in a double word (=48 bits) counting units of
+       100µs since 1968-01-01T00:00:00 local time.
+
+       A ShortClock throws the 5 MSB and 19 LSB bits away, which
+       gives a resolution a tad better than a minute and a range
+       of almost 28 years.
+    '''
 
     def render(self):
+        ''' Render as ISO8601 without timezone '''
         if self.val == 0:
-            yield "             "
+            yield "                "
         else:
             ut = (self.val << 19) * 100e-6
             t0 = (366+365)*24*60*60
-            yield time.strftime("%Y%m%d-%H%M", time.gmtime(ut - t0 ))
+            yield time.strftime("%Y-%m-%dT%H:%M", time.gmtime(ut - t0 ))
 
 class Rc489kEntryTail(ov.Struct):
+    ''' The ten words which describe a file '''
+
     def __init__(self, up, lo):
         super().__init__(
             up,
             lo,
-            nrec_=ov.Be24,
-            volume_=ov.Text(12),
-            tail0_=ShortClock,
-            tail1_=ShortClock,
-            tail2_=ov.Be24,
-            tail3_=ov.Be24,
-            tail4_=ov.Be24,
+            w1_=ov.Be24,		# really: size/modekind
+            docname_=ov.Text(12),
+            w6_=ShortClock,
+            w7_=ov.Be24,
+            w8_=ov.Be24,
+            w9_=ov.Be24,
+            w10_=ov.Be24,
             #vertical=True,
         )
+        if self.w1.val >> 23:
+            self.kind = self.w1.val & 0xfff
+            self.mode = self.w1.val >> 12
+            self.nseg = 0
+        else:
+            self.kind = 4
+            self.mode = 0
+            self.nseg = self.w1.val
+        self.key = self.w9.val >> 12
+
+    def raw_render(self):
+        return [
+            ("mode", "%d" % self.mode),
+            ("kind", "%d" % self.kind),
+            ("key", "%d" % self.key),
+            ("nseg", "%d" % self.nseg),
+            ("date", "%s" % str(self.w6)),
+            ("docname", "%s" % self.docname.txt),
+            ("w7", "0x%x" % self.w7.val),
+            ("w8", "0x%x" % self.w8.val),
+            ("w9", "0x%x" % self.w9.val),
+            ("w10", "0x%x" % self.w10.val),
+        ]
+
+    def render(self):
+        yield "{" + ", ".join("=".join(x) for x in self.raw_render()) + "}"
+
+    def ns_render(self):
+        return [x[1] for x in self.raw_render()]
 
 #################################################
+#
+# A file can be a subdirectory if it has key=10
 
 class Rc489kSubCatEnt(ov.Struct):
     def __init__(self, up, lo):
@@ -110,16 +123,18 @@ class Rc489kSubCatEnt(ov.Struct):
             up,
             lo,
             f00_=ov.Be24,
-            f01_=ov.Be24,
-            f02_=ov.Be24,
+            f01_=ov.Be24,	# Probably base-low
+            f02_=ov.Be24,	# Probably base-high
             filename_=ov.Text(12),
             entry_tail_=Rc489kEntryTail,
         )
 
+    def ns_render(self):
+        return self.entry_tail.ns_render()
+
 class Rc489kSubCat(ov.OctetView):
     def __init__(self, this, parent_namespace):
         this.add_type("Rc489kSubCat")
-        print(this, self.__class__.__name__)
         super().__init__(this)
         nent = ov.Be24(self, 0x2fd).insert()
         ptr = 0
@@ -130,30 +145,34 @@ class Rc489kSubCat(ov.OctetView):
             y = Rc489kSubCatEnt(self, ptr).insert()
             fn = y.filename.txt.strip()
             if " "  in fn:
+                print("BOGOFN", y)
                 return
             if y.f00.val not in (0x0, 0xffffff):
                 self.dents.append(y)
             ptr = y.hi
             if (i % 15) == 14:
                 ptr += 3
-        for n, dent in enumerate(self.dents):
-            begin = dent.f00.val >> 12
-            if n + 1 == len(self.dents):
-                end = len(this) // 0x300
-            else:
-                end = self.dents[n+1].f00.val >> 12
-            # print(begin, end, len(this), dent)
+        if not self.dents:
+            print(this, "No Subdir Dents")
+            return
+        if (self.dents[-1].f00.val // 64) * 0x300 < len(this):
+            divisor = 64
+        else:
+            divisor = 4096
+        print(this, self.__class__.__name__, "divisor=%d" % divisor)
+        for dent self.dents:
+            begin = (dent.f00.val // divisor) * 0x300
+            end = begin + dent.entry_tail.nseg * 0x300
             that = None
-            if begin and end and end > begin:
-                try:
-                    that = this.create(
-                        start = begin * 0x300,
-                        stop = min(len(this), end * 0x300),
-                    )
-                except:
-                    pass
-            mns = Rc489kNameSpace(
-                name = dent.filename.txt.strip(),
+            fn = dent.filename.txt.rstrip()
+            if begin and begin < end <= len(this):
+                y = ov.Opaque(self, lo=begin, hi=end).insert()
+                y.rendered = "Data for " + fn
+                that = this.create(start = begin, stop = end)
+            else:
+                print(this, "SubCat cannot", hex(begin), hex(end), hex(len(this)), fn)
+            Rc489kNameSpace(
+                name = fn,
                 parent = parent_namespace,
                 priv = dent,
                 this = that,
@@ -205,10 +224,10 @@ class Rc489kSaveDirEnt(ov.Struct):
             f06_=ov.Array(4, ov.Be24),
             f07_=ov.Text(12),
             f08_=ov.Array(4, ov.Be24),
-
-            #f06_=ov.Array(3, ov.Be24),
-            #f07_=Rc489kEntryTail,
         )
+
+    def ns_render(self):
+        return self.entry_tail.ns_render()
 
 class Rc489kSaveDirExt(ov.Struct):
     def __init__(self, up, lo):
@@ -284,14 +303,14 @@ class Rc489kTodo():
         self.de = entry
         self.filename = self.de.filename.txt.strip()
         self.flag = self.de.f00[0].val >> 12
-        self.need = (self.de.entry_tail.nrec.val & 0xffff) * 0x300
+        self.need = self.de.entry_tail.nseg * 0x300
         self.got = 0
         self.pieces = []
 
     def happy(self):
         #print(self.de.filename.txt, "?", self.flag, self.need, self.got)
         if self.flag in (0x000, 0x800):
-             return True
+            return True
         return self.need == self.got
 
     def feed(self, item):
@@ -311,6 +330,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
         self.has300 = 300 in (len(x) for x in this.iter_rec())
         print(this, self.__class__.__name__)
         super().__init__(this)
+        self.start_of_data = None
 
         self.namespace = Rc489kNameSpace(
             name='',
@@ -328,7 +348,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
             for rec in this.iter_rec():
                 if rec.key < self.start_of_data.key:
                     continue
-                elif rec.key == self.start_of_data.key:
+                if rec.key == self.start_of_data.key:
                     y = ov.Opaque(self, lo = rec.lo, hi = rec.hi).insert()
                 elif len(rec) == 480:
                     self.do_recs()
@@ -339,7 +359,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
                     self.recs.append(y)
         else:
             self.do_index()
-            recs = [x for x in this.iter_rec()]
+            recs = list(this.iter_rec())
             while recs[0].key < self.start_of_data.key:
                 recs.pop(0)
             todo = []
@@ -353,17 +373,16 @@ class Rc489kSaveTapeFile(ov.OctetView):
                 rec = recs.pop(0)
                 y = ov.Opaque(self, lo=rec.lo, hi=rec.hi).insert()
                 y.rendered = "WorkPackageMarker"
- 
-                for n in range(3):
-                     rec = recs.pop(0)
-                     for x in range(0, len(rec), 0x300):
-                         adr = rec.lo + x
-                         for m in range(0x300 // 51):
-                             z = Rc489kSaveDirExt(self, adr).insert()
-                             adr = z.hi
-                             todo.append(Rc489kTodo(self, z))
-                #print("LL", this, len(todo))
-                
+
+                for _n in range(3):
+                    rec = recs.pop(0)
+                    for x in range(0, len(rec), 0x300):
+                        adr = rec.lo + x
+                        for _m in range(0x300 // 51):
+                            z = Rc489kSaveDirExt(self, adr).insert()
+                            adr = z.hi
+                            todo.append(Rc489kTodo(self, z))
+
         this.add_interpretation(self, self.namespace.ns_html_plain)
         self.add_interpretation(more=True)
 
@@ -379,7 +398,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
             priv = todo.de,
             this = that,
         )
-        if todo.de.entry_tail.tail3.val in (0xa000, ):
+        if todo.de.entry_tail.key == 10:
             Rc489kSubCat(that, tns)
 
     def iter_index(self):
@@ -392,7 +411,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
     def do_index(self):
         self.subhdr = None
         self.bishdr = None
-        for adr, rec in self.iter_index_blocks():
+        for adr, _rec in self.iter_index_blocks():
             if self.subhdr is None:
                 self.subhdr = Rc489kSaveSubHead(self, adr).insert()
             elif self.bishdr is None:
@@ -408,7 +427,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
             if len(rec) == 300:
                 self.start_of_data = rec
                 return
-            assert not (len(rec) % 0x300)
+            assert not len(rec) % 0x300
             for j in range(0, len(rec), 0x300):
                 yield rec.lo + j, rec
 
@@ -431,9 +450,8 @@ class Rc489kSaveTapeFile(ov.OctetView):
             priv = recs[0].dirent,
             this = that,
         )
-        if recs[0].dirent.entry_tail.tail3.val in (0xa000, ):
+        if recs[0].dirent.entry_tail.key == 10:
             Rc489kSubCat(that, tns)
-
 
 #################################################
 
@@ -459,7 +477,7 @@ class Rc489kDumpLabel(ov.Struct):
 
 
 class Rc489kDumpEntryRec(ov.Struct):
-    def __init__(self, up, lo, hi):
+    def __init__(self, up, lo):
         super().__init__(
             up,
             lo,
@@ -472,10 +490,12 @@ class Rc489kDumpEntryRec(ov.Struct):
             key_=DWord,
             bs_dev_spec_=ov.Text(12),
             entry_base_=DWord,
-            vertical=True,
             more=True,
         )
         self.done(25*6)
+
+    def ns_render(self):
+        return self.entry_tail.ns_render()
 
 class Rc489kDumpSegment(ov.Struct):
     def __init__(self, up, lo, hi):
@@ -492,7 +512,7 @@ class Rc489kDumpSegment(ov.Struct):
         self.done()
 
 class Rc489kDumpEnd(ov.Struct):
-    def __init__(self, up, lo, hi):
+    def __init__(self, up, lo):
         super().__init__(
             up,
             lo,
@@ -505,7 +525,7 @@ class Rc489kDumpEnd(ov.Struct):
         self.done(25*6)
 
 class Rc489kDumpContinue(ov.Struct):
-    def __init__(self, up, lo, hi):
+    def __init__(self, up, lo):
         super().__init__(
             up,
             lo,
@@ -518,6 +538,10 @@ class Rc489kDumpContinue(ov.Struct):
         self.done(25*6)
 
 class Rc489kDumpTapeFile(ov.OctetView):
+    '''
+       save13 writes "dump" in the second tape block.
+    '''
+
     def __init__(self, this):
         if this[:6] != b'dump  ':
             return
@@ -532,22 +556,21 @@ class Rc489kDumpTapeFile(ov.OctetView):
         )
 
         self.recs = []
-        hdr = None
         for rec in this.iter_rec():
             first_word = ov.Be24(self, rec.lo).val
             if rec.key[1] == 0:
                 y = Rc489kDumpLabel(self, rec.lo).insert()
             elif first_word == 1:
                 self.proc_recs()
-                y = Rc489kDumpEntryRec(self, rec.lo, rec.hi).insert()
+                y = Rc489kDumpEntryRec(self, rec.lo).insert()
                 self.recs.append(y)
             elif first_word == 2:
                 y = Rc489kDumpSegment(self, rec.lo, rec.hi).insert()
                 self.recs.append(y)
             elif first_word == 3:
-                y = Rc489kDumpEnd(self, rec.lo, rec.hi).insert()
+                y = Rc489kDumpEnd(self, rec.lo).insert()
             elif first_word == 4:
-                y = Rc489kDumpContinue(self, rec.lo, rec.hi).insert()
+                y = Rc489kDumpContinue(self, rec.lo).insert()
             else:
                 break
 
@@ -572,7 +595,7 @@ class Rc489kDumpTapeFile(ov.OctetView):
                 priv = recs[0],
                 this = that,
             )
-            if recs[0].entry_tail.tail3.val in (0xa000, ):
+            if recs[0].entry_tail.key == 10:
                 Rc489kSubCat(that, tns)
 
 #################################################
@@ -586,7 +609,7 @@ class Rc489kTape():
         self.this = this
         self.recs = []
         self.label = None
-    
+
         for rec in this.iter_rec():
             if rec.key == (0, 0):
                 if rec[:4] != b'VOL1':
@@ -594,9 +617,10 @@ class Rc489kTape():
                 print(this, self.__class__.__name__)
                 self.label = rec
                 continue
+            if not self.label:
+                return
             if rec.key[1] == 0:
                 self.proc_recs()
-                recs = []
             self.recs.append(rec)
         if not self.label:
             return
@@ -614,10 +638,9 @@ class Rc489kTape():
             )
             that.add_type("Rc489k_TapeFile")
         self.recs = []
-   
+
     def label_interpretation(self, file, _this):
         file.write("<H3>Label</H3>\n")
         file.write("<pre>\n")
         file.write(str(bytes(self.label)) + "\n")
         file.write("</pre>\n")
-
