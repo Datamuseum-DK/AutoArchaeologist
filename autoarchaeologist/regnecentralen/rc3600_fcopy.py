@@ -96,6 +96,9 @@ class Domus_FCOPY(disk.Disk):
             y.insert()
             print(y)
             stop = y.lo + (y.last_sect.val<<9) + y.last_bytes.val
+            print("XX", hex(y.lo + 512), hex(stop), hex(y.last_sect.val<<9), hex(y.last_bytes.val))
+            if stop <= y.lo + 512:
+                continue
             that = this.create(start=y.lo + 512, stop = stop)
             print("YY", y.name.txt)
             ns = NameSpace(

@@ -5,9 +5,11 @@
    ========================
 '''
 
-from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT
+from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT, LSECSIZE, NameSpace
 from .object import ObjSector, BadObject
 from ...base import bitview as bv
+
+UNREAD = memoryview(b'_UNREAD_' * (LSECSIZE // 8))
 
 class Extent(bv.Struct):
     ''' ... '''
@@ -94,8 +96,8 @@ class SegmentDesc(bv.Struct):
             tree,
             lo,
             vertical=False,
-            lib_=-10,
-            col4_=-24,
+            vpid_=-10,
+            segno_=-24,
             snapshot_=-31,
             other2a_=-8,
             col9_=-9,
@@ -105,7 +107,7 @@ class SegmentDesc(bv.Struct):
             bootno_=-10,
             col5b__=-10,	# 0x000
             col5d_=-32,
-            other5_=-22,
+            version_=-22,
             npg_=-31,
             other6__=-14,	# 0x2005
             multiplier_=-32,
@@ -115,7 +117,7 @@ class SegmentDesc(bv.Struct):
             mobj_=-32,
         )
         assert self.lo + 915 == self.hi
-        self.bad = False
+        self.namespace = None
 
         assert self.col5b_.val == 0
         assert self.other3a_.val == 0x200
@@ -130,45 +132,64 @@ class SegmentDesc(bv.Struct):
         if self.other3c.val:
             return
         npg = 0
-        lbas = []
+        extents = []
         if self.multiplier.val == 1:
             for extent in self.ary.array:
                 if extent.is_null():
-                    lbas.append(None)
+                    extents.append(None)
                 else:
-                    lbas.append(extent)
+                    extents.append(extent)
                     npg += 1
         elif self.multiplier.val == 0xa2:
             for extent in self.ary.array:
                 if extent.is_null():
-                    lbas += [None] * self.multiplier.val
+                    extents += [None] * self.multiplier.val
                 else:
                     indir = Indir1(ovtree, extent.lba.val).insert()
-                    lbas += list(indir.expand())
+                    extents += list(indir.expand())
         elif self.multiplier.val == 0xa2 * 0xa2:
             for extent2 in self.ary.array:
                 if extent2.is_null():
-                    lbas += [None] * self.multiplier.val
+                    extents += [None] * self.multiplier.val
                 else:
                     indir2 = Indir2(ovtree, extent2.lba.val).insert()
                     for extent1 in indir2.expand():
                         if extent1 is None:
-                            lbas += [None] * 0xa2
+                            extents += [None] * 0xa2
                         else:
                             indir1 = Indir1(ovtree, extent1.lba.val).insert()
-                            lbas += list(x for x in indir1.expand())
+                            extents += list(x for x in indir1.expand())
         else:
             raise BadIndir("Wrong multiplier")
 
-        if (len(lbas) - lbas.count(None)) != self.npg.val:
+        if (len(extents) - extents.count(None)) != self.npg.val:
             raise BadIndir("Wrong npg")
-        for lba in lbas:
-            if lba is not None:
-                ovtree.set_picture('D', lo=lba.lba.val << LSECSHIFT, legend="Data")
-
-    def render(self):
-        if not self.bad:
-            yield from super().render()
-        else:
-            for i in super().render():
-                yield i + " BAD"
+        bits = []
+        #print("O", self)
+        while extents and extents[-1] is None:
+            extents.pop(-1)
+        if not extents:
+            return
+        #if self.vpid.val not in (1004, 1005, 1009,):
+        #    return
+        #if self.col9.val not in (0x7c, 0x7d, 0x81,):
+        #    return
+        for extent in extents:
+            if extent is not None:
+                lo = extent.lba.val << LSECSHIFT
+                ovtree.set_picture('D', lo=lo, legend="Data")
+                bits.append(ovtree.this[lo:lo+LSECSIZE])
+            else:
+                bits.append(UNREAD)
+            #print("E", bits[-1])
+        that = ovtree.this.create(records=bits)
+        that.add_note('R1k_Segment')
+        that.add_note("tag_%02x" % self.col9.val)
+        that.add_note("vpid_%02x" % self.vpid.val)
+        name = "%03x:%06x:%x" % (self.vpid.val, self.segno.val, self.version.val)
+        self.namespace = NameSpace(
+            parent = ovtree.namespace,
+            name = name,
+            priv = self,
+            this = that,
+        )

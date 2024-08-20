@@ -7,8 +7,9 @@
 
 from ...generic import disk
 from ...base import octetview as ov
+from ...base import namespace as ns
 
-from .defs import LSECSHIFT
+from .defs import LSECSHIFT, NameSpace
 from .superblock import SuperBlock
 from .system import add_volume
 from .world import WorldIndex
@@ -33,6 +34,9 @@ class Volume(disk.Disk):
 
         self.sblk = SuperBlock(self, 2).insert()
         self.volnbr = self.sblk.volnbr.val
+        self.namespace = NameSpace(
+            name="",
+        )
 
         if True:
             if self.sblk.at1331.lba.val:
@@ -55,7 +59,6 @@ class Volume(disk.Disk):
         if False:
             self.completed()
             return
-
 
         if True:
             self.sblk.freelist.commit(self)
@@ -87,5 +90,6 @@ class Volume(disk.Disk):
         for i, j in self.gaps():
             ov.Hidden(self, lo=i, hi=j).insert()
 
+        self.this.add_interpretation(self, self.namespace.ns_html_plain)
         self.this.add_interpretation(self, self.disk_picture)
         self.add_interpretation(title="Disk View", more=True)

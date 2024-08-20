@@ -7,13 +7,33 @@ from ..base import namespace
 class NameSpace(namespace.NameSpace):
     ''' ... '''
 
+    TABLE = (
+        ("l", "type"),
+        ("r", "recs"),
+        ("r", "reclen"),
+        ("l", "f00"),
+        ("l", "f96"),
+        ("l", "f97"),
+        ("l", "f98"),
+        ("l", "f99"),
+        ("l", "pad"),
+        ("l", "name"),
+        ("l", "artifact"),
+    )
+
     def ns_render(self):
         hdr = self.ns_priv
+        if hdr is None:
+            return [ [] * (len(self.TABLE) - 2) ] + super().ns_render()
         return [
             hdr.type.txt,
-            hdr.name.txt,
             hdr.recs.val,
             hdr.reclen.val,
+            str(hdr.f00),
+            str(hdr.f96),
+            str(hdr.f97),
+            str(hdr.f98),
+            str(hdr.f99),
             str(hdr.pad),
         ] + super().ns_render()
 
@@ -25,12 +45,17 @@ class Header(ov.Struct):
             name_=ov.Text(8),
             recs_=ov.Be24,
             reclen_=ov.Octet,
-            pad_=27,
+            f00_=ov.Be16,
+            f96_=ov.Be24,
+            f97_=ov.Be32,
+            f98_=ov.Be16,
+            f99_=ov.Be16,
+            pad_=14,
             **kwargs,
         )
         self.insert()
 
-class MemberP(ov.OctetView):
+class MemberText(ov.OctetView):
     def __init__(self, this):
         print(this, "S34Library::MemberP")
 
@@ -40,7 +65,7 @@ class MemberP(ov.OctetView):
         while adr < len(this):
             ctl = ov.Octet(self, adr).insert()
             code = ctl.val
-            if code == 0:
+            if code in (0x00, 0x80):
                 break
             if code & 0x80:
                 y = ov.Text(code & 0x7f)(self, ctl.hi).insert()
@@ -50,9 +75,8 @@ class MemberP(ov.OctetView):
                 self.parts.append(" " * code)
                 adr += 1
 
-        tfn = self.this.add_utf8_interpretation("Text Member")
-        linelen = this.member_head.reclen.val
-        with open(tfn.filename, "w", encoding="utf-8") as file:
+        with self.this.add_utf8_interpretation("Text Member") as file:
+            linelen = this.member_head.reclen.val
             pos = 0
             for part in self.parts:
                 file.write(part)
@@ -65,43 +89,37 @@ class MemberP(ov.OctetView):
 class S34Library(ov.OctetView):
 
     def __init__(self, this):
-        if this[:9] not in (
-            bytes.fromhex("d6 c1 d3 c9 c7 d5 40 40 40"),
-            bytes.fromhex("d6 5b c8 c1 d5 c7 40 40 40"),
-            bytes.fromhex("d6 c4 d2 c5 e3 7c 40 40 40"),
-            bytes.fromhex("d6 e4 e3 f0 f0 c1 c1 40 40"),
-            bytes.fromhex("d6 c3 c1 e3 f0 40 40 40 40"),
-        ):
-            return
+        hdr = getattr(this, "ga21_9128", None)
+        if not hdr:
+            return;
+        if hdr.record_length.txt != "0008":
+            return;
         print(this, "S34Library")
 
         super().__init__(this)
 
-        self.namespace = namespace.NameSpace(name='', root=this, separator=".")
+        self.namespace = NameSpace(name='', root=this, separator=".")
 
         y = Header(self, 0)
         while True:
             if y.recs.val == 0 or y.type.txt == " " or y.recs.val > 1000:
                 break
             adr = y.hi + (y.recs.val << 7)
-            print(hex(adr), y)
+            #print(hex(adr), y)
             if adr >= len(self.this):
                 break
-            that = self.this.create(
-                 start = y.hi,
-                 stop = adr,
-            )
-            that.add_note(y.name.txt)
+            that = ov.This(self, lo=y.hi, hi=adr).insert().that
+            if b'_UNREAD__UNREAD_' in that.tobytes():
+                that.add_note("BADSECT")
             that.add_note("MEMBER_" + y.type.txt)
             that.member_head = y
             NameSpace(y.name.txt, self.namespace, this=that, priv=y)
             if y.type.txt == "P":
-                MemberP(that)
+                MemberText(that)
             elif y.type.txt == "S":
-                MemberP(that)
+                MemberText(that)
 
             y = Header(self, adr)
 
         this.add_interpretation(self, self.namespace.ns_html_plain)
-        self.this.add_interpretation(self, this.html_interpretation_children)
-        self.add_interpretation()
+        self.add_interpretation(more=True)

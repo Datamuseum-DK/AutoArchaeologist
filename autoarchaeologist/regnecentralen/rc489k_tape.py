@@ -160,7 +160,7 @@ class Rc489kSubCat(ov.OctetView):
         else:
             divisor = 4096
         print(this, self.__class__.__name__, "divisor=%d" % divisor)
-        for dent self.dents:
+        for dent in self.dents:
             begin = (dent.f00.val // divisor) * 0x300
             end = begin + dent.entry_tail.nseg * 0x300
             that = None

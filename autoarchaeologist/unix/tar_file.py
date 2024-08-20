@@ -58,12 +58,16 @@ class TarEntry():
             self.target = that.type_case.decode(self.target)
         hdrchild = that.create(start=offset, stop=offset + 512)
         hdrchild.by_class[TarFile] = that
-        if self.link == 0 and self.size:
-            self.this = that.create(start=offset + 512, stop=offset + 512 + self.size)
-            # self.this.set_name(self.filename)
-            self.namespace.ns_set_this(self.this)
-        else:
+        if self.link > 0:
             self.this = None
+        elif self.size == 0:
+            self.this = None
+        elif offset + 512 + self.size >= len(that):
+            self.this = None
+        else:
+            self.this = that.create(start=offset + 512, stop=offset + 512 + self.size)
+            self.namespace.ns_set_this(self.this)
+            # self.this.set_name(self.filename)
         if self.link:
             self.size = 0
         self.next = offset + 512 * (1 + (self.size + 511) // 512)

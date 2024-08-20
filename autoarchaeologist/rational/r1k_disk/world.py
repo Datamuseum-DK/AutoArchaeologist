@@ -3,6 +3,28 @@
 '''
    Worlds and trees thereof
    ========================
+
+FE_HANDBOOK.PDf 187p
+
+Note: [...] The D2 mapping is:
+
+	ADA		1001
+	DDB		1002
+	FILE		1003
+	USER		1004
+	GROUP		1005
+	SESSION		1006
+	TAPE		1007
+	TERMINAL	1008
+	DIRECTORY	1009
+	CONFIGURATION	1010
+	CODE_SEGMENT	1011
+	LINK		1012
+	NULL_DEVICE	1013
+	PIPE		1014
+	ARCHIVED_CODE	1015
+	PROGRAM_LIBRARY	1016
+
 '''
 
 from ...base import bitview as bv

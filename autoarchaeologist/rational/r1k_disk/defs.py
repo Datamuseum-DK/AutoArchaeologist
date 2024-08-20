@@ -22,6 +22,7 @@
 '''
 
 from ...base import bitview as bv
+from ...base import namespace as ns
 
 ELIDE_FREELIST = True
 ELIDE_BADLIST = True
@@ -104,3 +105,43 @@ class AdaArray(bv.Struct):
 
     def render(self):
         yield "0x%x*0x%x" % ((self.a2.val - 0x40) // self.a4.val, self.a4.val)
+
+class NameSpace(ns.NameSpace):
+    ''' ... '''
+
+    TABLE = (
+        ("r", "vp_id"),
+        ("r", "segno"),
+        ("r", "snapshot"),
+        ("r", "other2a"),
+        ("r", "col9"),
+        ("r", "vol"),
+        ("r", "other3c"),
+        ("r", "bootno"),
+        ("r", "col5d"),
+        ("r", "version"),
+        ("r", "npg"),
+        ("r", "mgr"),
+        ("r", "mobj"),
+        ("r", "name"),
+        ("r", "artifact"),
+    )
+
+    def ns_render(self):
+        seg = self.ns_priv
+        return [
+            str(seg.vpid.val),
+            hex(seg.segno.val),
+            hex(seg.snapshot.val),
+            hex(seg.other2a.val),
+            hex(seg.col9.val),
+            hex(seg.vol.val),
+            hex(seg.other3c.val),
+            hex(seg.bootno.val),
+            hex(seg.col5d.val),
+            hex(seg.version.val),
+            hex(seg.npg.val),
+            hex(seg.mgr.val),
+            hex(seg.mobj.val),
+        ] + super().ns_render()
+
