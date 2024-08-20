@@ -103,7 +103,7 @@ class Opaque(Octets):
         if self.that:
             yield self.that
         elif self.rendered is None:
-            yield "Opaque[0x%x]" % (self.hi - self.lo)
+            yield self.__class__.__name__ + "[0x%x]" % (self.hi - self.lo)
         else:
             yield self.rendered
 
