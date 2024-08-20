@@ -10,6 +10,61 @@ from ..generic import hexdump
 from ..base import octetview as ov
 from ..base import namespace
 
+class Rc489kNameSpace(namespace.NameSpace):
+    ''' ... '''
+
+    TABLE = (
+        ( "r", "dump_type"),
+        ( "r", "entry_no"),
+        ( "r", "num_segs"),
+        ( "l", "volume"),
+        ( "r", "tail0"),
+        ( "r", "tail1"),
+        ( "r", "tail2"),
+        ( "r", "tail3"),
+        ( "r", "tail4"),
+        ( "r", "key"),
+        ( "r", "bs_dev"),
+        ( "r", "entry_base"),
+        ( "l", "name"),
+        ( "l", "artifact"),
+    )
+
+    def ns_render(self):
+        meta = self.ns_priv
+        if isinstance(meta, Rc489kSubCatEnt):
+            return [
+                "",
+                "",
+                meta.entry_tail.nrec.val,
+                meta.entry_tail.volume.txt,
+                str(meta.entry_tail.tail0),
+                str(meta.entry_tail.tail1),
+                hex(meta.entry_tail.tail2.val),
+                hex(meta.entry_tail.tail3.val),
+                hex(meta.entry_tail.tail4.val),
+                "",
+                "",
+                "",
+            ] + super().ns_render()
+        if isinstance(meta, Rc489kDumpEntryRec):
+            return [
+                hex(meta.dump_type.val),
+                hex(meta.entry_no.val),
+                meta.num_segs.val,
+                meta.entry_tail.volume.txt,
+                str(meta.entry_tail.tail0),
+                str(meta.entry_tail.tail1),
+                hex(meta.entry_tail.tail2.val),
+                hex(meta.entry_tail.tail3.val),
+                hex(meta.entry_tail.tail4.val),
+                str(meta.key),
+                meta.bs_dev_spec.txt.strip(),
+                str(meta.entry_base),
+            ] + super().ns_render()
+        return ["-"] * (len(self.TABLE)-2) + super().ns_render()
+
+
 class DWord(ov.Struct):
     def __init__(self, up, lo):
         super().__init__(
@@ -94,7 +149,7 @@ class Rc489kSubCat(ov.OctetView):
                     )
                 except:
                     pass
-            mns = DumpNameSpace(
+            mns = Rc489kNameSpace(
                 name = dent.filename.txt.strip(),
                 parent = parent_namespace,
                 priv = dent,
@@ -109,21 +164,30 @@ class Rc489kSaveHead(ov.Struct):
         super().__init__(
             up,
             lo,
-            f00_=ov.Text(9),
-            f01_=ov.Text(12),
-            f02_=ov.Text(6),
-            f03_=ov.Text(6),
-            f04_=ov.Text(15),
-            f05a_=ov.Text(9),
-            f05b_=ov.Text(15),
-            f06_=ov.Text(9),
-            f07_=ov.Be24,
+            tsave_=ov.Text(9),
+            ttapename_=ov.Text(12),
+            tfileno_=ov.Text(6),
+            tvers_=ov.Text(6),
+            tdate_=ov.Text(15),
+            tseg_=ov.Text(9),
+            tlbl_=ov.Text(15),
+            f07_=ov.Text(9),
             f08_=ov.Be24,
             f09_=ov.Be24,
-            f10_=ov.Be24,
+            segm_=ov.Be24,
             f11_=ov.Be24,
-            f12_=ov.Text(9),
-            f13_=ov.Array(15, ov.Be24),
+            f12_=ov.Be24,
+            f13_=ov.Text(9),
+            f14_=ov.Be24,
+            f15_=ov.Be24,
+            f16_=ov.Be24,
+            f17_=ov.Be24,
+            f18_=ov.Be24,
+            f19_=ov.Be24,
+            f20_=ov.Be24,
+            f21_=ov.Be24,
+            f22_=ov.Be24,
+            f99_=ov.Array(6, ov.Be24),
             vertical=True,
         )
 
@@ -143,8 +207,18 @@ class Rc489kSaveDirEnt(ov.Struct):
             #f07_=Rc489kEntryTail,
         )
 
+class Rc489kSaveDirExt(ov.Struct):
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            f00_=ov.Array(3, ov.Be24),
+            filename_=ov.Text(12),
+            f04_=Rc489kEntryTail,
+        )
+
 class Rc489kSaveSubHead(ov.Struct):
-    def __init__(self, up, lo, hi):
+    def __init__(self, up, lo):
         super().__init__(
             up,
             lo,
@@ -154,9 +228,9 @@ class Rc489kSaveSubHead(ov.Struct):
             vertical=True,
             more=True,
         )
-        self.addfield("vols", ov.Array(self.nvol.val, ov.Text(12)))
+        self.addfield("vols", ov.Array(self.nvol.val, ov.Text(12), vertical=True))
         self.addfield("lbl", ov.Text(12))
-        self.done()
+        self.done(0x300)
 
 class Rc489kSaveDirSect(ov.Struct):
     def __init__(self, up, lo):
@@ -164,7 +238,7 @@ class Rc489kSaveDirSect(ov.Struct):
             up,
             lo,
             dirent_=ov.Array(0x300//87, Rc489kSaveDirEnt, vertical=True),
-            pad_=(0x300 % 87),
+            pad__=(0x300 % 87),
             vertical=True,
         )
 
@@ -184,48 +258,155 @@ class Rc489kSaveEntry(ov.Struct):
         )
         self.done(hi - lo)
 
+class Rc489kDummy(ov.Struct):
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            f00_=ov.Text(64),
+            more=True,
+        )
+        self.done(0x300)
+
+class Rc489kEndOfDirectory(ov.Opaque):
+    ''' ... '''
+
+class Rc489kDataBlock(ov.Opaque):
+    ''' ... '''
+
+class Rc489kTodo():
+
+    def __init__(self, up, entry):
+        self.up = up
+        self.de = entry
+        self.filename = self.de.filename.txt.strip()
+        self.flag = self.de.f00[0].val >> 12
+        self.need = (self.de.f04.nrec.val & 0xffff) * 0x300
+        self.got = 0
+        self.pieces = []
+
+    def happy(self):
+        #print(self.de.filename.txt, "?", self.flag, self.need, self.got)
+        if self.flag in (0x000, 0x800):
+             return True
+        return self.need == self.got
+
+    def feed(self, item):
+        y = ov.Opaque(self.up, lo=item.lo, hi=item.hi).insert()
+        y.rendered = "Data for " + self.de.filename.txt
+        #print(self.de.filename.txt, "+", self.flag, self.need, self.got, hex(len(item)))
+        # assert len(item) in (0x900, self.need - self.got)
+        self.got += len(item)
+        self.pieces.append(item)
+
 class Rc489kSaveTapeFile(ov.OctetView):
     def __init__(self, this):
         if this[:9] != b'save     ':
             return
         this.add_type("Rc489k_Save")
-        print(this, self.__class__.__name__)
+        self.has480 = 480 in (len(x) for x in this.iter_rec())
+        self.has300 = 300 in (len(x) for x in this.iter_rec())
+        print(this, self.__class__.__name__, self.has480, self.has300)
         super().__init__(this)
 
-        self.namespace = DumpNameSpace(
+        self.namespace = Rc489kNameSpace(
             name='',
             separator='',
             root=this,
         )
 
-        for rec in this.iter_rec():
-            if rec.key[1] == 0:
-                self.hdr = Rc489kSaveHead(self, 0).insert()
-            elif rec.key[1] == 1 and len(rec) > 0x600:
-                self.subhdr = Rc489kSaveSubHead(self, rec.lo, rec.hi).insert()
-        adr = 0x696
-        while True:
-            y = Rc489kSaveDirSect(self, adr).insert()
-            #print("XX", this, hex(adr), y.terminated(), y)
-            if y.terminated():
-                #ov.Opaque(self, y.hi + 0x2000, len(this)).insert()
-                break
-            adr = y.hi
-
-        self.recs = []
-        for rec in this.iter_rec():
-            if rec.key[1] < 4:
-                continue
-            if len(rec) > 480:
-                y = ov.Opaque(self, lo = rec.lo, hi = rec.hi).insert()
-                self.recs.append(y)
-            elif len(rec) == 480:
-                self.do_recs()
-                y = Rc489kSaveEntry(self, rec.lo, rec.hi).insert()
-                self.recs.append(y)
+        self.hdr = Rc489kSaveHead(self, 0).insert()
+        self.index = []
+        if self.hdr.tvers.txt == "empty ":
+            ov.Opaque(self, lo=self.hdr.hi, hi=len(this)).insert()
+        elif self.has480:
+            self.do_index()
+            self.recs = []
+            for rec in this.iter_rec():
+                if rec.key < self.start_of_data.key:
+                    continue
+                elif rec.key == self.start_of_data.key:
+                    y = ov.Opaque(self, lo = rec.lo, hi = rec.hi).insert()
+                elif len(rec) == 480:
+                    self.do_recs()
+                    y = Rc489kSaveEntry(self, rec.lo, rec.hi).insert()
+                    self.recs.append(y)
+                elif self.recs and len(rec) > 480:
+                    y = Rc489kDataBlock(self, lo = rec.lo, hi = rec.hi).insert()
+                    self.recs.append(y)
+        else:
+            self.do_index()
+            recs = [x for x in this.iter_rec()]
+            print("SOD", self.start_of_data)
+            while recs[0].key < self.start_of_data.key:
+                recs.pop(0)
+            todo = []
+            while recs:
+                if len(recs[0]) != 300:
+                    while todo[0].happy():
+                        self.finish_todo(todo.pop(0))
+                    todo[0].feed(recs.pop(0))
+                    continue
+                todo = []
+                rec = recs.pop(0)
+                y = ov.Opaque(self, lo=rec.lo, hi=rec.hi).insert()
+                y.rendered = "WorkPackageMarker"
+ 
+                for n in range(3):
+                     rec = recs.pop(0)
+                     for x in range(0, len(rec), 0x300):
+                         adr = rec.lo + x
+                         for m in range(0x300 // 51):
+                             z = Rc489kSaveDirExt(self, adr).insert()
+                             adr = z.hi
+                             todo.append(Rc489kTodo(self, z))
+                #print("LL", this, len(todo))
                 
         this.add_interpretation(self, self.namespace.ns_html_plain)
         self.add_interpretation(more=True)
+
+    def finish_todo(self, todo):
+        if len(todo.pieces) == 0:
+            return
+        first = todo.pieces[0].lo
+        last = todo.pieces[0].hi
+        that = self.this.create(start=first, stop=last, records=todo.pieces)
+        Rc489kNameSpace(
+            name = todo.filename,
+            parent = self.namespace,
+            priv = todo.de,
+            this = that,
+        )
+
+    def iter_index(self):
+        for rec in self.index:
+            for dirent in rec.dirent:
+                if dirent.f00[2].val == 0:
+                    return
+                yield dirent
+
+    def do_index(self):
+        self.subhdr = None
+        self.bishdr = None
+        for adr, rec in self.iter_index_blocks():
+            if self.subhdr is None:
+                self.subhdr = Rc489kSaveSubHead(self, adr).insert()
+            elif self.bishdr is None:
+                self.bishdr = ov.Opaque(self, adr, 0x300).insert()
+            else:
+                y = Rc489kSaveDirSect(self, adr).insert()
+                self.index.append(y)
+
+    def iter_index_blocks(self):
+        for rec in self.this.iter_rec():
+            if rec.key[1] == 0:
+                continue
+            if len(rec) == 300:
+                self.start_of_data = rec
+                return
+            assert not (len(rec) % 0x300)
+            for j in range(0, len(rec), 0x300):
+                yield rec.lo + j, rec
 
     def do_recs(self):
         recs = self.recs
@@ -240,7 +421,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
         that = self.this.create(
                 records = [x.octets() for x in recs[1:]]
         )
-        DumpNameSpace(
+        Rc489kNameSpace(
             name = fname,
             parent = self.namespace,
             priv = recs[0].dirent,
@@ -249,60 +430,6 @@ class Rc489kSaveTapeFile(ov.OctetView):
 
 
 #################################################
-
-class DumpNameSpace(namespace.NameSpace):
-    ''' ... '''
-
-    TABLE = (
-        ( "r", "dump_type"),
-        ( "r", "entry_no"),
-        ( "r", "num_segs"),
-        ( "l", "volume"),
-        ( "r", "tail0"),
-        ( "r", "tail1"),
-        ( "r", "tail2"),
-        ( "r", "tail3"),
-        ( "r", "tail4"),
-        ( "r", "key"),
-        ( "r", "bs_dev"),
-        ( "r", "entry_base"),
-        ( "l", "name"),
-        ( "l", "artifact"),
-    )
-
-    def ns_render(self):
-        meta = self.ns_priv
-        if isinstance(meta, Rc489kSubCatEnt):
-            return [
-                "",
-                "",
-                meta.entry_tail.nrec.val,
-                meta.entry_tail.volume.txt,
-                str(meta.entry_tail.tail0),
-                str(meta.entry_tail.tail1),
-                hex(meta.entry_tail.tail2.val),
-                hex(meta.entry_tail.tail3.val),
-                hex(meta.entry_tail.tail4.val),
-                "",
-                "",
-                "",
-            ] + super().ns_render()
-        if isinstance(meta, Rc489kDumpEntryRec):
-            return [
-                hex(meta.dump_type.val),
-                hex(meta.entry_no.val),
-                meta.num_segs.val,
-                meta.entry_tail.volume.txt,
-                str(meta.entry_tail.tail0),
-                str(meta.entry_tail.tail1),
-                hex(meta.entry_tail.tail2.val),
-                hex(meta.entry_tail.tail3.val),
-                hex(meta.entry_tail.tail4.val),
-                str(meta.key),
-                meta.bs_dev_spec.txt.strip(),
-                str(meta.entry_base),
-            ] + super().ns_render()
-        return ["-"] * (len(self.TABLE)-2) + super().ns_render()
 
 class Rc489kDumpLabel(ov.Struct):
     def __init__(self, up, lo):
@@ -319,7 +446,7 @@ class Rc489kDumpLabel(ov.Struct):
             dumplabel_=ov.Text(2*6),
             inorblank_=ov.Text(1*6),
             bsfilename_=ov.Text(2*6),
-            vertical=True,
+            #vertical=True,
             more=True,
         )
         self.done(25*6)
@@ -392,7 +519,7 @@ class Rc489kDumpTapeFile(ov.OctetView):
         print(this, self.__class__.__name__)
         super().__init__(this)
 
-        self.namespace = DumpNameSpace(
+        self.namespace = Rc489kNameSpace(
             name='',
             separator='',
             root=this,
@@ -419,7 +546,7 @@ class Rc489kDumpTapeFile(ov.OctetView):
                 break
 
         self.proc_recs()
-        this.add_interpretation(self, self.namespace.ns_html_plain)
+        #this.add_interpretation(self, self.namespace.ns_html_plain)
         self.add_interpretation(more=True)
 
     def proc_recs(self):
@@ -433,14 +560,14 @@ class Rc489kDumpTapeFile(ov.OctetView):
                 records = [x.payload_.octets() for x in recs[1:]]
             )
             that.add_name(fname)
-            tns = DumpNameSpace(
+            tns = Rc489kNameSpace(
                 name = fname,
                 parent = self.namespace,
                 priv = recs[0],
                 this = that,
             )
-            if recs[0].entry_tail.tail3.val == 0xa000:
-                Rc489kSubCat(that, tns)
+            #if recs[0].entry_tail.tail3.val in (0xa000, ):
+            #    Rc489kSubCat(that, tns)
 
 #################################################
 
