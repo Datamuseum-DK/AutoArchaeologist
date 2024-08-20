@@ -300,10 +300,13 @@ class Excavation(result_page.ResultPage):
 
         fo.write("<H2>Top level artifacts</H2>")
         fo.write("<table>\n")
-        for this in self.children:
-            fo.write("<tr>\n")
-            fo.write('<td valign="top">' + self.html_link_to(this) + '</td>\n')
-            fo.write('<td valign="top">' + this.html_description() + "</td>\n")
+        for n, this in enumerate(self.children):
+            if n & 1:
+                fo.write('<tr class="stripe">\n')
+            else:
+                fo.write('<tr>\n')
+            fo.write('<td>' + self.html_link_to(this) + '</td>\n')
+            fo.write('<td>' + this.html_description() + "</td>\n")
             fo.write("</tr>\n")
             fo.write("<tr>\n")
             fo.write("<td></td>")
