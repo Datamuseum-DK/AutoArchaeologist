@@ -231,7 +231,7 @@ class FromBitStore():
         lines = metalist.split("\n")
         while lines:
             line1 = lines.pop(0)
-            if line1[:10] != '|[[Bits:30':
+            if line1[:10] not in ('|[[Bits:30', '|([[Bits:3'):
                 continue
             line2 = lines.pop(0)
             line2 = line2[2:].split()[0]
