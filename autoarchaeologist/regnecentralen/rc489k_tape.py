@@ -128,6 +128,9 @@ class Rc489kSubCat(ov.OctetView):
             if ptr >= len(this):
                 break
             y = Rc489kSubCatEnt(self, ptr).insert()
+            fn = y.filename.txt.strip()
+            if " "  in fn:
+                return
             if y.f00.val not in (0x0, 0xffffff):
                 self.dents.append(y)
             ptr = y.hi
@@ -306,7 +309,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
         this.add_type("Rc489k_Save")
         self.has480 = 480 in (len(x) for x in this.iter_rec())
         self.has300 = 300 in (len(x) for x in this.iter_rec())
-        print(this, self.__class__.__name__, self.has480, self.has300)
+        print(this, self.__class__.__name__)
         super().__init__(this)
 
         self.namespace = Rc489kNameSpace(
@@ -422,12 +425,14 @@ class Rc489kSaveTapeFile(ov.OctetView):
         that = self.this.create(
                 records = [x.octets() for x in recs[1:]]
         )
-        Rc489kNameSpace(
+        tns = Rc489kNameSpace(
             name = fname,
             parent = self.namespace,
             priv = recs[0].dirent,
             this = that,
         )
+        if recs[0].dirent.entry_tail.tail3.val in (0xa000, ):
+            Rc489kSubCat(that, tns)
 
 
 #################################################
@@ -547,7 +552,7 @@ class Rc489kDumpTapeFile(ov.OctetView):
                 break
 
         self.proc_recs()
-        #this.add_interpretation(self, self.namespace.ns_html_plain)
+        this.add_interpretation(self, self.namespace.ns_html_plain)
         self.add_interpretation(more=True)
 
     def proc_recs(self):
@@ -593,6 +598,8 @@ class Rc489kTape():
                 self.proc_recs()
                 recs = []
             self.recs.append(rec)
+        if not self.label:
+            return
         self.proc_recs()
         if self.label:
             this.add_interpretation(self, self.label_interpretation)
