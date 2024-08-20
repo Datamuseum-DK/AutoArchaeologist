@@ -198,7 +198,7 @@ class Rc489kSaveDirEnt(ov.Struct):
             lo,
             f00_=ov.Array(3, ov.Be24),
             filename_=ov.Text(12),
-            f04_=Rc489kEntryTail,
+            entry_tail_=Rc489kEntryTail,
             f06_=ov.Array(4, ov.Be24),
             f07_=ov.Text(12),
             f08_=ov.Array(4, ov.Be24),
@@ -214,7 +214,7 @@ class Rc489kSaveDirExt(ov.Struct):
             lo,
             f00_=ov.Array(3, ov.Be24),
             filename_=ov.Text(12),
-            f04_=Rc489kEntryTail,
+            entry_tail_=Rc489kEntryTail,
         )
 
 class Rc489kSaveSubHead(ov.Struct):
@@ -281,7 +281,7 @@ class Rc489kTodo():
         self.de = entry
         self.filename = self.de.filename.txt.strip()
         self.flag = self.de.f00[0].val >> 12
-        self.need = (self.de.f04.nrec.val & 0xffff) * 0x300
+        self.need = (self.de.entry_tail.nrec.val & 0xffff) * 0x300
         self.got = 0
         self.pieces = []
 
@@ -337,7 +337,6 @@ class Rc489kSaveTapeFile(ov.OctetView):
         else:
             self.do_index()
             recs = [x for x in this.iter_rec()]
-            print("SOD", self.start_of_data)
             while recs[0].key < self.start_of_data.key:
                 recs.pop(0)
             todo = []
@@ -371,12 +370,14 @@ class Rc489kSaveTapeFile(ov.OctetView):
         first = todo.pieces[0].lo
         last = todo.pieces[0].hi
         that = self.this.create(start=first, stop=last, records=todo.pieces)
-        Rc489kNameSpace(
+        tns = Rc489kNameSpace(
             name = todo.filename,
             parent = self.namespace,
             priv = todo.de,
             this = that,
         )
+        if todo.de.entry_tail.tail3.val in (0xa000, ):
+            Rc489kSubCat(that, tns)
 
     def iter_index(self):
         for rec in self.index:
@@ -566,8 +567,8 @@ class Rc489kDumpTapeFile(ov.OctetView):
                 priv = recs[0],
                 this = that,
             )
-            #if recs[0].entry_tail.tail3.val in (0xa000, ):
-            #    Rc489kSubCat(that, tns)
+            if recs[0].entry_tail.tail3.val in (0xa000, ):
+                Rc489kSubCat(that, tns)
 
 #################################################
 
