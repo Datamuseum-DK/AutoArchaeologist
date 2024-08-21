@@ -169,7 +169,7 @@ class DS2089Cpm(DS2089):
     ''' With CP/M control chars '''
     def __init__(self):
         super().__init__()
-        self.set_slug(0x00, ' ', '«nul»')
+        self.set_slug(0x00, ' ', '«nul»', self.IGNORE)
         self.set_slug(0x0d, ' ', '')
         self.set_slug(0x1a, ' ', '«eof»', self.EOF)
 

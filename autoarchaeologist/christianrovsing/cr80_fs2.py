@@ -493,7 +493,7 @@ class CR80Amos_Ascii(type_case.Ascii):
 
     def __init__(self):
         super().__init__()
-        self.set_slug(0x00, ' ', '«nul»')
+        self.set_slug(0x00, ' ', '«nul»', self.IGNORE)
         self.set_slug(0x01, ' ', '«soh»')
         self.set_slug(0x02, ' ', '«stx»')
         self.set_slug(0x03, ' ', '«etx»')
