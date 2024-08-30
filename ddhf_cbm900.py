@@ -4,6 +4,7 @@ Commodore CBM-900 Artifacts from Datamuseum.dk's BitStore
 '''
 
 from autoarchaeologist import ddhf
+from autoarchaeologist.base import type_case
 
 from autoarchaeologist.unix import cbm900_partition
 from autoarchaeologist.unix import v7_filesystem
@@ -21,6 +22,8 @@ class CBM900(ddhf.DDHF_Excavation):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.type_case = type_case.WellKnown("iso8859-1")
 
         self.add_examiner(cbm900_partition.CBM900_Partition)
         self.add_examiner(v7_filesystem.V7_Filesystem)
