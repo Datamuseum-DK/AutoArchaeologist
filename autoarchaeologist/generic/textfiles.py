@@ -4,48 +4,73 @@
    Generic Text files, based on type_case
 '''
 
-PATTERNS = {
-    b'+++ Low_Level_Action Started':	'R1000 Log file',
-}
-
-class TextFiles():
-
-    def __init__(self, this):
-        if not this.has_note("ASCII"):
-            return
-        for k, v in PATTERNS.items():
-            if k in this.tobytes():
-                this.add_note(v)
-
-        if this[:2] == b'%!':
-            this.add_note("PostScript")
-
 class TextFile():
     ''' General Text-File-Excavator '''
 
-    VERBOSE = False
+    # print() why artifacts get rejected
+    VERBOSE = True
 
+    # No longer than this
+    MAX_LENGTH = 4 << 20
+
+    # Max octets after EOF
     MAX_TAIL = 2048
 
+    # Always Use this TypeCase
     TYPE_CASE = None
 
+    # How many different INVALID octets are acceptable
+    INVALID_TOLERANCE = 5
+
+    # How many INVALID octets are acceptable
+    INVALID_COUNT = 100
+    INVALID_RATIO = .05
+
+    # How many lines must there be (= '\n' in output)
+    MIN_LINES = 1
+
     def __init__(self, this):
-        self.this = this
-        self.txt = []
+        if len(this) > self.MAX_LENGTH:
+            return
+
         if self.TYPE_CASE:
             type_case = self.TYPE_CASE
         else:
             type_case = this.type_case
-        for j in this.iter_bytes():
+
+        go_quietly_at = self.INVALID_TOLERANCE
+        if self.VERBOSE:
+            # Allow a few more to report what we failed on
+            go_quietly_at += 10
+
+        self.tolerance = []
+        self.this = this
+        self.eof_pos = None
+        self.txt = []
+        self.histogram = [0] * 256
+        self.counts = {
+            "IGNORE": 0,
+            "INVALID": 0,
+            "GOOD": 0,
+        }
+        for n, j in enumerate(this.iter_bytes()):
+            self.histogram[j] += 1
             slug = type_case.slugs[j]
-            if slug.flags & type_case.INVALID:
-                if self.VERBOSE:
-                    print(this, "TextFile fails on", hex(j))
-                return
             if slug.flags & type_case.IGNORE:
-                continue
-            self.txt.append(slug.long)
+                self.counts["IGNORE"] += 1
+            elif slug.flags & type_case.INVALID:
+                self.counts["INVALID"] += 1
+                mark = "▶%02x◀" % j
+                self.tolerance.append(mark)
+                if len(self.tolerance) <= self.INVALID_COUNT:
+                    self.txt.append(mark)
+                elif len(self.tolerance) > go_quietly_at:
+                    return
+            else:
+                self.counts["GOOD"] += 1
+                self.txt.append(slug.long)
             if slug.flags & type_case.EOF:
+                self.eof_pos = n
                 break
         if not self.credible():
             return
@@ -56,13 +81,78 @@ class TextFile():
 
     def credible(self):
         ''' Determine if result warrants a new artifact '''
-        if self.MAX_TAIL is not None and len(self.this) - len(self.txt) > self.MAX_TAIL:
-            if self.VERBOSE:
-                print(self.this, "TextFile: too long tail", len(self.this) - len(self.txt))
+        if not self.credible_tolerance():
             return False
-        if '\n' not in self.txt:
+        if not self.credible_min_lines():
+            return False
+        if not self.credible_max_tail():
+            return False
+        if not self.credible_report_tolerated():
+            return False
+        return True
+
+    def credible_tolerance(self):
+        ''' Check INVALID slug tolerance '''
+        if len(self.tolerance) > self.INVALID_RATIO * len(self.txt):
+            return False
+        if len(self.tolerance) > self.INVALID_COUNT:
             if self.VERBOSE:
-                print(self.this, "TextFile: no NL")
+                print(
+                    self.this,
+                    self.__class__.__name__,
+                    "Fails on",
+                    " ".join(self.tolerance[:self.INVALID_COUNT]),
+                    len(self.txt),
+            )
+            return False
+        return True
+
+    def credible_report_tolerated(self):
+        ''' In verbose mode report what we tolerated '''
+        if self.VERBOSE and self.tolerance:
+            k = []
+            for i in sorted(set(self.tolerance)):
+                j = self.tolerance.count(i)
+                if j == 1:
+                    k.append(i)
+                else:
+                    k.append(i + "*%d" % j)
+            print(
+                self.this,
+                self.__class__.__name__,
+                "Tolerated",
+                " ".join(k),
+            )
+        return True
+
+    def credible_max_tail(self):
+        ''' Check amount of file behind EOF '''
+        if self.MAX_TAIL is None or self.eof_pos is None:
+            return True
+        if len(self.this) - self.eof_pos > self.MAX_TAIL:
+            if self.VERBOSE:
+                print(
+                    self.this,
+                    self.__class__.__name__,
+                    "Too much after EOF:",
+                    len(self.this) - len(self.txt)
+                )
+            return False
+        return True
+
+    def credible_min_lines(self):
+        ''' Check number of lines in output '''
+        if self.MIN_LINES is None:
+            return True
+        lines = self.txt.count('\n')
+        if lines < self.MIN_LINES:
+            if self.VERBOSE and lines > 0:
+                print(
+                    self.this,
+                    self.__class__.__name__,
+                    "Too few lines:",
+                    lines,
+                )
             return False
         return True
 
