@@ -249,10 +249,18 @@ class MikadosDisk(ov.OctetView):
         if magic.txt.lower() != "pladelager":
             return
 
-        if not this.num_rec():
-            self.mult = 32
-        else:
+        # We need to know the number of 256 byte sectors per "spor".
+        # The geometry of the drive is available only in the memory table
+        # described in [30005441] section 5.3.1 and not recorded on the media.
+        # [30007261] page 8.1 contains a (partial?) list of formats.
+        # We trust the imposed geometry if there is one, fall back to a lookup
+        # or 32 if all else fails.
+        if this.num_rec():
             self.mult = len(set(x.key[-1] for x in this.iter_rec()))
+        else:
+            self.mult = {
+                77 * 2 * 26 * 256: 26,	# B - 8" 1Mb DDE format
+            }.get(len(this), 32)
 
         y = DiskLabel(self, 0x0).insert()
 
