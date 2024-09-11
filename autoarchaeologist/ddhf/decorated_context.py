@@ -6,10 +6,13 @@
 
 '''
 
+import sys
 import os
 
 from ..base import excavation
+from ..container import simh_tap_file, plain_file, imd_file
 from .bitstore import FromBitStore
+
 
 class DDHF_Excavation(excavation.Excavation):
     '''
@@ -78,6 +81,23 @@ class DDHF_Excavation(excavation.Excavation):
         ''' Add artifacts from the Datamuseum.dk Bitstore '''
         FromBitStore(self, self.ddhf_bitstore_cache, *args, **kwargs)
 
+    def from_argv(self):
+        ''' Process extra command line arguments '''
+        for fn in sys.argv[1:]:
+            ext = os.path.splitext(fn)
+            try:
+                if ext[1] in (".tap", ".TAP"):
+                    s = simh_tap_file.SimhTapContainer(filename = fn)
+                    self.add_top_artifact(s, description=fn)
+                elif ext[1] in (".imd", ".IMD"):
+                    s = imd_file.ImdContainer(filename = fn)
+                    self.add_top_artifact(s, description=fn)
+                else:
+                    s = plain_file.PlainFileArtifact(fn)
+                    self.add_top_artifact(s, description=fn)
+            except excavation.DuplicateArtifact:
+                pass
+
 OK_ENVS = {
     "AUTOARCHAEOLOGIST_HTML_DIR": "html_dir",
     "AUTOARCHAEOLOGIST_LINK_PREFIX": "link_prefix",
@@ -95,6 +115,8 @@ def main(job, html_subdir="tmp", **kwargs):
     kwargs.setdefault('download_links', True)
     kwargs.setdefault('download_limit', 1 << 20)
     ctx = job(**kwargs)
+
+    ctx.from_argv()
 
     ctx.start_examination()
     baseurl = ctx.produce_html()
