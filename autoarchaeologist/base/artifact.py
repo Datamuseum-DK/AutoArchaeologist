@@ -101,6 +101,8 @@ class ArtifactBase(result_page.ResultPage):
         self._keys = {}
         self._reclen = 0
 
+        self.metrics = None # Used only for toplevel artifacts
+
     def __str__(self):
         if not self.digest:
             return "\u27e6…\u27e7"
@@ -164,6 +166,10 @@ class ArtifactBase(result_page.ResultPage):
         self._reclen += len(rec)
         rec.artifact = self
         return rec
+
+    def num_rec(self):
+        ''' Get number of records '''
+        return len(self._keys)
 
     def get_rec(self, key):
         ''' Get a Record '''
@@ -233,6 +239,19 @@ class ArtifactBase(result_page.ResultPage):
     def has_note(self, note):
         ''' Check if not already exists '''
         return note in self.notes
+
+    def iter_all_children(self):
+        done = set()
+        todo = [ self ]
+        while todo:
+            this = todo.pop(0)
+            if this in done:
+                continue
+            done.add(this)
+            yield this
+            for child in this.children:
+                if child not in done:
+                    todo.append(child)
 
     def iter_types(self, recursive=False):
         ''' Return all notes that apply to this artifact '''

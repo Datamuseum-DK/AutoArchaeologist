@@ -18,6 +18,7 @@ from . import artifact
 from . import index
 from . import type_case
 from . import result_page
+from . import metrics
 
 def dotdotdot(gen, limit=35):
     ''' Return a limited number of elements, and mark as truncated if so. '''
@@ -153,9 +154,10 @@ class Excavation(result_page.ResultPage):
         if not self.busy:
             self.examine()
 
-    def add_examiner(self, ex):
-        ''' Add an examiner function '''
-        self.examiners.append(ex)
+    def add_examiner(self, *args):
+        ''' Add an examiner function(s) '''
+        for i in args:
+            self.examiners.append(i)
 
     def add_top_artifact(self, what, description=None):
         ''' Add a top-level artifact '''
@@ -253,6 +255,8 @@ class Excavation(result_page.ResultPage):
 
         self.polish()
 
+        self.calculate_metrics()
+
         self.produce_front_page()
 
         for this in self.hashes.values():
@@ -300,15 +304,22 @@ class Excavation(result_page.ResultPage):
 
         fo.write("<H2>Top level artifacts</H2>")
         fo.write("<table>\n")
+        fo.write("<thead>\n")
+        fo.write("<th>Artifact</th>\n")
+        fo.write("<th>Unique</th>\n")
+        fo.write("<th>Description<th>\n")
+        fo.write("</thead>\n")
         for n, this in enumerate(self.children):
             if n & 1:
                 fo.write('<tr class="stripe">\n')
             else:
                 fo.write('<tr>\n')
             fo.write('<td>' + self.html_link_to(this) + '</td>\n')
+            fo.write('<td>' + this.metrics.terse() + '</td>\n')
             fo.write('<td>' + this.html_description() + "</td>\n")
             fo.write("</tr>\n")
             fo.write("<tr>\n")
+            fo.write("<td></td>")
             fo.write("<td></td>")
             fo.write('<td style="font-size: 70%;">')
             fo.write(", ".join(dotdotdot(sorted({y for x, y in this.iter_notes(True)}))))
@@ -395,12 +406,19 @@ class Excavation(result_page.ResultPage):
     def summary(self, *args, **kwargs):
         return "The entire excavation"
 
+    def calculate_metrics(self):
+        for that in self.children:
+            that.metrics = metrics.Metrics(that)
+        for that in self.children:
+            that.metrics.reduce(self.children)
+        
+
     CSS = '''
         body {
             font-family: "Inconsolata", "Courier New", mono-space;
         }
         td,th {
-            padding: 0 10px 0; 
+            padding: 0 10px 0;
         }
         th {
             position: sticky; top: 0; background-color: #eeeeee;
