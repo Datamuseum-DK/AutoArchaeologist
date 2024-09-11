@@ -79,6 +79,10 @@ class TypeCase():
         ''' decode octets using short form, not checking flags '''
         return ''.join(self.slugs[x].short for x in octets)
 
+    def decode_long(self, octets):
+        ''' decode octets using short form, not checking flags '''
+        return ''.join(self.slugs[x].long for x in octets)
+
     def set_slug(self, nbr, short, *args, **kwargs):
         ''' define a slug '''
         self.slugs[nbr] = Slug(short, *args, **kwargs)
