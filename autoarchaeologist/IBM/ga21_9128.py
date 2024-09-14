@@ -234,7 +234,9 @@ class Hdr1Sector(ov.Struct):
         return (int(i[:2]), int(i[2:3]), int(i[3:]))
 
     def end_chs(self):
-        i = self.end_of_data.txt
+        i = self.end_of_extent.txt
+        if i == "":
+            i = self.end_of_data.txt.strip()
         return (int(i[:2]), int(i[2:3]), int(i[3:]))
 
 class Ga21_9182(disk.Disk):
@@ -292,7 +294,7 @@ class Ga21_9182(disk.Disk):
         end = data_set.end_chs()
         recs = []
         for rec in self.this.iter_rec():
-            if start <= rec.key < end:
+            if start <= rec.key <= end:
                 recs.append(rec)
                 data_set.recs.append(rec.frag)
         if len(recs) == 0:
