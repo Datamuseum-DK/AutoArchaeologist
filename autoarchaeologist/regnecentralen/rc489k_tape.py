@@ -239,6 +239,9 @@ class Rc489kSaveDirExt(ov.Struct):
             entry_tail_=Rc489kEntryTail,
         )
 
+    def ns_render(self):
+        return self.entry_tail.ns_render()
+
 class Rc489kSaveSubHead(ov.Struct):
     def __init__(self, up, lo):
         super().__init__(

@@ -946,6 +946,7 @@ class ComalSaveFile():
         this.add_interpretation(self, self.upas.html_detailed)
         this.add_interpretation(self, self.udas.html_detailed)
         this.add_interpretation(self, self.html_detailed)
+        this.taken = self
 
     def html_detailed(self, fo, _this):
         ''' The status words '''
