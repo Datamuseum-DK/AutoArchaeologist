@@ -9,30 +9,7 @@ import html
 
 from ..base import octetview as ov
 from ..base import namespace
-
-class Rc489kNameSpace(namespace.NameSpace):
-    ''' ... '''
-
-    TABLE = (
-        ( "r", "mode"),
-        ( "r", "kind"),
-        ( "r", "key"),
-        ( "r", "nseg"),
-        ( "l", "date"),
-        ( "l", "docname"),
-        ( "r", "w7"),
-        ( "r", "w8"),
-        ( "r", "w9"),
-        ( "r", "w10"),
-        ( "l", "name"),
-        ( "l", "artifact"),
-    )
-
-    def ns_render(self):
-        meta = self.ns_priv
-        if hasattr(meta, "ns_render"):
-            return meta.ns_render() + super().ns_render()
-        return [html.escape(str(type(meta)))] + ["-"] * (len(self.TABLE)-3) + super().ns_render()
+from .rc489k_utils import *
 
 class DWord(ov.Struct):
     ''' A double word '''
@@ -60,12 +37,7 @@ class ShortClock(ov.Be24):
 
     def render(self):
         ''' Render as ISO8601 without timezone '''
-        if self.val == 0:
-            yield "                "
-        else:
-            ut = (self.val << 19) * 100e-6
-            t0 = (366+365)*24*60*60
-            yield time.strftime("%Y-%m-%dT%H:%M", time.gmtime(ut - t0 ))
+        yield short_clock(self.val)
 
 class Rc489kEntryTail(ov.Struct):
     ''' The ten words which describe a file '''
@@ -74,44 +46,20 @@ class Rc489kEntryTail(ov.Struct):
         super().__init__(
             up,
             lo,
-            w1_=ov.Be24,		# really: size/modekind
-            docname_=ov.Text(12),
-            w6_=ShortClock,
-            w7_=ov.Be24,
-            w8_=ov.Be24,
-            w9_=ov.Be24,
-            w10_=ov.Be24,
-            #vertical=True,
+            w_=ov.Array(10, ov.Be24),
         )
-        if self.w1.val >> 23:
-            self.kind = self.w1.val & 0xfff
-            self.mode = self.w1.val >> 12
-            self.nseg = 0
-        else:
-            self.kind = 4
-            self.mode = 0
-            self.nseg = self.w1.val
-        self.key = self.w9.val >> 12
-
-    def raw_render(self):
-        return [
-            ("mode", "%d" % self.mode),
-            ("kind", "%d" % self.kind),
-            ("key", "%d" % self.key),
-            ("nseg", "%d" % self.nseg),
-            ("date", "%s" % str(self.w6)),
-            ("docname", "%s" % self.docname.txt),
-            ("w7", "0x%x" % self.w7.val),
-            ("w8", "0x%x" % self.w8.val),
-            ("w9", "0x%x" % self.w9.val),
-            ("w10", "0x%x" % self.w10.val),
-        ]
+        self.entry_tail = EntryTail(self.this, list(x.val for x in self.w))
+        self.nseg = self.entry_tail.nseg
+        self.kind = self.entry_tail.kind
+        self.mode = self.entry_tail.mode
+        self.key = self.entry_tail.key
+        self.docname = self.entry_tail.docname
 
     def render(self):
-        yield "{" + ", ".join("=".join(x) for x in self.raw_render()) + "}"
+        yield "-".join(self.entry_tail.ns_render())
 
     def ns_render(self):
-        return [x[1] for x in self.raw_render()]
+        return self.entry_tail.ns_render()
 
 #################################################
 #
