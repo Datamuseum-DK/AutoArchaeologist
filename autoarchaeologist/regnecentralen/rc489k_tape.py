@@ -574,3 +574,9 @@ class Rc489kTape():
         file.write("<pre>\n")
         file.write(str(bytes(self.label)) + "\n")
         file.write("</pre>\n")
+
+examiners = (
+    Rc489kTape,
+    Rc489kDumpTapeFile,
+    Rc489kSaveTapeFile,
+)
