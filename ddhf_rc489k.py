@@ -28,7 +28,11 @@ class Rc489kEvenPar(type_case.EvenPar):
     def __init__(self):
         super().__init__(Rc489kTypeCase())
 
-class TextFileEvenParity(textfiles.TextFile):
+class TextFile(textfiles.TextFile):
+    ''' Text files with even parity'''
+    MAX_TAIL = 0xc0000
+
+class TextFileEvenParity(TextFile):
     ''' Text files with even parity'''
     TYPE_CASE = Rc489kEvenPar()
 
@@ -44,7 +48,7 @@ class Rc489k(ddhf.DDHF_Excavation):
         self.add_examiner(*rc489k_tape.examiners)
         self.add_examiner(*rc489k_binout.examiners)
         self.add_examiner(rcsl.RCSL)
-        self.add_examiner(textfiles.TextFile)
+        self.add_examiner(TextFile)
         self.add_examiner(TextFileEvenParity)
         self.add_examiner(samesame.SameSame)
         self.add_examiner(gier_text.GIER_Text)
