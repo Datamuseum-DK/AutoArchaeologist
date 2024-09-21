@@ -8,6 +8,7 @@ import time
 import html
 
 from ..base import namespace
+from ..base import octetview as ov
 
 def words_to_bytes(words):
     a = []
@@ -61,26 +62,30 @@ def short_clock(word):
     t0 = (366+365)*24*60*60
     return time.strftime("%Y-%m-%dT%H:%M", time.gmtime(ut - t0 ))
 
-class EntryTail():
+class Rc489kEntryTail(ov.Struct):
+    ''' The ten words which describe a file '''
 
-    def __init__(self, this, words):
-        self.this = this
-        self.words = words
-        if self.words[0] >> 23:
-            self.kind = self.words[0] & 0xfff
-            self.mode = self.words[0] >> 12
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            w_=ov.Array(10, ov.Be24),
+        )
+        if self.w[0].val >> 23:
+            self.kind = self.w[0].val & 0xfff
+            self.mode = self.w[0].val >> 12
             self.nseg = 0
         else:
             self.kind = 4
             self.mode = 0
-            self.nseg = self.words[0]
-        self.key = self.words[8] >> 12
+            self.nseg = self.w[0].val
+        self.key = self.w[8].val >> 12
         self.docname = self.this.type_case.decode_long(
-            words_to_bytes(self.words[1:5])
+            words_to_bytes((x.val for x in self.w[1:5]))
         )
 
-    def __str__(self):
-        return ",".join(self.ns_render())
+    def render(self):
+        yield "-".join(self.ns_render())
 
     def ns_render(self):
         return [
@@ -88,11 +93,11 @@ class EntryTail():
             "%d" % self.kind,
             "%d" % self.key,
             "%d" % self.nseg,
-            short_clock(self.words[5]),
+            short_clock(self.w[5].val),
             self.docname,
-            "0x%x" % self.words[6],
-            "0x%x" % self.words[7],
-            "0x%x" % self.words[8],
-            "0x%x" % self.words[9],
+            "0x%x" % self.w[6].val,
+            "0x%x" % self.w[7].val,
+            "0x%x" % self.w[8].val,
+            "0x%x" % self.w[9].val,
         ]
 

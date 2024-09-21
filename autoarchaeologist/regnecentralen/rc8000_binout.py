@@ -1,95 +1,113 @@
 '''
    RC8000 binout format
    --------------------
+
+   c39904456 starts with "newcat" but looks similar ?
 '''
 
 from ..base import octetview as ov
 from .rc489k_utils import *
 
-RC8000_BINOUT_MAGIC = bytes.fromhex("98 37 89 25 98 97 91 25")
-
 def parity(x):
+    ''' calculate parity '''
     x ^= x >> 4
     x ^= x >> 2
     x ^= x >> 1
     return x & 1
 
-def wtotxt(x):
-    return "%c" % ((x >> 16) & 0xff) + "%c" % ((x >> 8) & 0xff) + "%c" % ((x >> 0) & 0xff)
+#########################
 
-class BinOutName():
-
-    def __init__(self, *args, **kwargs):
-        self.nspace = Rc489kNameSpace(*args, **kwargs, priv=self)
-        self.nload = 0
-        self.cat_key = 0
-        self.entry_tail = None
-        self.load_segments = []
-
-    def commit(self, this):
-        if not self.load_segments:
-            return
-        print("COMMIT", this, self, self.load_segments[0])
-        that = this.create(
-             bits = words_to_bytes(self.load_segments[0].words)
+class RC8000BinOutNewCat(ov.Struct):
+    ''' ... '''
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            cmd__=ov.Text(6),
         )
-        self.nspace.ns_set_this(that)
 
-    def ns_render(self):
-        return self.entry_tail.ns_render()
+class RC8000BinOutCreate(ov.Struct):
+    ''' ... '''
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            cmd__=ov.Text(6),
+            name_=ov.Text(12),
+            entry_tail_=Rc489kEntryTail,
+        )
 
-class BinOutSegment(ov.Octets):
+class RC8000BinOutPerman(ov.Struct):
+    ''' ... '''
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            cmd__=ov.Text(6),
+            name_=ov.Text(12),
+            catalog_key_=ov.Be24,
+        )
 
-    def __init__(self, tree, lo, payload):
-        super().__init__(tree, lo, width = len(payload) + 1)
-        self.payload = payload
-        self.hwords = []
-        for n in range(0, len(payload), 2):
-            self.hwords.append((payload[n] << 6) | payload[n+1])
-        self.words = []
-        for n in range(0, len(self.hwords), 2):
-            self.words.append((self.hwords[n] << 12) | self.hwords[n+1])
+class RC8000BinOutLoad(ov.Struct):
+    ''' ... '''
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            cmd__=ov.Text(6),
+            name_=ov.Text(12),
+            nseg_=ov.Be24,
+        )
 
-    def decode_command_segment(self):
-        n = 0
-        retval = None
-        while n < len(self.words):
-            t = words_to_text(self.this, self.words[n:n+2])
-            n += 2
-            if t == 'create':
-                if retval:
-                    yield retval
-                fn = words_to_text(self.this, self.words[n:n+4])
-                n += 4
-                retval = BinOutName(name = fn, parent=self.tree.namespace)
-                retval.entry_tail = EntryTail(self.this, self.words[n:n+10])
-                n += 10
-                print("CW", [t, fn, str(retval.entry_tail)])
-            elif t == 'perman':
-                fn = words_to_text(self.this, self.words[n:n+4])
-                n += 4
-                retval.cat_key = self.words[n]
-                n += 1
-                print("CW", [t, fn, retval.cat_key])
-            elif t == 'load':
-                fn = words_to_text(self.this, self.words[n:n+4])
-                n += 4
-                retval.nload = self.words[n]
-                n += 1
-                print("CW", [t, fn, retval.nload])
-            else:
-                print("CW?", [t], self)
+class RC8000BinOutEntry(ov.Struct):
+    ''' One catlog entry '''
+
+    def __init__(self, up, seg):
+        super().__init__(up, seg.lo, more=True, vertical=True)
+        self.namespace = None
+        self.nseg = 0
+        self.parts = []
+        while self.hi < seg.hi:
+            i = ov.Text(6)(up, self.hi)
+            if i.txt == 'create':
+                if self.namespace:
+                    break
+                self.add_field("create", RC8000BinOutCreate)
+                self.namespace = Rc489kNameSpace(
+                    name = self.create.name.txt.rstrip(),
+                    parent = self.tree.namespace,
+                    priv = self.create.entry_tail,
+                )
+            elif i.txt == 'newcat':
+                self.add_field("newcat", RC8000BinOutNewCat)
+            elif i.txt == 'perman':
+                self.add_field("perman", RC8000BinOutPerman)
+            elif i.txt == 'load  ':
+                self.add_field("load", RC8000BinOutLoad)
+                self.nseg = self.load.nseg.val
                 break
-        if retval:
-            yield retval
+            elif i.txt == 'end':
+                self.add_field("end", ov.Text(3))
+                break
+            else:
+                print(up.this, self.__class__.__name__, "???", hex(self.hi), i)
+                self.add_field("huh", ov.Text(6))
+                break
+        self.done()
 
-    def render(self):
-        yield "-".join("%06x" % x for x in self.words)
+    def commit(self):
+        ''' Commit and create artifact if possible '''
+        if self.namespace and self.parts:
+            that = self.tree.this.create(
+                records = (x.octets() for x in self.parts),
+            )
+            self.namespace.ns_set_this(that)
 
 class RC8000BinOut(ov.OctetView):
+    ''' A binout tape file '''
 
     def __init__(self, this):
-        if this[0:8] != RC8000_BINOUT_MAGIC:
+        if not this.has_type("Rc8000_binout_segments"):
             return
         super().__init__(this)
 
@@ -98,35 +116,98 @@ class RC8000BinOut(ov.OctetView):
             separator='',
             root=this,
         )
+
+        l = list(this.iter_rec())
+        while l:
+            seg = l.pop(0)
+            y = RC8000BinOutEntry(self, seg)
+            for _i in range(y.nseg):
+                seg = l.pop(0)
+                z = ov.Opaque(self, lo=seg.lo, hi=seg.hi).insert()
+                y.parts.append(z)
+            y.insert()
+            y.commit()
+
+        this.add_interpretation(self, self.namespace.ns_html_plain)
+        self.add_interpretation(more=True)
+
+#########################
+
+class RC8000BinOutSegment(ov.Opaque):
+    ''' ... '''
+
+    def octets(self):
+        ''' Convert to octets '''
+        for i in range(0, len(self), 4):
+            yield ((self[i] << 2) & 0xfc) | ((self[i+1] & 0x3f) >> 4)
+            yield ((self[i+1] << 4) & 0xf0) | ((self[i+2] & 0x3f)>> 2)
+            yield ((self[i+2] << 6) & 0xc0) | (self[i+3] & 0x3f)
+
+class RC8000BinOutSegmentChecksum(ov.Opaque):
+    ''' ... '''
+
+class RC8000BinOutEnd(ov.Opaque):
+    ''' ... '''
+
+class RC8000BinOutTapeFile(ov.OctetView):
+    '''
+       From BINOUT (RCSL 31-D244):
+
+       A binout segment is a stream of 8-bit characters with odd parity, the
+       left-most bit of each character being the parity bit. The last character
+       in the segment is a sumcharacter, which is charaterized by the second
+       bit being one. The right-most 5 bits of this character form the sum modulo
+       64 of all other characters in the segment.
+       Each byte [12 bits!] of the input is output as two characters.  The second
+       bit of these is always 0, wheras the right-most 6 bits are a copy of the cor-
+       responding 6-bit group of the byte.
+    '''
+
+    def __init__(self, this):
+        if not parity(this[0]):
+            return
+        super().__init__(this)
         segments = []
         l = []
         lo = 0
         for n, i in enumerate(this):
-            if not parity(i):
-                break
-            if i & 0x40:
-                goodsum = (sum(l) & 0x3f) == (i& 0x3f)
-                if not goodsum:
+            if not i:
+                if not segments:
                     return
-                segments.append(BinOutSegment(self, lo, l).insert())
+                y = RC8000BinOutEnd(self, n, width=1).insert()
+                y = ov.Opaque(self, n+1, hi=len(this)).insert()
+                break
+            if not parity(i):
+                if segments:
+                    print(this, self.__class__.__name__, "Bail(parity) at", n)
+                return
+            if i & 0x40:
+                if len(l) == 0:
+                    return
+                goodsum = (sum(l) & 0x3f) == (i & 0x3f)
+                if not goodsum:
+                    if segments:
+                        print(this, self.__class__.__name__, "Bail(badseg) at", n)
+                    return
+                # print(this, "SEG", hex(lo), len(l), len(this))
+                y = RC8000BinOutSegment(self, lo=lo, width=len(l)).insert()
+                segments.append(y)
+                RC8000BinOutSegmentChecksum(self, y.hi, width=1).insert()
                 lo = n+1
                 l = []
             else:
                 l.append(i & 0x7f)
-        if not segments:
-            return
-        print(this, self.__class__.__name__, len(segments))
-        n = 0
-        names = []
-        while n < len(segments):
-            seg = segments[n]
-            n += 1
-            names.append(*seg.decode_command_segment())
-            names[-1].load_segments += segments[n:n + names[-1].nload]
-            n += names[-1].nload
-        for i in names:
-            i.commit(self.this)
-            print("NN", i)
-        this.add_note("Rc8000_binout")
-        this.add_interpretation(self, self.namespace.ns_html_plain)
-        self.add_interpretation() 
+        r = []
+        for seg in segments:
+            r.append(bytes(seg.octets()))
+
+        that = this.create(records = r)
+        this.add_type("Rc8000_binout_tape_file")
+        that.add_type("Rc8000_binout_segments")
+        self.this.add_interpretation(self, this.html_interpretation_children)
+        self.add_interpretation(more=True)
+
+examiners = (
+    RC8000BinOutTapeFile,
+    RC8000BinOut,
+)

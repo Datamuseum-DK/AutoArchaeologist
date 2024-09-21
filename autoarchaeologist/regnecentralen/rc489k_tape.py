@@ -39,27 +39,6 @@ class ShortClock(ov.Be24):
         ''' Render as ISO8601 without timezone '''
         yield short_clock(self.val)
 
-class Rc489kEntryTail(ov.Struct):
-    ''' The ten words which describe a file '''
-
-    def __init__(self, up, lo):
-        super().__init__(
-            up,
-            lo,
-            w_=ov.Array(10, ov.Be24),
-        )
-        self.entry_tail = EntryTail(self.this, list(x.val for x in self.w))
-        self.nseg = self.entry_tail.nseg
-        self.kind = self.entry_tail.kind
-        self.mode = self.entry_tail.mode
-        self.key = self.entry_tail.key
-        self.docname = self.entry_tail.docname
-
-    def render(self):
-        yield "-".join(self.entry_tail.ns_render())
-
-    def ns_render(self):
-        return self.entry_tail.ns_render()
 
 #################################################
 #
