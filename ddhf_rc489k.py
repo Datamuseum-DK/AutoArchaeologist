@@ -9,24 +9,28 @@ from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.regnecentralen import rc489k_tape
+from autoarchaeologist.regnecentralen import rc489k_binout
 from autoarchaeologist.regnecentralen import rcsl
+from autoarchaeologist.regnecentralen import gier_text
 
-class TypeCase(type_case.DS2089):
-    ''' RC489k characterset for most artifacts '''
+class Rc489kTypeCase(type_case.DS2089):
+    ''' RC489k default type case '''
 
     def __init__(self):
         super().__init__()
-        self.set_slug(0x00, ' ', '')
+        self.set_slug(0x00, ' ', '', self.IGNORE)
         self.set_slug(0x08, ' ', '«bs»')
-        self.set_slug(0x18, ' ', '«can»')
-        self.set_slug(0x19, ' ', '«em»', self.EOF)
+        self.set_slug(0x19, ' ', '▶EOF◀', self.EOF)
+        self.set_slug(0x1f, ' ', '▶EOF◀', self.EOF)
 
-myTypeCase = TypeCase()
+class Rc489kEvenPar(type_case.EvenPar):
+    ''' Even parity version of type case '''
+    def __init__(self):
+        super().__init__(Rc489kTypeCase())
 
-class TextFile(textfiles.TextFile):
-    ''' General Text-File-Excavator '''
-
-    MAX_TAIL = 1<<16
+class TextFileEvenParity(textfiles.TextFile):
+    ''' Text files with even parity'''
+    TYPE_CASE = Rc489kEvenPar()
 
 class Rc489k(ddhf.DDHF_Excavation):
 
@@ -35,14 +39,15 @@ class Rc489k(ddhf.DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.type_case = myTypeCase
+        self.type_case = Rc489kTypeCase()
 
-        self.add_examiner(rc489k_tape.Rc489kSaveTapeFile)
-        self.add_examiner(rc489k_tape.Rc489kDumpTapeFile)
-        self.add_examiner(rc489k_tape.Rc489kTape)
+        self.add_examiner(*rc489k_tape.examiners)
+        self.add_examiner(*rc489k_binout.examiners)
         self.add_examiner(rcsl.RCSL)
-        self.add_examiner(TextFile)
+        self.add_examiner(textfiles.TextFile)
+        self.add_examiner(TextFileEvenParity)
         self.add_examiner(samesame.SameSame)
+        self.add_examiner(gier_text.GIER_Text)
 
         self.from_bitstore(
             "RC/RC8000/DISK",
