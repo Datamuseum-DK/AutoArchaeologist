@@ -593,11 +593,10 @@ class ArtifactFragmented(ArtifactBase):
             i.append(j)
         return i
 
-
     def add_fragment(self, frag):
         ''' Append a fragment '''
         if not isinstance(frag, Record):
-            frag = Record(self._len, frag=frag)
+            frag = Record(self._len, frag=frag, key=(len(self._frags),))
         else:
             frag = Record(self._len, frag=frag.frag, key=frag.key)
         assert frag.lo == self._len
