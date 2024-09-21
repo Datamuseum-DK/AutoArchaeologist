@@ -159,7 +159,7 @@ class BinTree():
             yield from self.pad_from_to(ptr, self.hi, pad_width)
 
     def prefix(self, lo, hi):
-        if not self.separators:
+        if self.separators_width == 0:
             return "0x" + self.adrfmt % lo + "…" + self.adrfmt % hi
         while self.separators and self.separators[0][0] < lo:
             self.separators.pop(0)
