@@ -1,8 +1,7 @@
 '''
-   RC8000 binout format
-   --------------------
+   RC4000/RC8000/RC9000 binout format
+   ----------------------------------
 
-   c39904456 starts with "newcat" but looks similar ?
 '''
 
 from ..base import octetview as ov
@@ -17,7 +16,7 @@ def parity(x):
 
 #########################
 
-class RC8000BinOutNewCat(ov.Struct):
+class Rc489kBinOutNewCat(ov.Struct):
     ''' ... '''
     def __init__(self, up, lo):
         super().__init__(
@@ -26,7 +25,7 @@ class RC8000BinOutNewCat(ov.Struct):
             cmd__=ov.Text(6),
         )
 
-class RC8000BinOutCreate(ov.Struct):
+class Rc489kBinOutCreate(ov.Struct):
     ''' ... '''
     def __init__(self, up, lo):
         super().__init__(
@@ -37,7 +36,7 @@ class RC8000BinOutCreate(ov.Struct):
             entry_tail_=Rc489kEntryTail,
         )
 
-class RC8000BinOutPerman(ov.Struct):
+class Rc489kBinOutPerman(ov.Struct):
     ''' ... '''
     def __init__(self, up, lo):
         super().__init__(
@@ -48,7 +47,7 @@ class RC8000BinOutPerman(ov.Struct):
             catalog_key_=ov.Be24,
         )
 
-class RC8000BinOutLoad(ov.Struct):
+class Rc489kBinOutLoad(ov.Struct):
     ''' ... '''
     def __init__(self, up, lo):
         super().__init__(
@@ -59,7 +58,7 @@ class RC8000BinOutLoad(ov.Struct):
             nseg_=ov.Be24,
         )
 
-class RC8000BinOutEntry(ov.Struct):
+class Rc489kBinOutEntry(ov.Struct):
     ''' One catlog entry '''
 
     def __init__(self, up, seg):
@@ -72,18 +71,18 @@ class RC8000BinOutEntry(ov.Struct):
             if i.txt == 'create':
                 if self.namespace:
                     break
-                self.add_field("create", RC8000BinOutCreate)
+                self.add_field("create", Rc489kBinOutCreate)
                 self.namespace = Rc489kNameSpace(
                     name = self.create.name.txt.rstrip(),
                     parent = self.tree.namespace,
                     priv = self.create.entry_tail,
                 )
             elif i.txt == 'newcat':
-                self.add_field("newcat", RC8000BinOutNewCat)
+                self.add_field("newcat", Rc489kBinOutNewCat)
             elif i.txt == 'perman':
-                self.add_field("perman", RC8000BinOutPerman)
+                self.add_field("perman", Rc489kBinOutPerman)
             elif i.txt == 'load  ':
-                self.add_field("load", RC8000BinOutLoad)
+                self.add_field("load", Rc489kBinOutLoad)
                 self.nseg = self.load.nseg.val
                 break
             elif i.txt == 'end':
@@ -103,11 +102,11 @@ class RC8000BinOutEntry(ov.Struct):
             )
             self.namespace.ns_set_this(that)
 
-class RC8000BinOut(ov.OctetView):
+class Rc489kBinOut(ov.OctetView):
     ''' A binout tape file '''
 
     def __init__(self, this):
-        if not this.has_type("Rc8000_binout_segments"):
+        if not this.has_type("Rc489k_binout_segments"):
             return
         super().__init__(this)
 
@@ -120,7 +119,7 @@ class RC8000BinOut(ov.OctetView):
         l = list(this.iter_rec())
         while l:
             seg = l.pop(0)
-            y = RC8000BinOutEntry(self, seg)
+            y = Rc489kBinOutEntry(self, seg)
             for _i in range(y.nseg):
                 seg = l.pop(0)
                 z = ov.Opaque(self, lo=seg.lo, hi=seg.hi).insert()
@@ -133,7 +132,7 @@ class RC8000BinOut(ov.OctetView):
 
 #########################
 
-class RC8000BinOutSegment(ov.Opaque):
+class Rc489kBinOutSegment(ov.Opaque):
     ''' ... '''
 
     def octets(self):
@@ -143,13 +142,13 @@ class RC8000BinOutSegment(ov.Opaque):
             yield ((self[i+1] << 4) & 0xf0) | ((self[i+2] & 0x3f)>> 2)
             yield ((self[i+2] << 6) & 0xc0) | (self[i+3] & 0x3f)
 
-class RC8000BinOutSegmentChecksum(ov.Opaque):
+class Rc489kBinOutSegmentChecksum(ov.Opaque):
     ''' ... '''
 
-class RC8000BinOutEnd(ov.Opaque):
+class Rc489kBinOutEnd(ov.Opaque):
     ''' ... '''
 
-class RC8000BinOutTapeFile(ov.OctetView):
+class Rc489kBinOutTapeFile(ov.OctetView):
     '''
        From BINOUT (RCSL 31-D244):
 
@@ -174,7 +173,7 @@ class RC8000BinOutTapeFile(ov.OctetView):
             if not i:
                 if not segments:
                     return
-                y = RC8000BinOutEnd(self, n, width=1).insert()
+                y = Rc489kBinOutEnd(self, n, width=1).insert()
                 y = ov.Opaque(self, n+1, hi=len(this)).insert()
                 break
             if not parity(i):
@@ -190,9 +189,9 @@ class RC8000BinOutTapeFile(ov.OctetView):
                         print(this, self.__class__.__name__, "Bail(badseg) at", n)
                     return
                 # print(this, "SEG", hex(lo), len(l), len(this))
-                y = RC8000BinOutSegment(self, lo=lo, width=len(l)).insert()
+                y = Rc489kBinOutSegment(self, lo=lo, width=len(l)).insert()
                 segments.append(y)
-                RC8000BinOutSegmentChecksum(self, y.hi, width=1).insert()
+                Rc489kBinOutSegmentChecksum(self, y.hi, width=1).insert()
                 lo = n+1
                 l = []
             else:
@@ -202,12 +201,12 @@ class RC8000BinOutTapeFile(ov.OctetView):
             r.append(bytes(seg.octets()))
 
         that = this.create(records = r)
-        this.add_type("Rc8000_binout_tape_file")
-        that.add_type("Rc8000_binout_segments")
+        this.add_type("Rc489k_binout_tape_file")
+        that.add_type("Rc489k_binout_segments")
         self.this.add_interpretation(self, this.html_interpretation_children)
         self.add_interpretation(more=True)
 
 examiners = (
-    RC8000BinOutTapeFile,
-    RC8000BinOut,
+    Rc489kBinOutTapeFile,
+    Rc489kBinOut,
 )
