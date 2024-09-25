@@ -197,7 +197,7 @@ class RelBin():
         self.this.add_interpretation(self, self.html_as_interpretation)
         for i in r:
             for j, k in sorted(i.symbols()):
-                if j in (".ENT",) and k:
+                if j in (".ENT", ".TITL") and k:
                     this.add_note(k)
         if self.r[0].name:
             this.add_name(self.r[0].name.strip())
