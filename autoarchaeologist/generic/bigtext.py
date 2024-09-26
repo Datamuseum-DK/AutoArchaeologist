@@ -155,7 +155,7 @@ class BigTextBase():
     MAX_UNKNOWN_LEN = 20	# Maximum amount of unrecognized input data
     MIN_LEADER = 16		# Minimum blank leader on either side
     GIVE_UP_AFTER = 1024	# Bail if nothing found by this much input
-    VERBOSE = 1
+    VERBOSE = 0
 
     TREE = Tree()
 
