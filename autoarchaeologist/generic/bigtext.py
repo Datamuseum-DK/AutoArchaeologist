@@ -211,7 +211,7 @@ class BigTextBase():
             # A sequence must have a blank leader before
             here.find_leader(self.MIN_LEADER)
             if not here.lead:
-                self.hits.pop(0)
+                self.hits.pop(n)
                 continue
 
             # Try to merge with subsequent hits
@@ -223,7 +223,7 @@ class BigTextBase():
             # and a blank leader after
             here.find_trailer(self.MIN_LEADER)
             if not here.tail:
-                self.hits.pop(0)
+                self.hits.pop(n)
                 continue
 
             # Must be this wide to ride
