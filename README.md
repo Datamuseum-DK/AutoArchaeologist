@@ -49,6 +49,14 @@ This will fetch some IBM S/34 floppies from bitsavers.org and excavate them
 into your /tmp directory, this probably takes some minutes, and then tell
 you to point your browser at the excavation.
 
+# Read more
+
+I have started a proper documentation project, but there is not much
+in it yet, I plan to flesh it out as I saunter through the source code
+in the future:
+
+https://datamuseum.dk/aa/docs/
+
 # Quo Vadis ?
 
 The development in this project is very much driven by the needs
