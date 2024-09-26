@@ -60,6 +60,7 @@ class Rc489k(ddhf.DDHF_Excavation):
             "RC/RC4000/SW",
             "RC/RC4000/TEST",
             "RC/RC9000",
+            "RC/RC9000/TAPE",
         )
 
 if __name__ == "__main__":
