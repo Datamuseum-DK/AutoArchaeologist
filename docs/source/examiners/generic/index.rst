@@ -9,6 +9,7 @@ computers create, for instance "textfiles".
 .. toctree::
    :maxdepth: 1
 
-   sccs_id.rst
+   ansitapelabels.rst
    bigtext.rst
    samesame.rst
+   sccs_id.rst

@@ -1,8 +1,16 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
+
 '''
    ANSI tape labels
    ----------------
 
-   Implemented based on Ecma-13 .
+   Implemented based on Ecma-13 as available her:
+
+      http://bitsavers.org/pdf/ecma/ECMA-013.pdf
 
 '''
 
