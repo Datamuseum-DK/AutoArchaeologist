@@ -1,5 +1,5 @@
 
-from ..base import octetview as ov
+from ...base import octetview as ov
 
 class BasicHead(ov.Struct):
     def __init__(self, tree, lo):

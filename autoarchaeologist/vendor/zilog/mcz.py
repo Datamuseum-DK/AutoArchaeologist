@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
 
 '''
    Zilog MCZ floppies
    ~~~~~~~~~~~~~~~~~~
 '''
 
-from ..generic import disk
-from ..base import octetview as ov
-from ..base import namespace
-from ..base import type_case
+from ...generic import disk
+from ...base import octetview as ov
+from ...base import namespace
+from ...base import type_case
 
 class Sector(disk.Sector):
     def __init__(self, *args, **kwargs):
@@ -26,7 +30,7 @@ class DataSector(Sector):
 
 class Chain():
     def __init__(self, tree, chs, stype=None, reclen=128):
-        if stype == None:
+        if stype is None:
             stype = Sector
         self.tree = tree
         self.first = chs
@@ -186,7 +190,12 @@ class DirEnt(ov.Struct):
         self.desc = DescRec(self.tree, lo = sect.lo + 2)
         self.desc.insert()
 
-        self.chain = Chain(self.tree, sect.next_sector, stype=DataSector,reclen=self.desc.reclen.val)
+        self.chain = Chain(
+            self.tree,
+            sect.next_sector,
+            stype=DataSector,
+            reclen=self.desc.reclen.val
+        )
         #print("L", len(self.chain.octets))
         self.chain.insert()
         self.chain.picture('·')
@@ -195,7 +204,7 @@ class DirEnt(ov.Struct):
         i = self.desc.reclen.val - self.desc.lastbytes.val
         if i == len(self.chain.octets):
             return
-        elif i:
+        if i:
             that = self.tree.this.create(bits=self.chain.octets[:-i])
         else:
             that = self.tree.this.create(bits=self.chain.octets)
@@ -246,26 +255,23 @@ class MCZRIO(disk.Disk):
             return
 
         print(this, "MCZRIO")
+        this.add_note("Zilog_MCZ_fs")
         super().__init__(
             this,
             [ [ len(this) // (32 * 136), 1, 32, 136 ] ],
         )
-        this.type_case = self.type_case
-        this.add_note("Zilog_MCZ_fs")
-
-        self.namespace = NameSpace(
-            name = '',
-            root = this,
-            separator = "",
-        )
-        self.label = Label(self, 22, 0, 0).insert()
-        self.dir = Directory(self, self.label.next_sector, self.namespace)
-        self.dir.insert()
-        #print(dir.octets)
 
         self.picture_legend['L'] = "Label"
         self.picture_legend['R'] = "Descriptor"
         self.picture_legend['D'] = "Directory"
+
+        this.type_case = self.type_case
+
+        self.namespace = NameSpace(name = '', root = this, separator = "")
+        self.label = Label(self, 22, 0, 0).insert()
+        self.dir = Directory(self, self.label.next_sector, self.namespace)
+        self.dir.insert()
+
         self.fill_gaps()
         this.add_interpretation(self, self.namespace.ns_html_plain)
         this.add_interpretation(self, self.disk_picture)

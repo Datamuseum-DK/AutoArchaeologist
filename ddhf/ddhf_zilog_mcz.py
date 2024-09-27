@@ -5,8 +5,8 @@
 
 from autoarchaeologist import ddhf
 
-from autoarchaeologist.zilog import mcz
-from autoarchaeologist.zilog import zdos_basic
+from autoarchaeologist.vendor.zilog import mcz
+from autoarchaeologist.vendor.zilog import zdos_basic
 from autoarchaeologist.generic import textfiles
 
 class ZilogMCZ(ddhf.DDHF_Excavation):
