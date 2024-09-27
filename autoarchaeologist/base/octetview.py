@@ -66,12 +66,7 @@ class Octets(bintree.BinTreeLeaf):
 
     def render(self):
         ''' Render hexdumped + text-column '''
-        #yield fom self.hexdump(lo=self.lo, hi=self.hi, width=len(self)
-        #return
-        octets = self.this[self.lo:self.hi]
-        fmt = "%02x"
-        tcase = self.this.type_case.decode(octets)
-        yield " ".join(fmt % x for x in octets) + "   ┆" + tcase + "┆"
+        yield from self.this.hexdump(lo=self.lo, hi=self.hi, width=len(self))
 
 class Dump(Octets):
     ''' basic (hex)dump '''

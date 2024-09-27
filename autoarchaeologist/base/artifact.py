@@ -461,14 +461,14 @@ class ArtifactBase(result_page.ResultPage):
         for _i in range(n):
             octets = self.type_case.decode(self[lo:lo+width])
             dump = " ".join(fmt % x for x in self[lo:lo+width])
-            yield dump + "  ┆" + octets + "┆"
+            yield dump + "   ┆" + octets + "┆"
             lo += width
         if lo == hi:
             return
         octets = self.type_case.decode(self[lo:hi])
         dump = " ".join(fmt % x for x in self[lo:hi])
         pad = " " * (len(fmt % 0xff) + 1) * (width - (hi - lo))
-        yield dump + pad + "  ┆" + octets + "┆"
+        yield dump + pad + "   ┆" + octets + "┆"
 
 class ArtifactStream(ArtifactBase):
 
