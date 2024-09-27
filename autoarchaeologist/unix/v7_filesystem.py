@@ -9,6 +9,7 @@
 import struct
 
 from . import unix_fs as ufs
+from ..base import octetview as ov
 
 class V7_Inode(ufs.Inode):
     '''
@@ -39,6 +40,27 @@ class V7_Inode(ufs.Inode):
             return None
         words = struct.unpack(self.ufs.ENDIAN + "HH", blk)
         return self.ufs.get_block((words[0] << 16) | words[1])
+
+class V7_InodeLE(ufs.Inode):
+    ''' ... '''
+
+    SHORT = ov.Le16
+    LONG = ov.Le32
+
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            di_mode_=self.SHORT,            
+            di_nlink_=self.SHORT,            
+            di_uid_=self.SHORT,            
+            di_gid_=self.SHORT,            
+            di_size_=self.LONG,            
+            di_addr_=40,
+            di_atime_=self.LONG,
+            di_mtime_=self.LONG,
+            di_ctime_=self.LONG,
+        )
 
 class V7_Filesystem(ufs.UnixFileSystem):
     ''' The default parameters match V7/PDP '''
@@ -86,6 +108,8 @@ class V7_Filesystem(ufs.UnixFileSystem):
             offset=self.DISK_OFFSET + self.SUPERBLOCK_OFFSET,
             name="sblock",
         )
+        print(sblock, len(self.this))
+        print(hex(sblock.s_fsize))
         if not sblock:
             return
         if not sblock.s_isize or not sblock.s_fsize:
@@ -105,6 +129,7 @@ class V7_Filesystem(ufs.UnixFileSystem):
         inoa = self.DISK_OFFSET
         inoa += 2 * self.SECTOR_SIZE
         inoa += (inum - 1) * self.INODE_SIZE
+        return V7_InodeLE(self, inoa)
         return self.this.record(
             self.INODE_LAYOUT,
             offset=inoa,

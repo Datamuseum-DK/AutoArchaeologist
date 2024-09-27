@@ -76,10 +76,10 @@ class SysVFileSystem(ufs.UnixFileSystem):
     def get_superblock(self):
         ''' Read the superblock '''
         i = self.this[0x3f8:0x3fc].tobytes()
+        print("?SysVFIleSystem", self.this,  i.hex())
         self.ENDIAN = self.MAGIC.get(i)
         if not self.ENDIAN:
             return
-        print("?SysVFIleSystem", self.this,  i.hex())
 
         sblock = self.this.record(
             self.SBLOCK_LAYOUT,
@@ -87,6 +87,7 @@ class SysVFileSystem(ufs.UnixFileSystem):
             offset=0x200,
             name="sblock",
         )
+        print(self.this, sblock)
         if sblock.s_type == 3:
             self.SECTOR_SIZE = 2048
             self.FS_TYPE = "UNIX UFS 2K Filesystem"
@@ -94,6 +95,9 @@ class SysVFileSystem(ufs.UnixFileSystem):
             self.SECTOR_SIZE = 1024
             self.FS_TYPE = "UNIX UFS 1K Filesystem"
         elif sblock.s_type == 1:
+            self.SECTOR_SIZE = 512
+            self.FS_TYPE = "UNIX UFS 512B Filesystem"
+        elif sblock.s_type == 2214887424:
             self.SECTOR_SIZE = 512
             self.FS_TYPE = "UNIX UFS 512B Filesystem"
 

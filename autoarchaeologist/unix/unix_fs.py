@@ -34,7 +34,10 @@ import struct
 import time
 
 from ..base import namespace
-from .. import record
+from ..base import octetview as ov
+
+class NotCredible(Exception):
+    ''' dont trust this '''
 
 class NameSpace(namespace.NameSpace):
     ''' Unix NameSpace '''
@@ -64,11 +67,31 @@ class NameSpace(namespace.NameSpace):
         ("l", "artifact"),
     )
 
-class Inode(record.Record):
+class Inode(ov.Struct):
     ''' Inode in a UNIX filesystem '''
 
-    def __init__(self, ufs, **kwargs):
-        self.ufs = ufs
+    # i_mode bits
+    S_ISFMT = 0o170000
+    S_IFBLK = 0o060000
+    S_IFDIR = 0o040000
+    S_IFCHR = 0o020000
+    S_IFPIP = 0o010000
+    S_IFREG = 0o100000
+
+    S_ISUID = 0o004000
+    S_ISGID = 0o002000
+    S_ISVTX = 0o001000
+    S_IRUSR = 0o000400
+    S_IWUSR = 0o000200
+    S_IXUSR = 0o000100
+    S_IRGRP = 0o000400
+    S_IWGRP = 0o000200
+    S_IXGRP = 0o000100
+    S_IROTH = 0o000400
+    S_IWOTH = 0o000200
+    S_IXOTH = 0o000100
+
+    def __init__(self, *args, **kwargs):
 
         # Used by .get_block
         self.di_db = []
@@ -83,22 +106,25 @@ class Inode(record.Record):
         self.di_gid = 0
         self.di_mtime = 0
 
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
-        self.di_type = self.di_mode & self.ufs.S_ISFMT
+        self.di_type = self.di_mode & self.S_ISFMT
         self.fix_di_addr()
 
     def __iter__(self):
-        if self.di_type not in (0, self.ufs.S_IFDIR, self.ufs.S_IFREG):
+        if self.di_type not in (0, self.S_IFDIR, self.S_IFREG):
             return
         block_no = 0
         yet = self.di_size
         while yet:
             b = self.get_block(block_no)
             if b is None or len(b) == 0:
-                return None
+                return
+            b.insert()
+            #b.rendered = "Inode " + str(self.di_inum) + " block " + str(block_no)
+            b.rendered = "Inode " + str(self.di_inum) + " datablock"
             if len(b) > yet:
-                b = b[:yet]
+                b = ov.Opaque(b.tree, lo=b.lo, width=yet)
             yield b
             yet -= len(b)
             block_no += 1
@@ -112,44 +138,44 @@ class Inode(record.Record):
         retval.append("%6d" % self.di_inum)
 
         typ = {
-            self.ufs.S_IFPIP: "p",
-            self.ufs.S_IFCHR: "c",
-            self.ufs.S_IFDIR: "d",
-            self.ufs.S_IFBLK: "b",
-            self.ufs.S_IFREG: "-",
+            self.S_IFPIP: "p",
+            self.S_IFCHR: "c",
+            self.S_IFDIR: "d",
+            self.S_IFBLK: "b",
+            self.S_IFREG: "-",
         }.get(self.di_type)
 
         mode = self.di_mode
 
         if typ is None:
             txt = "%10o" % mode
-        elif not mode & self.ufs.S_IXUSR and mode & self.ufs.S_ISUID:
+        elif not mode & self.S_IXUSR and mode & self.S_ISUID:
             txt = "%10o" % mode
-        elif not mode & self.ufs.S_IXGRP and mode & self.ufs.S_ISGID:
+        elif not mode & self.S_IXGRP and mode & self.S_ISGID:
             txt = "%10o" % mode
         else:
             txt = typ
-            txt += "r" if mode & self.ufs.S_IRUSR else '-'
-            txt += "w" if mode & self.ufs.S_IWUSR else '-'
-            if mode & self.ufs.S_IXUSR and mode & self.ufs.S_ISUID:
+            txt += "r" if mode & self.S_IRUSR else '-'
+            txt += "w" if mode & self.S_IWUSR else '-'
+            if mode & self.S_IXUSR and mode & self.S_ISUID:
                 txt += "s"
-            elif mode & self.ufs.S_IXUSR:
+            elif mode & self.S_IXUSR:
                 txt += "x"
             else:
                 txt += "-"
-            txt += "r" if mode & self.ufs.S_IRGRP else '-'
-            txt += "w" if mode & self.ufs.S_IWGRP else '-'
-            if mode & self.ufs.S_IXGRP and mode & self.ufs.S_ISGID:
+            txt += "r" if mode & self.S_IRGRP else '-'
+            txt += "w" if mode & self.S_IWGRP else '-'
+            if mode & self.S_IXGRP and mode & self.S_ISGID:
                 txt += "s"
-            elif mode & self.ufs.S_IXUSR:
+            elif mode & self.S_IXUSR:
                 txt += "x"
             else:
                 txt += "-"
-            txt += "r" if mode & self.ufs.S_IROTH else '-'
-            txt += "w" if mode & self.ufs.S_IWOTH else '-'
-            if mode & self.ufs.S_ISVTX and mode & self.ufs.S_IXOTH:
+            txt += "r" if mode & self.S_IROTH else '-'
+            txt += "w" if mode & self.S_IWOTH else '-'
+            if mode & self.S_ISVTX and mode & self.S_IXOTH:
                 txt += "t"
-            elif mode & self.ufs.S_ISVTX:
+            elif mode & self.S_ISVTX:
                 txt += "T"
             else:
                 txt += "-"
@@ -167,11 +193,8 @@ class Inode(record.Record):
 
     def indir_get(self, blk, idx):
         ''' Pick a block number out of an indirect block '''
-        blk = blk[idx * 4:(idx + 1) * 4]
-        if len(blk) != 4:
-            return None
-        nblk = struct.unpack(self.ufs.ENDIAN + "L", blk)[0]
-        return self.ufs.get_block(nblk)
+        y = self.long(self.tree, blk.lo + 4 * idx)
+        return self.ufs.get_block(y.val)
 
     def get_block(self, block_no):
         '''
@@ -225,6 +248,12 @@ class DirEnt():
         self.inode = inode
         self.directory = None
         self.artifact = None
+        self.sanity_check()
+
+    def sanity_check(self):
+        if self.inode.di_type in (self.inode.S_IFREG, self.inode.S_IFDIR):
+            for _y in self.inode:
+                continue
 
     def __lt__(self, other):
         return self.path < other.path
@@ -238,23 +267,23 @@ class DirEnt():
             return
         if self.directory:
             self.directory.commit_files()
-        elif self.inode.di_type == self.ufs.S_IFREG:
+        elif self.inode.di_type == self.inode.S_IFREG:
             self.ufs.inode_is[self.inode.di_inum] = self
             if not self.inode.di_size:
                 return
-            b = bytes()
-            for i in self.inode:
-                b += i
-            if len(b) == 0:
+            l = list()
+            for y in self.inode:
+                l.append(y)
+            if len(l) == 0:
                 return
-            self.artifact = self.ufs.this.create(bits=b)
+            self.artifact = self.ufs.this.create(records=[x.octets() for x in l])
             self.artifact.add_note("UNIX file")
             self.namespace.ns_set_this(self.artifact)
 
 class Directory():
     ''' A directory in a UNIX filesystem '''
 
-    def __init__(self, ufs, path, namespace, inode):
+    def __init__(self, ufs, path, namespace, inode, parent_ino=None):
         self.ufs = ufs
         self.path = path
         self.inode = inode
@@ -262,16 +291,25 @@ class Directory():
         self.ufs.inode_is[self.inode.di_inum] = self
         self.namespace = namespace
         n = 0
-        for inum, dname in self.parse():
+        for inum, dname in self.ufs.parse_directory(self.inode):
             if n == 0 and dname != ".":
+                return
+            if n == 0 and inum != inode.di_inum:
+                raise NotCredible("'.' does not point back")
                 return
             if n == 1 and dname != "..":
                 return
+            if parent_ino and n == 1 and inum != parent_ino:
+                raise NotCredible("'..' does not point back")
+                return
             n += 1
-            if inum >= 2 and inum <= self.ufs.sblock.fs_imax:
-                dinode = self.ufs.get_inode(inum)
-            else:
-                dinode = None
+            if inum == 0:
+                continue
+            if not 2 <= inum <= self.ufs.sblock.fs_imax:
+                raise NotCredible("Inode " + hex(inum))
+            dinode = self.ufs.get_inode(inum)
+            if dname in (".", "..") and dinode.ifmt != dinode.S_IFDIR:
+                return
             dirent = DirEnt(self.ufs, self, dname, inum, dinode)
             self.dirents.append(dirent)
         self.recurse()
@@ -284,7 +322,7 @@ class Directory():
         for dirent in self.dirents:
             if not dirent.inode:
                 continue
-            if dirent.inode.di_type != self.ufs.S_IFDIR:
+            if dirent.inode.di_type != dirent.inode.S_IFDIR:
                 continue
             if dirent.path[-1] in (".", "..",):
                 continue
@@ -296,6 +334,7 @@ class Directory():
                 dirent.path,
                 dirent.namespace,
                 dirent.inode,
+                self.inode.di_inum,
             )
 
     def commit_files(self):
@@ -304,60 +343,31 @@ class Directory():
             dirent.commit_file()
         assert self.ufs.inode_is[self.inode.di_inum] == self
 
-    def parse(self):
-        ''' Parse classical unix directory: 16bit inode + 14 char name '''
-        for b in self.inode:
-            b = b.tobytes()
-            for j in range(0, len(b), 16):
-                de_bytes = b[j:j+16]
-                if len(de_bytes) != 16:
-                    break
-                if not max(de_bytes):
-                    continue
-                words = struct.unpack(self.ufs.ENDIAN + "H14s", de_bytes)
-                name = words[1].rstrip(b'\x00')
-                name = name.decode(self.ufs.CHARSET)
-                yield words[0], name
-
-class UnixFileSystem():
+class UnixFileSystem(ov.OctetView):
     ''' What it says on the tin '''
 
     FS_TYPE = "UNIX Filesystem"
-    CHARSET = "ASCII"
-    ENDIAN = ">"
-
-    # i_mode bits
-    S_ISFMT = 0o170000
-    S_IFBLK = 0o060000
-    S_IFDIR = 0o040000
-    S_IFCHR = 0o020000
-    S_IFPIP = 0o010000
-    S_IFREG = 0o100000
-
-    S_ISUID = 0o004000
-    S_ISGID = 0o002000
-    S_ISVTX = 0o001000
-    S_IRUSR = 0o000400
-    S_IWUSR = 0o000200
-    S_IXUSR = 0o000100
-    S_IRGRP = 0o000400
-    S_IWGRP = 0o000200
-    S_IXGRP = 0o000100
-    S_IROTH = 0o000400
-    S_IWOTH = 0o000200
-    S_IXOTH = 0o000100
 
     DIRECTORY = Directory
+
+    VERBOSE = False
 
     def __init__(self, this):
         if len(this) < 20480:
             return
-        self.this = this
+        super().__init__(this)
         self.sblock = None
         self.inode_is = {}
         self.suspect_inodes = {}
-        self.analyse()
-        if self.sblock:
+        self.good = False
+        try:
+            self.analyse()
+        except NotCredible as err:
+            if self.VERBOSE:
+                print("\tNot Credible", err)
+            return
+        self.good = True
+        if 0 and self.sblock:
             print("Speculate", self.this)
             self.speculate()
             print("Speculation over", self.this)
@@ -373,6 +383,8 @@ class UnixFileSystem():
             NameSpace(None, name="", separator="", root=self.this),
             self.get_inode(2),
         )
+
+    def commit(self):
         self.this.add_interpretation(self, self.rootdir.namespace.ns_html_plain)
         self.rootdir.commit_files()
         self.this.add_description(self.FS_TYPE)
@@ -387,7 +399,7 @@ class UnixFileSystem():
                 continue
             if inode.di_size >= len(self.this):
                 continue
-            if inode.di_type not in (0, self.S_IFDIR, self.S_IFREG):
+            if inode.di_type not in (0, inode.S_IFDIR, inode.S_IFREG):
                 continue
             self.suspect_inodes[inum] = inode
 
@@ -418,9 +430,9 @@ class UnixFileSystem():
     def speculate_ifdir(self, tour):
         ''' Try to reattach directory inodes '''
         for inum, inode in self.suspect_inodes.items():
-            if not tour and inode.di_type != self.S_IFDIR:
+            if not tour and inode.di_type != inode.S_IFDIR:
                 continue
-            if tour and inode.di_type not in (0, self.S_IFDIR):
+            if tour and inode.di_type not in (0, inode.S_IFDIR):
                 continue
             if inode.di_size % 0x10:   # XXX: Only SysV
                 continue
@@ -451,7 +463,7 @@ class UnixFileSystem():
         return
         pdir = self.inode_is.get(2)
         for inum, inode in self.suspect_inodes.items():
-            if inode.di_type not in (0, self.S_IFREG):
+            if inode.di_type not in (0, inode.S_IFREG):
                 continue
             if not inode.di_size:
                 continue
@@ -459,7 +471,7 @@ class UnixFileSystem():
             fpath = pdir.path + [name]
             print("  Reattach ", inode, "as", "/".join(fpath) )
             styp = inode.di_type
-            inode.di_type = self.S_IFREG
+            inode.di_type = inode.S_IFREG
             dirent = DirEnt(self, pdir, name, inum, inode)
             pdir.dirents.append(dirent)
             dirent.commit_file()
