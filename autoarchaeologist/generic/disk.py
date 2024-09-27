@@ -1,47 +1,26 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
 
 '''
-   Utilities for Disks
+   Utility classes for dealing with artifacts representing
+   or organized as some kind of disk, ie: A cyl/hd/sect type
+   of layout.
+
+   By convention, a sector containing b'_UNREAD_' repeatedly
+   is considered invalid because they were not read from the
+   original media.
 '''
 
 import os
 import subprocess
 
 from ..base import octetview as ov
+from ..base import category_colors
 
-COLORS = [
-   # Colorblind barrier-free color palette
-   #
-   # From Okabe & Ito (2002):
-   #    Color Universal Design (CUD)
-   #    - How to make figures and presentations that are friendly to Colorblind people
-   #
-   # https://jfly.uni-koeln.de/html/color_blind/
-   #
-   #   via:
-   # https://betterfigures.org/2015/06/23/picking-a-colour-scale-for-scientific-graphics/
-   #
-   [ 0, 0, 0],		# Black
-   [ 230, 159, 0],	# Orange
-   [ 86, 180, 233],	# Sky blue
-   [ 0, 158, 115],	# Bluish green
-   [ 240, 228, 66],	# Yellow
-   [ 0, 114, 178],	# Blue
-   [ 213, 94, 0],	# Vermillion
-   [ 204, 121, 167],	# Reddish purple
-
-   # More colors...
-   [ 255, 0, 0],
-   [ 0, 255, 0],
-   [ 0, 0, 255],
-   [ 255, 255, 0],
-   [ 255, 0, 255],
-   [ 0, 255, 255],
-   [ 128, 0, 0],
-   [ 0, 128, 0],
-   [ 0, 0, 128],
-]
-
+COLORS = category_colors.COLORS
 
 class Sector(ov.Octets):
     ''' A sector '''
@@ -132,7 +111,7 @@ class UnusedSector(Sector):
 class Disk(ov.OctetView):
     ''' ... '''
 
-    SECTOR_OFFSET = 1
+    SECTOR_OFFSET = 1		# Sectors are usually numbered 1, 2, 3…
 
     def __init__(self, this, geometry, physsect=None, unread_pattern=None):
         self.geometry = geometry	# [ [C, H, S, B], ...]
@@ -233,6 +212,7 @@ class Disk(ov.OctetView):
         subprocess.run(
             [
                 "convert",
+                "-strip",		# Avoid timestamp
                 "-scale", zoom,
                 p6f.filename + "_",
                 p6f.filename,
