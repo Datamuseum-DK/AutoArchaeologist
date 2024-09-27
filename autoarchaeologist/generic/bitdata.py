@@ -4,6 +4,8 @@
 
    Tools for dealing with data not on byte boundaries
 
+   NB: Dont use these classes in new development
+
 '''
 
 class PackedBits():

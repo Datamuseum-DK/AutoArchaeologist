@@ -3,6 +3,8 @@
 '''
    Operating on artifacts in bit-alignment
    ---------------------------------------
+
+   NB: Dont use these classes in new development
 '''
 
 from ..generic.ascii import Str2Html
