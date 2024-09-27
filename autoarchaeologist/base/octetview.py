@@ -66,11 +66,26 @@ class Octets(bintree.BinTreeLeaf):
 
     def render(self):
         ''' Render hexdumped + text-column '''
+        #yield fom self.hexdump(lo=self.lo, hi=self.hi, width=len(self)
+        #return
         octets = self.this[self.lo:self.hi]
         fmt = "%02x"
         tcase = self.this.type_case.decode(octets)
         yield " ".join(fmt % x for x in octets) + "   ┆" + tcase + "┆"
 
+class Dump(Octets):
+    ''' basic (hex)dump '''
+
+    WIDTH = 32
+    FMT = "%02x"
+
+    def render(self):
+        ''' ... '''
+        yield self.__class__.__name__ + " {"
+        for i in self.this.hexdump(self.lo, self.hi):
+            yield "  " + i
+        yield "}"
+         
 class This(Octets):
     ''' A new artifact '''
 
@@ -120,9 +135,14 @@ def Text(width, rstrip=False):
             super().__init__(*args, **kwargs)
             if type_case is None:
                 type_case = self.this.type_case
+            self.type_case = type_case
             self.txt = type_case.decode(self.iter_bytes())
             if self.RSTRIP:
                 self.txt = self.txt.rstrip()
+
+        def full_text(self):
+            ''' Full representation of the text '''
+            return self.type_case.decode_long(self.iter_bytes())
 
         def render(self):
             yield "»" + self.txt + "«"
