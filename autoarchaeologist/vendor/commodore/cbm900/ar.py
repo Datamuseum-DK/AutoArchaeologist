@@ -1,10 +1,17 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
+
 '''
-   AR(1) format
+   CBM900 ar(1) files
+   ------------------
 '''
 
-from ..base import octetview as ov
-from ..base import namespace
-from .unix_stat import UnixStat
+from ....base import octetview as ov
+from ....base import namespace
+from ....unix.unix_stat import UnixStat
 
 class ArHdr(ov.Struct):
     ''' see ⟦309830465⟧ '''
@@ -47,18 +54,15 @@ class NameSpace(namespace.NameSpace):
             self.stat.timestamp(arhdr.time.val),
         ] + super().ns_render()
 
-class Ar(ov.OctetView):
+class CBM900Ar(ov.OctetView):
+    ''' CBM900 ar(1) files '''
 
     def __init__(self, this):
         if len(this) < 30:
             return
         super().__init__(this)
-        y = ov.Struct(
-            self,
-            0,
-            magic_=ov.Le16
-        )
-        if y.magic.val != 0o177535:
+        y = ov.Le16(self, 0)
+        if y.val != 0o177535:
             return
         y.insert()
         this.type = "Ar_file"
@@ -76,6 +80,6 @@ class Ar(ov.OctetView):
                 break
             z = ov.This(self, lo=offset, width=y.size.val).insert()
             offset = z.hi
-            NameSpace(y.name.txt, self.namespace, this=z.this, priv=y)
+            NameSpace(y.name.txt, self.namespace, this=z.that, priv=y)
         this.add_interpretation(self, self.namespace.ns_html_plain)
         self.add_interpretation()

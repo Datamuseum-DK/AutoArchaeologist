@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
+
 '''
 Commodore CBM-900 Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,8 +13,7 @@ from autoarchaeologist import ddhf
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.unix import guess_unix_fs
-from autoarchaeologist.unix import cbm900_ar
-from autoarchaeologist.unix import cbm900_l_out
+from autoarchaeologist.vendor.commodore import cbm900
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
 
@@ -22,11 +27,11 @@ class CBM900(ddhf.DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        # The demo programs for Hanovermesse 1985 are in german.
         self.type_case = type_case.WellKnown("iso8859-1")
 
+        self.add_examiner(*cbm900.examiners)
         self.add_examiner(guess_unix_fs.GuessUnixFs)
-        self.add_examiner(cbm900_ar.Ar)
-        self.add_examiner(cbm900_l_out.L_Out)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
 
