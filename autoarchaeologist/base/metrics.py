@@ -44,8 +44,10 @@ class Metrics():
             file.write("<H2>Metrics</H2>\n")
             file.write("<table>\n")
             file.write("<thead>\n")
+            file.write("<tr>\n")
             file.write("<th>Overlaps</th>\n")
             file.write("<th>Artifact</th>\n")
+            file.write("</tr>\n")
             file.write("</thead>\n")
             if l_unique:
                 file.write("<tr>")
@@ -76,6 +78,7 @@ class Metrics():
                     file.write("<td>" + that.summary(names=True, notes=True) + "</td>")
                     file.write("</tr>")
                 file.write("</table>\n")
+            self.this.top.html_suffix(file, self.this)
         return self.this.top.html_link_to(
             self.this,
             "%d/%d" % (l_unique, l_children),
