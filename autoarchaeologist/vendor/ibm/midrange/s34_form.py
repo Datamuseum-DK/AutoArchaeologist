@@ -1,9 +1,32 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
 
+'''
+   IBM S/34 'O' members descripting screen forms
 
+   I dont think this format is documented anywhere.
 
-from ..base import octetview as ov
+   The most complex part of each form description contains the
+   precise data sequence sent to the display, which is documented
+   in the alphabetically sorted "Encylopedia" section of this document:
+
+      GA21-9247-6 5250 Information Display System Functions Reference Manual
+
+   which bitsavers have here:
+
+      http://bitsavers.org/pdf/ibm/5250_5251/
+
+   Start from "Orders" on page 2-136 (pdf pg 188)
+   
+'''
+
+from ....base import octetview as ov
 
 class FormPointer(ov.Struct):
+    ''' Points to where the form lives in the member '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -21,6 +44,7 @@ class FormPointer(ov.Struct):
         self.insert()
 
 class FormHead(ov.Struct):
+    ''' Form description '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -33,6 +57,7 @@ class FormHead(ov.Struct):
         )
 
 class FieldDef(ov.Struct):
+    ''' Field description '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -46,14 +71,13 @@ class FieldDef(ov.Struct):
             pass
         elif self.f01.val == 0xffff:
             self.add_field("f02", ov.Be16)
-            pass
         elif self.f01.val & 0x8000:
             self.add_field("f02", ov.Be16)
             self.add_field("f80", 8)
         self.done()
 
 class StartOfHeader(ov.Struct):
-    ''' GA21-9247-2 pdf page 191 '''
+    ''' GA21-9247-6 pdf page 191 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -70,7 +94,7 @@ class StartOfHeader(ov.Struct):
             print(self.tree.this, "FORM: Bad SOH len", self)
 
 class ClearUnit(ov.Struct):
-    ''' GA21-9247-2 pdf page 61 '''
+    ''' GA21-9247-6 pdf page 61 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -80,7 +104,7 @@ class ClearUnit(ov.Struct):
         )
 
 class ClearFormatTable(ov.Struct):
-    ''' GA21-9247-2 pdf page 61 '''
+    ''' GA21-9247-6 pdf page 61 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -90,7 +114,7 @@ class ClearFormatTable(ov.Struct):
         )
 
 class WriteToDisplay(ov.Struct):
-    ''' GA21-9247-2 pdf page 65 '''
+    ''' GA21-9247-6 pdf page 65 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -101,7 +125,7 @@ class WriteToDisplay(ov.Struct):
         )
 
 class InsertCursor(ov.Struct):
-    ''' GA21-9247-2 pdf page 189 '''
+    ''' GA21-9247-6 pdf page 189 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -112,7 +136,7 @@ class InsertCursor(ov.Struct):
         )
 
 class SetBufferAddress(ov.Struct):
-    ''' GA21-9247-2 pdf page 189 '''
+    ''' GA21-9247-6 pdf page 189 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -123,7 +147,7 @@ class SetBufferAddress(ov.Struct):
         )
 
 class StartField(ov.Struct):
-    ''' GA21-9247-2 pdf page 190 '''
+    ''' GA21-9247-6 pdf page 190 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -139,6 +163,7 @@ class StartField(ov.Struct):
         self.done()
 
 class Attribute(ov.Struct):
+    ''' GA21-9247-6 pdf page 195 '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -147,6 +172,7 @@ class Attribute(ov.Struct):
         )
 
 class Form(ov.Struct):
+    ''' One form in the member '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -156,7 +182,7 @@ class Form(ov.Struct):
         )
 
         self.pane = []
-        for i in range(25):
+        for _i in range(26):
             self.pane.append([' '] * 80)
         self.pos_x = 0
         self.pos_y = 0
@@ -169,7 +195,7 @@ class Form(ov.Struct):
             nf = 0
             if this[self.hi] & 0x40:
                 self.add_field("formxx", 4)
-             
+
             while True:
                 if this[self.hi] == 0xff and this[self.hi+1] == 0xff:
                     self.add_field(None, 2)
@@ -206,29 +232,29 @@ class Form(ov.Struct):
                 if this[self.hi] == 0x1d:
                     y = self.add_field(None, StartField)
                     save = (self.pos_x, self.pos_y)
-                    self.add_char('├')
-                    for i in range(y.len.val):
-                        self.add_char('┴')
-                    self.add_char('┤')
+                    self.add_glyph('├')
+                    for _i in range(y.len.val):
+                        self.add_glyph('┴')
+                    self.add_glyph('┤')
                     self.pos_x, self.pos_y = save
                     continue
                 if this[self.hi] & 0xe0 == 0x20:
                     self.add_field(None, Attribute)
-                    self.add_char('╳')
+                    self.add_glyph('╳')
                     continue
                 ptr = self.hi
                 while ptr < end:
                     if this[ptr] in (0x01, 0x04, 0x03, 0x11, 0x13, 0x1d,):
-                         break
+                        break
                     if this[ptr] & 0xe0 == 0x20:
-                         break
+                        break
                     ptr += 1
                     if self.pos_x + (ptr - self.hi) > 79:
-                         break
+                        break
                 if ptr > self.hi:
                     y = self.add_field(None, ov.Text(ptr - self.hi))
                     for c in y.txt:
-                        self.add_char(c)
+                        self.add_glyph(c)
                     continue
                 print(this, "Unknown FORM data", bytes(this[self.hi:self.hi+16]).hex())
                 break
@@ -237,20 +263,31 @@ class Form(ov.Struct):
         self.done()
         self.insert()
 
-    def add_char(self, chr):
+    def add_glyph(self, glyph):
+        ''' Add a glyph and advance cursor '''
         while self.pos_x > 79:
             self.pos_x -= 80
             self.pos_y += 1
-        if self.pos_y > 24:
-            print(self.tree.this, "FORM AD", hex(self.hi), self.pos_y, self.pos_x, chr)
+        if self.pos_y == 25 and self.pos_x == 0:
+            pass
+        elif self.pos_y > 25:
+            print(
+                self.tree.this,
+                "FORM add_glyph outside screen",
+                hex(self.hi),
+                self.pos_y,
+                self.pos_x,
+                glyph
+            )
             return
-        self.pane[self.pos_y][self.pos_x] = chr
+        self.pane[self.pos_y][self.pos_x] = glyph
         self.pos_x += 1
         if self.pos_x > 79:
             self.pos_x -= 80
             self.pos_y += 1
 
     def render_pane(self):
+        ''' Render image of pane '''
         yield '┌' + '─' * 80 + '┐'
         for line in self.pane:
             yield '│' + ''.join(line) + '│'
@@ -261,6 +298,7 @@ class Form(ov.Struct):
         yield from self.render_pane()
 
 class S34Form(ov.OctetView):
+    ''' IBM S/34 'O' members describing screen forms '''
 
     def __init__(self, this):
 
@@ -273,7 +311,6 @@ class S34Form(ov.OctetView):
         if not this.has_note("MEMBER_O"):
             return
 
-        print(this, "S34Form")
         super().__init__(this)
         this.type_case.set_slug(0x0, '░')
 
@@ -281,7 +318,7 @@ class S34Form(ov.OctetView):
         adr = 0
         while adr < len(this) and this[adr] != 0xff:
             y = FormPointer(self, adr)
-            print("FP", y)
+            # print("FP", y)
             if y.f1.val:
                 return
             if y.f2.val:
@@ -306,4 +343,3 @@ class S34Form(ov.OctetView):
                 for i in form.render_pane():
                     file.write(i + "\n")
         self.add_interpretation(more=True)
-

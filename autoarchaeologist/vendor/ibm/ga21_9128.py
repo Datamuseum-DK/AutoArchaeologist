@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
 
 '''
    Floppies according to GA21-9182
    ===============================
 '''
 
-
-from ..base import artifact
-from ..base import octetview as ov
-from ..base import namespace
-from ..generic import disk
+from ...base import artifact
+from ...base import octetview as ov
+from ...base import namespace
+from ...generic import disk
 
 C_VOL1 = "VOL1".encode('cp037')
 C_HDR1 = "HDR1".encode('cp037')
@@ -90,7 +93,7 @@ class MVolFile():
         last = self.frags.get("")
         if last is not None:
             self.commit_file(last, last.recs)
-            print("COMPLETE S", last.user_name.txt)
+            # print("COMPLETE S", last.user_name.txt)
             return
         last_vol = max(self.frags)
         last = self.frags.get(last_vol)
@@ -98,10 +101,10 @@ class MVolFile():
             return
         if len(self.frags) != int(last_vol):
             return
-        print("COMPLETE M", last.user_name.txt)
+        #print("COMPLETE M", last.user_name.txt)
         recs = []
         for seq, frag in sorted((int(x.seq), x) for x in self.frags.values()):
-            print("  No", seq, frag.tree.this)
+            # print("  No", seq, frag.tree.this)
             recs += frag.recs
         self.commit_file(last, recs)
 

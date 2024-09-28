@@ -10,9 +10,7 @@ from autoarchaeologist.bitsavers import bitsavers
 
 from autoarchaeologist.generic import textfiles
 
-from autoarchaeologist.IBM import ga21_9128
-from autoarchaeologist.IBM import s34_library
-from autoarchaeologist.IBM import s34_form
+from autoarchaeologist.vendor.ibm import midrange
 
 class BitSaversIbm34(bitsavers.Excavation):
     '''
@@ -23,10 +21,8 @@ class BitSaversIbm34(bitsavers.Excavation):
 
         self.type_case = type_case.WellKnown("cp037")
 
-        self.add_examiner(ga21_9128.Ga21_9182)
-        self.add_examiner(s34_library.S34Library)
-        self.add_examiner(s34_form.S34Form)
-        self.add_examiner(textfiles.TextFile)
+        self.add_examiner(*midrange.examiners)
+        #self.add_examiner(textfiles.TextFile)
 
         bitsavers.FromBitsavers(
             self,

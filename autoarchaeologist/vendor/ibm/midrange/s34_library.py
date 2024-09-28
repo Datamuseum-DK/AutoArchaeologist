@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license text
 
-
-
-from ..base import octetview as ov
-from ..base import namespace
+from ....base import octetview as ov
+from ....base import namespace
 
 class NameSpace(namespace.NameSpace):
     ''' ... '''
@@ -57,7 +60,7 @@ class Header(ov.Struct):
 
 class MemberText(ov.OctetView):
     def __init__(self, this):
-        print(this, "S34Library::MemberP")
+        #print(this, "S34Library::MemberP")
 
         super().__init__(this)
         self.parts = []
@@ -94,7 +97,7 @@ class S34Library(ov.OctetView):
             return;
         if hdr.record_length.txt != "0008":
             return;
-        print(this, "S34Library")
+        #print(this, "S34Library")
 
         super().__init__(this)
 
