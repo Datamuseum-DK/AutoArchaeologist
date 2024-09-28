@@ -11,7 +11,7 @@ import os
 import mmap
 import urllib.request
 
-from ..base import excavation
+from ..base import excavation, decorator
 from ..container import imd_file
 
 class FromBitsavers():
@@ -111,7 +111,7 @@ class FromBitsavers():
                 file.write(body)
         return None
 
-class Excavation(excavation.Excavation):
+class Decorator(decorator.Decorator):
     ''' ... '''
 
     def html_prefix_banner(self, file, _this):
@@ -121,12 +121,3 @@ class Excavation(excavation.Excavation):
         file.write('<p>AutoArchaeologist software from <a href="https://github.com/Datamuseum-DK/AutoArchaeologist">DataMuseum.dk\'s github repo</a></p>\n')
         file.write('<p>Contact: Poul-Henning Kamp</p>\n')
         file.write('<hr/>\n')
-
-if __name__ == "__main__":
-
-
-    FromBitSavers(
-        None,
-        "/tmp/BS/Cache",
-        "bits/IBM/System_34",
-    )

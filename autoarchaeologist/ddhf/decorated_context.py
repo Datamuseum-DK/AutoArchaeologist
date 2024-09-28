@@ -9,10 +9,55 @@
 import sys
 import os
 
-from ..base import excavation
+from ..base import excavation, decorator
 from ..container import simh_tap_file, plain_file, imd_file
 from .bitstore import FromBitStore
 
+class Decorator(decorator.Decorator):
+
+    def html_prefix_banner(self, file, _this):
+        ''' Emit the banner for this excavation '''
+        file.write('<table>\n')
+        file.write('<tr>\n')
+
+        file.write('<td style="vertical-align: middle;">\n')
+        file.write('<img src="/logo/ddhf_logo.svg"/>\n')
+        file.write('</td>\n')
+
+        file.write('<td style="vertical-align: top;')
+        file.write(' padding-left: 40px; padding-right: 40px;">\n')
+        file.write('<h1><a href="https://datamuseum.dk/wiki">DataMuseum.dk</a></h1>\n')
+        file.write('<p>Presents historical artifacts from the history of:</p>\n')
+        if self.top.ddhf_topic:
+            file.write('<h2>\n')
+            if self.top.ddhf_topic_link:
+                file.write('<a href="' + self.top.ddhf_topic_link + '">')
+            file.write(self.top.ddhf_topic + '\n')
+            if self.top.ddhf_topic_link:
+                file.write('</a>')
+            file.write('</h2>\n')
+        file.write('</td>\n')
+        file.write('<td style="vertical-align: top; padding: 10px;">\n')
+        file.write('<P>\n')
+        file.write('This is an automatic "excavation" of a thematic subset of\n')
+        file.write('<br>\n')
+        file.write('artifacts from\n')
+        file.write('<A href="https://datamuseum.dk/wiki">Datamuseum.dk</A>\'s')
+        file.write(' <A href="https://datamuseum.dk/wiki/Bits:Keyword">BitArchive</A>.\n')
+        if self.top.ddhf_topic_link:
+            file.write('<p>\n')
+            file.write('See our Wiki for more about ')
+            file.write('<a href="' + self.top.ddhf_topic_link + '">')
+            file.write(self.top.ddhf_topic + '</a>\n')
+            file.write('</p>\n')
+        file.write('<p>\n')
+        file.write('Excavated with: ')
+        file.write(' <A href="https://github.com/Datamuseum-DK/AutoArchaeologist">')
+        file.write('AutoArchaeologist</A> - Free &amp; Open Source Software.\n')
+        file.write('</td>\n')
+        file.write('</tr>\n')
+        file.write('</table>\n')
+        file.write('<hr/>\n')
 
 class DDHF_Excavation(excavation.Excavation):
     '''
@@ -33,49 +78,7 @@ class DDHF_Excavation(excavation.Excavation):
         self.ddhf_bitstore_cache = ddhf_bitstore_cache
         super().__init__(**kwargs)
 
-    def html_prefix_banner(self, file, _this):
-        ''' Emit the banner for this excavation '''
-        file.write('<table>\n')
-        file.write('<tr>\n')
-
-        file.write('<td style="vertical-align: middle;">\n')
-        file.write('<img src="/logo/ddhf_logo.svg"/>\n')
-        file.write('</td>\n')
-
-        file.write('<td style="vertical-align: top;')
-        file.write(' padding-left: 40px; padding-right: 40px;">\n')
-        file.write('<h1><a href="https://datamuseum.dk/wiki">DataMuseum.dk</a></h1>\n')
-        file.write('<p>Presents historical artifacts from the history of:</p>\n')
-        if self.ddhf_topic:
-            file.write('<h2>\n')
-            if self.ddhf_topic_link:
-                file.write('<a href="' + self.ddhf_topic_link + '">')
-            file.write(self.ddhf_topic + '\n')
-            if self.ddhf_topic_link:
-                file.write('</a>')
-            file.write('</h2>\n')
-        file.write('</td>\n')
-        file.write('<td style="vertical-align: top; padding: 10px;">\n')
-        file.write('<P>\n')
-        file.write('This is an automatic "excavation" of a thematic subset of\n')
-        file.write('<br>\n')
-        file.write('artifacts from\n')
-        file.write('<A href="https://datamuseum.dk/wiki">Datamuseum.dk</A>\'s')
-        file.write(' <A href="https://datamuseum.dk/wiki/Bits:Keyword">BitArchive</A>.\n')
-        if self.ddhf_topic_link:
-            file.write('<p>\n')
-            file.write('See our Wiki for more about ')
-            file.write('<a href="' + self.ddhf_topic_link + '">')
-            file.write(self.ddhf_topic + '</a>\n')
-            file.write('</p>\n')
-        file.write('<p>\n')
-        file.write('Excavated with: ')
-        file.write(' <A href="https://github.com/Datamuseum-DK/AutoArchaeologist">')
-        file.write('AutoArchaeologist</A> - Free &amp; Open Source Software.\n')
-        file.write('</td>\n')
-        file.write('</tr>\n')
-        file.write('</table>\n')
-        file.write('<hr/>\n')
+        self.decorator = Decorator(self)
 
     def from_bitstore(self, *args, **kwargs):
         ''' Add artifacts from the Datamuseum.dk Bitstore '''

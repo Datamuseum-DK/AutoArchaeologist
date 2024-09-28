@@ -5,16 +5,19 @@
    There is NO way the world can ever thank Al Kossow enough for bitsavers.
 '''
 
-from autoarchaeologist.bitsavers import bitsavers
 
+from autoarchaeologist import Excavation
+from autoarchaeologist.bitsavers import bitsavers
 from autoarchaeologist.vendor.ibm import midrange
 
-class BitSaversIbm34(bitsavers.Excavation):
+class BitSaversIbm34(Excavation):
     '''
        Excavate the non-fe IBM/S34 floppies
     '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.decorator = bitsavers.Decorator(self)
 
         midrange.midrange_excavation(self)
 

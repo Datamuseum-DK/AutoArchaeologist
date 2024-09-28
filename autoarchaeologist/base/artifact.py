@@ -12,7 +12,6 @@ import html
 from itertools import zip_longest
 
 from . import bintree
-from . import excavation
 from . import interpretation
 from . import octetview as ov
 from . import result_page
@@ -117,7 +116,7 @@ class ArtifactBase(result_page.ResultPage):
         return int(self.digest[:8], 16)
 
     def __lt__(self, other):
-        if isinstance(other, excavation.Excavation):
+        if other == self.top:
             return 1
         return self.digest < other.digest
 
@@ -351,7 +350,7 @@ class ArtifactBase(result_page.ResultPage):
                     txt.append(i)
                     j.add(i)
         if notes:
-            txt += excavation.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
+            txt += self.top.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
         if not link or not ident or not types or not descriptions:
             return nam + ", ".join(txt)
         return nam + ", ".join(txt)

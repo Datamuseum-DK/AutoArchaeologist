@@ -19,14 +19,7 @@ from . import index
 from . import type_case
 from . import result_page
 from . import metrics
-
-def dotdotdot(gen, limit=35):
-    ''' Return a limited number of elements, and mark as truncated if so. '''
-    for n, i in enumerate(gen):
-        if n == limit:
-            yield "[…]"
-            return
-        yield i
+from . import decorator
 
 class DuplicateArtifact(Exception):
     ''' Top level artifacts should not be identical '''
@@ -118,6 +111,8 @@ class Excavation(result_page.ResultPage):
         self.html_dir = html_dir
         self.link_prefix = link_prefix
         self.spill_index = spill_index
+
+        self.decorator = None
 
         self.hashes = {}
         self.busy = True
@@ -257,79 +252,12 @@ class Excavation(result_page.ResultPage):
 
         self.calculate_metrics()
 
-        self.produce_front_page()
+        if self.decorator is None:
+            self.decorator = decorator.Decorator(self)
 
-        for this in self.hashes.values():
-
-            if self.downloads and len(this) < self.download_limit:
-                binfile = self.filename_for(this, suf=".bin")
-                this.writetofile(open(binfile.filename, 'wb'))
-
-            fnt = self.filename_for(this)
-            fmt = None
-            with open(fnt.filename, "w") as fot:
-                self.html_prefix(fot, this)
-                self.html_artifact_head(fot, this)
-                more = this.html_page(fot)
-                if more:
-                    fmt = self.filename_for(this, suf="_more.html")
-                    fot.write("<H3>More…</H3>\n")
-                    fot.write('<A href="%s">Full View</A>\n' % fmt.link)
-                self.html_suffix(fot, this)
-            if not more:
-                continue
-            with open(fmt.filename, "w") as fot:
-                self.html_prefix(fot, this)
-                self.html_artifact_head(fot, this)
-                this.html_page(fot, domore=True)
-                fot.write("<H3>Less…</H3>\n")
-                fot.write('<A href="%s">Reduced view</A>\n' % fnt.link)
-                self.html_suffix(fot, this)
+        self.decorator.produce_html()
 
         return self.filename_for(self).link
-
-    def produce_front_page(self):
-        ''' Top level html page '''
-        fn = self.filename_for(self, suf=".css")
-        with open(fn.filename, "w") as file:
-            file.write(self.CSS)
-        fn = self.filename_for(self)
-        fo = open(fn.filename, "w")
-        self.html_prefix(fo, self)
-
-        fo.write("<pre>\n")
-        fo.write(self.html_link_to(self, "top"))
-        fo.write("</pre>\n")
-        index.Index(self).produce(fo)
-
-        fo.write("<H2>Top level artifacts</H2>")
-        fo.write("<table>\n")
-        fo.write("<thead>\n")
-        fo.write("<th>Artifact</th>\n")
-        fo.write("<th>Unique</th>\n")
-        fo.write("<th>Description<th>\n")
-        fo.write("</thead>\n")
-        for n, this in enumerate(self.children):
-            if n & 1:
-                fo.write('<tr class="stripe">\n')
-            else:
-                fo.write('<tr>\n')
-            fo.write('<td>' + self.html_link_to(this) + '</td>\n')
-            fo.write('<td>' + this.metrics.terse() + '</td>\n')
-            fo.write('<td>' + this.html_description() + "</td>\n")
-            fo.write("</tr>\n")
-            fo.write("<tr>\n")
-            fo.write("<td></td>")
-            fo.write("<td></td>")
-            fo.write('<td style="font-size: 70%;">')
-            fo.write(", ".join(dotdotdot(sorted({y for x, y in this.iter_notes(True)}))))
-            fo.write("</td>\n")
-            fo.write("</tr>\n")
-        fo.write("</table>\n")
-
-        self.emit_interpretations(fo, domore=True)
-
-        self.html_suffix(fo, self)
 
     def html_link_to(self, this, link_text=None, anchor=None, **kwargs):
         ''' Return a HTML link to an artifact '''
@@ -345,53 +273,18 @@ class Excavation(result_page.ResultPage):
         t += '</a>'
         return t
 
-    def html_prefix_head(self, fo, this):
-        ''' meta lines inside <head>…</head> '''
-        fo.write('<meta charset="utf-8">\n')
-        if isinstance(this, Excavation):
-            fo.write('<title>AutoArchaeologist</title>\n')
-        elif isinstance(this, str):
-            fo.write('<title>' + this + '</title>\n')
-        else:
-            fo.write('<title>' + str(this) + '</title>\n')
-
-    def html_prefix_banner(self, _fo, _this):
-        ''' Top of pages banner '''
-        return
-
     def html_prefix(self, fo, this):
-        ''' Top of the HTML pages '''
-        fo.write("<!DOCTYPE html>\n")
-        fo.write("<html>\n")
-        fo.write("<head>\n")
-        self.html_prefix_head(fo, this)
-        self.html_prefix_style(fo, this)
-        fo.write("</head>\n")
-        fo.write("<body>\n")
-        self.html_prefix_banner(fo, this)
+        self.decorator.html_prefix(fo, this)
 
     def html_artifact_head(self, fo, this):
-        fo.write("<pre>")
-        fo.write(self.html_link_to(self, "top"))
-        if not isinstance(this, Excavation) and self.download_links and self.download_limit > len(this):
-            fo.write(" - " + self.html_link_to(this, "download", suf=".bin"))
-        fo.write("</pre>\n")
-        if this.ns_roots:
-            index.Index(this).produce(fo)
+        self.decorator.html_artifact_head(fo, this)
 
-    def html_suffix(self, fo, _this):
-        ''' Tail of all the HTML pages '''
-        fo.write("</body>\n")
-        fo.write("</html>\n")
+    def html_suffix(self, fo, this):
+        self.decorator.html_suffix(fo, this)
 
     def html_derivation(self, _fo, target=False):
         ''' Duck-type as Artifact'''
         return ""
-
-    def html_prefix_style(self, fo, _target):
-        ''' Duck-type as Artifact '''
-        rdir = self.filename_for(self, suf=".css").link
-        fo.write('<link rel="stylesheet" href="%s">\n' % rdir)
 
     def iter_types(self):
         ''' Duck-type as Artifact '''
@@ -411,27 +304,6 @@ class Excavation(result_page.ResultPage):
             that.metrics = metrics.Metrics(that)
         for that in self.children:
             that.metrics.reduce(self.children)
-        
 
-    CSS = '''
-        body {
-            font-family: "Inconsolata", "Courier New", mono-space;
-        }
-        td,th {
-            padding: 0 10px 0;
-        }
-        th {
-            position: sticky; top: 0; background-color: #eeeeee;
-            border-bottom: 1px solid black;
-            padding: 5px;
-        }
-        th.v { writing-mode: sideways-rl; vertical-align: bottom;}
-        th.l { vertical-align: bottom; text-align: left; }
-        th.r { vertical-align: bottom; text-align: right; }
-        th.c { vertical-align: bottom; text-align: center; }
-        td.l { vertical-align: top; text-align: left; }
-        td.r { vertical-align: top; text-align: right; }
-        td.c { vertical-align: top; text-align: center; }
-        td.s, th.s { font-size: .8em; }
-        tr.stripe:nth-child(2n+1) { background-color: #ddffdd; }
-    '''
+    def dotdotdot(self, *args, **kwargs):
+        yield from self.decorator.dotdotdot(*args, **kwargs)
