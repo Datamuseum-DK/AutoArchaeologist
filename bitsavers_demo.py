@@ -13,7 +13,7 @@
 
 
 from autoarchaeologist import Excavation
-from autoarchaeologist.collection import bitsavers
+from autoarchaeologist.collection import bitsavers_org
 from autoarchaeologist.vendor.ibm import midrange
 
 class BitSaversIbm34(Excavation):
@@ -25,7 +25,7 @@ class BitSaversIbm34(Excavation):
 
         midrange.midrange_excavation(self)
 
-        bitsavers.FromBitsavers(
+        bitsavers_org.FromBitsavers(
             self,
             "-bits/IBM/System_34/S34_diag_set2",
             "-bits/IBM/System_34/S34_diags",
