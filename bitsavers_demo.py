@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    This is a small demo to show excavation of IMD files
    from bitsavers.org.
@@ -7,7 +13,7 @@
 
 
 from autoarchaeologist import Excavation
-from autoarchaeologist.bitsavers import bitsavers
+from autoarchaeologist.collection import bitsavers
 from autoarchaeologist.vendor.ibm import midrange
 
 class BitSaversIbm34(Excavation):
@@ -16,8 +22,6 @@ class BitSaversIbm34(Excavation):
     '''
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-        self.decorator = bitsavers.Decorator(self)
 
         midrange.midrange_excavation(self)
 

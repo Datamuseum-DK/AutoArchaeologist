@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
+'''
+   Download artifacts from bitsavers.org
+'''
+
 
 PROTOCOL = "https"
 URL = "bitsavers.org/"
@@ -16,8 +25,8 @@ from ..container import imd_file
 
 class FromBitsavers():
 
-    def __init__(self, ctx, *args, media_types=None, cache_dir=None):
-        self.ctx = ctx
+    def __init__(self, top, *args, media_types=None, cache_dir=None):
+        self.top = top
         if cache_dir is None:
             cache_dir = "/tmp/BS/Cache"
         try:
@@ -27,9 +36,11 @@ class FromBitsavers():
         self.cache_dir = cache_dir
         self.minuslist = set()
 
+        if top.decorator is None:
+            top.decorator = Decorator(top)
+
         for i in args:
             self.process_arg(i)
-
 
     def process_arg(self, arg):
         arg = arg.strip('/')
@@ -52,7 +63,7 @@ class FromBitsavers():
             # print("IMD ARTIFACT", arg)
             artifact = imd_file.ImdContainer(octets = body)
             try:
-                this = self.ctx.add_top_artifact(
+                this = self.top.add_top_artifact(
                     artifact,
                     description="Bitsavers:" + arg
                 )
