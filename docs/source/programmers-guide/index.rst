@@ -10,5 +10,6 @@ Programmer's Guide
    :maxdepth: 0
    :caption: Content
 
-   sightseeing.rst
    data_model.rst
+   octetview.rst
+   sightseeing.rst
