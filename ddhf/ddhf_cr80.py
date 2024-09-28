@@ -9,7 +9,7 @@ from autoarchaeologist.christianrovsing import cr80_sysone
 from autoarchaeologist.christianrovsing import cr80_fs2
 from autoarchaeologist.intel import isis
 from autoarchaeologist.generic import textfiles
-from autoarchaeologist.zilog import mcz
+from autoarchaeologist.vendor.zilog import mcz
 
 class Cr80Floppy(ddhf.DDHF_Excavation):
     ''' CR80 Floppy disk images'''
