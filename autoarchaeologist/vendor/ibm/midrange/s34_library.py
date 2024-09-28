@@ -4,6 +4,14 @@
 #
 # See LICENSE file for full text of license text
 
+'''
+   IBM S/34 libraries containing members
+
+   I am not aware of any documentation for this.
+
+   The only data I have to operate on are 8" floppies.
+'''
+
 from ....base import octetview as ov
 from ....base import namespace
 
@@ -41,6 +49,7 @@ class NameSpace(namespace.NameSpace):
         ] + super().ns_render()
 
 class Header(ov.Struct):
+    ''' Header of the member '''
     def __init__(self, *args, **kwargs):
         super().__init__(
             *args,
@@ -59,10 +68,12 @@ class Header(ov.Struct):
         self.insert()
 
 class MemberText(ov.OctetView):
+    ''' Content of the member '''
     def __init__(self, this):
         #print(this, "S34Library::MemberP")
 
         super().__init__(this)
+        this.taken = self
         self.parts = []
         adr = 0
         while adr < len(this):
@@ -90,13 +101,15 @@ class MemberText(ov.OctetView):
         self.add_interpretation(more=True)
 
 class S34Library(ov.OctetView):
-
+    ''' Libraries of members '''
     def __init__(self, this):
         hdr = getattr(this, "ga21_9128", None)
         if not hdr:
-            return;
+            return
+
+        # NB: This is a very weak criteria
         if hdr.record_length.txt != "0008":
-            return;
+            return
         #print(this, "S34Library")
 
         super().__init__(this)
