@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-# See LICENSE file for full text of license text
+# See LICENSE file for full text of license
 
 '''
    List of colors for coloring categories.
