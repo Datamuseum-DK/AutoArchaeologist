@@ -10,4 +10,5 @@ Programmer's Guide
    :maxdepth: 0
    :caption: Content
 
+   sightseeing.rst
    data_model.rst
