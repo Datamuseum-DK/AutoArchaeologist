@@ -12,7 +12,7 @@ from autoarchaeologist.regnecentralen import rc3600_fdtape
 from autoarchaeologist.regnecentralen import rc3600_fcopy
 from autoarchaeologist.regnecentralen import rc7000_comal
 from autoarchaeologist.regnecentralen import rc3600_ldfs
-from autoarchaeologist.generic import bigdigits
+from autoarchaeologist.generic import bigtext
 from autoarchaeologist.data_general import absbin
 from autoarchaeologist.data_general import relbin
 from autoarchaeologist.data_general import papertapechecksum
@@ -68,7 +68,7 @@ class Rc3600(ddhf.DDHF_Excavation):
         self.add_examiner(rc7000_comal.ComalSaveFile)
         self.add_examiner(absbin.AbsBin)
         self.add_examiner(relbin.RelBin)
-        self.add_examiner(bigdigits.BigDigits)
+        self.add_examiner(bigtext.BigText)
         self.add_examiner(papertapechecksum.DGC_PaperTapeCheckSum)
         self.add_examiner(rcsl.RCSL)
         self.add_examiner(TextFile)
