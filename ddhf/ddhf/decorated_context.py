@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
 '''
     Datamuseum.dk HTML decorations
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 '''
 
 import sys
 import os
 
-from ..base import excavation, decorator
-from ..container import simh_tap_file, plain_file, imd_file
-from .bitstore import FromBitStore
+from autoarchaeologist.base import excavation, decorator
+from autoarchaeologist.container import simh_tap_file, plain_file, imd_file
+from autoarchaeologist.collection.datamuseum_dk import FromBitStore
 
 class Decorator(decorator.Decorator):
 

@@ -9,7 +9,7 @@ Commodore CBM-900 Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.unix import guess_unix_fs

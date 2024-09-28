@@ -1,8 +1,13 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Standardized CP/M Excavation stuff
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
-
 
 from ..base import type_case
 from ..generic import samesame
