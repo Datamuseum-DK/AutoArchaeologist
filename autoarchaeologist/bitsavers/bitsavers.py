@@ -38,7 +38,7 @@ class FromBitsavers():
             return
         if arg in self.minuslist:
             return
-        print("ARG", arg)
+        # print("ARG", arg)
         if arg[-4:].lower() in IGNORE:
             return
         body = self.cache_fetch(arg)
@@ -49,7 +49,7 @@ class FromBitsavers():
             self.process_dir(arg, body)
             return
         if arg[-4:].lower() in (".imd",):
-            print("IMD ARTIFACT", arg)
+            # print("IMD ARTIFACT", arg)
             artifact = imd_file.ImdContainer(octets = body)
             try:
                 this = self.ctx.add_top_artifact(
@@ -92,7 +92,7 @@ class FromBitsavers():
 
     def cache_fetch(self, url):
         cache_file = os.path.join(self.cache_dir, url.replace('/', '_'))
-        print("CF", cache_file)
+        # print("CF", cache_file)
         for turnus in range(2):
             try:
                 fi = open(cache_file, "rb")
@@ -105,7 +105,7 @@ class FromBitsavers():
                 pass
             print("fetching " + url)
             url = PROTOCOL + "://" + URL + url
-            print("URL", url)
+            # print("URL", url)
             body = urllib.request.urlopen(url).read()
             with open(cache_file, "wb") as file:
                 file.write(body)
