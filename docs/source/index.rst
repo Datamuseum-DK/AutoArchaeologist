@@ -28,6 +28,7 @@ Table of content
    :caption: For users
 
    examiners/index.rst
+   collections/index.rst
 
 .. toctree::
    :maxdepth: 2

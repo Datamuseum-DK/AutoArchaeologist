@@ -12,6 +12,7 @@
 import os
 import mmap
 import hashlib
+import tempfile
 import html
 
 from . import artifact
@@ -84,10 +85,17 @@ class Excavation(result_page.ResultPage):
         html_dir="/tmp/aa",	   # Where to put HTML output
         link_prefix=None,	   # Default is file://[…]
         spill_index=10,		   # Spill limit for index lines
+        cache_dir=None,		   # Cache directory for collections
     ):
 
         super().__init__()
         # Sanitize parameters
+
+        if cache_dir is None:
+            cache_dir = os.environ.get("AUTOARCHAEOLOGIST_CACHE_DIR", None)
+        if cache_dir is None:
+            cache_dir = tempfile.gettempdir()
+        self.cache_dir = cache_dir
 
         os.makedirs(html_dir, exist_ok=True)
 
@@ -307,3 +315,9 @@ class Excavation(result_page.ResultPage):
 
     def dotdotdot(self, *args, **kwargs):
         yield from self.decorator.dotdotdot(*args, **kwargs)
+
+    def get_cache_subdir(self, subdir):
+        ''' Get a cache_dir subdirectory (for collections) '''
+        path = os.path.join(self.cache_dir, subdir)
+        os.makedirs(path, exist_ok=True)
+        return path

@@ -47,20 +47,17 @@ class FromBitStore():
 
     ''' Pull in top-level artifacts from Datamuseum.dk's bitstore '''
 
-    def __init__(self, ctx, cache_dir, *args, media_types=None):
-        self.ctx = ctx
-        self.cache_dir = cache_dir
+    def __init__(self, top, *args, media_types=None, cache_dir=None):
+        self.top = top
+        if cache_dir:
+            self.cache_dir = cache_dir
+        else:
+            self.cache_dir = self.top.get_cache_subdir("Datamuseum.dk")
         self.loaded = set()
         self.blacklist = set()
         if media_types is not None:
             media_types = set(media_types)
         self.media_types = media_types
-
-        if cache_dir:
-            try:
-                os.mkdir(cache_dir)
-            except FileExistsError:
-                pass
 
         for i in args:
             self.process_arg(i)
@@ -83,7 +80,7 @@ class FromBitStore():
 
     def cache_fetch(self, key, url):
         ''' Fetch something if not cached '''
-        cache_file = self.cache_dir + "/" + key
+        cache_file = os.path.join(self.cache_dir, key)
         try:
             fi = open(cache_file, "rb")
             return mmap.mmap(
@@ -207,7 +204,7 @@ class FromBitStore():
                 return
 
         try:
-            this = self.ctx.add_top_artifact(b, description=link_summary)
+            this = self.top.add_top_artifact(b, description=link_summary)
         except excavation.DuplicateArtifact as why:
             this = why.that
         except:
@@ -218,12 +215,12 @@ class FromBitStore():
         self.impose_geometry(meta, this)
         self.set_media_type(meta, this)
 
-        symlink = os.path.join(self.ctx.html_dir, arg + ".html")
+        symlink = os.path.join(self.top.html_dir, arg + ".html")
         try:
             os.remove(symlink)
         except FileNotFoundError:
             pass
-        os.symlink(self.ctx.basename_for(this), symlink, )
+        os.symlink(self.top.basename_for(this), symlink, )
 
     def fetch_pattern(self, arg):
         ''' Fetch and parse the keyword page from the wiki '''

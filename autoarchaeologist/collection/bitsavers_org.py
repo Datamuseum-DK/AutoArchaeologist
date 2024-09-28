@@ -27,13 +27,11 @@ class FromBitsavers():
 
     def __init__(self, top, *args, media_types=None, cache_dir=None):
         self.top = top
-        if cache_dir is None:
-            cache_dir = "/tmp/BS/Cache"
-        try:
-            os.mkdir(cache_dir)
-        except FileExistsError:
-            pass
-        self.cache_dir = cache_dir
+        if cache_dir:
+            self.cache_dir = cache_dir
+        else:
+            self.cache_dir = self.top.get_cache_subdir("Bitsavers.org")
+
         self.minuslist = set()
 
         if top.decorator is None:

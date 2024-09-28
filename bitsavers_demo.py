@@ -11,7 +11,6 @@
    There is NO way the world can ever thank Al Kossow enough for bitsavers.
 '''
 
-
 from autoarchaeologist import Excavation
 from autoarchaeologist.collection import bitsavers_org
 from autoarchaeologist.vendor.ibm import midrange
