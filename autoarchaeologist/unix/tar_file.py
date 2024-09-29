@@ -3,10 +3,20 @@
 '''
 
 from ..base import namespace
+from ..base import octetview as ov
 from . import unix_stat
 
 class Invalid(Exception):
     ''' invalid tar file '''
+
+class End(Exception):
+    ''' end of tar file '''
+
+class FilePadding(ov.Opaque):
+    ''' ... '''
+
+class EndOfArchive(ov.Opaque):
+    ''' ... '''
 
 class NameSpace(namespace.NameSpace):
     ''' ... '''
@@ -14,7 +24,7 @@ class NameSpace(namespace.NameSpace):
     KIND = "Tar file"
 
     TABLE = (
-        ("l", "mode"),
+        ("r", "mode"),
         ("r", "link"),
         ("r", "uid"),
         ("r", "gid"),
@@ -24,102 +34,155 @@ class NameSpace(namespace.NameSpace):
         ("l", "artifact"),
     )
 
-    stat = unix_stat.UnixStat()
-
     def ns_render(self):
-        if 0 and self.ns_name[-1] == '/':
-            sfmt = "d"
-        else:
-            sfmt = "-"
-        return [
-            sfmt + self.stat.mode_bits(self.ns_priv.mode),
-            self.ns_priv.link,
-            self.ns_priv.uid,
-            self.ns_priv.gid,
-            self.ns_priv.size,
-            self.stat.timestamp(self.ns_priv.mtime),
-        ] + super().ns_render()
+        if hasattr(self.ns_priv, "ns_render"):
+            return self.ns_priv.ns_render() + super().ns_render()
+        return [""] * (len(self.TABLE)-2) + super().ns_render()
 
-class TarEntry():
+class TarEntry(ov.Struct):
     ''' One tar(1) file entry '''
 
-    def __init__(self, up, that, offset):
-        self.up = up
-        self.hdr = that[offset:offset+512]
-        self.parse_header()
-        self.filename = that.type_case.decode(self.filename)
-        self.namespace = up.namespace.ns_find(
+    def __init__(self, tree, lo):
+        csf = tree.this[lo+148:lo+156]
+        if csf[-1] != 0x20:
+            if sum(tree.this[lo:lo+0x200]) == 0:
+                raise End()
+            raise Invalid("Checksum[-1] non-space")
+        if csf[-2] != 0x00:
+            raise Invalid("Checksum[-2] non-zero")
+
+        csum = 0
+        for i in range(0x200):
+            if 148 <= i < 156:
+                csum += 0x20
+            else:
+                csum += tree.this[lo + i]
+
+        csf = bytes(csf[:-2]).lstrip(b'\x20')
+        if int(csf, 8) != csum:
+            raise Invalid(
+                "Wrong checksum 0x%x != 0x%x (%s)" % (csum, int(csf, 8), str(csf))
+            )
+
+        super().__init__(
+            tree,
+            lo,
+            name_=ov.Text(100),
+            mode_=ov.Text(8),
+            uid_=ov.Text(8),
+            gid_=ov.Text(8),
+            size_=ov.Text(12),
+            mtime_=ov.Text(12),
+            checksum_=ov.Text(8),
+            flag_=ov.Text(1),
+            linkname_=ov.Text(100),
+            magic_=ov.Text(6),
+            version_=ov.Text(2),
+            uname_=ov.Text(32),
+            gname_=ov.Text(32),
+            devmajor_=ov.Text(8),
+            devminor_=ov.Text(8),
+            prefix_=ov.Text(155),
+            pad__=12,
+        )
+        assert self.hi == lo + 0x200
+        nm = bytes(self.name.octets()).rstrip(b'\x00')
+        if 0 in nm:
+            raise Invalid("NUL in name")
+        self.filename = self.this.type_case.decode_long(nm)
+        if sum(self.pad_.octets()):
+            raise Invalid("Padding not zero")
+        for fld in (
+            self.mode,
+            self.uid,
+            self.gid,
+            self.size,
+            self.mtime,
+            self.checksum,
+        ):
+            fld.val = int(fld.txt, 8)
+            fld.txt = fld.txt.strip()
+
+        for fld in (
+            self.flag,
+            self.linkname,
+            self.magic,
+            self.version,
+            self.uname,
+            self.gname,
+            self.devmajor,
+            self.devminor,
+            self.prefix,
+        ):
+            fld.txt = fld.txt.strip()
+
+        if self.prefix.txt:
+            print(self.tree.this, "HAS TAR-PREFIX", self)
+        self.name.txt = self.filename
+        self.namespace = tree.namespace.ns_find(
             self.filename.split("/"),
             cls = NameSpace,
             separator = '/',
             priv = self,
         )
-        if self.target:
-            self.target = that.type_case.decode(self.target)
-        hdrchild = that.create(start=offset, stop=offset + 512)
-        hdrchild.by_class[TarFile] = that
-        if self.link > 0:
-            self.this = None
-        elif self.size == 0:
-            self.this = None
-        elif offset + 512 + self.size >= len(that):
-            self.this = None
-        else:
-            self.this = that.create(start=offset + 512, stop=offset + 512 + self.size)
-            self.namespace.ns_set_this(self.this)
-            # self.this.set_name(self.filename)
-        if self.link:
-            self.size = 0
-        self.next = offset + 512 * (1 + (self.size + 511) // 512)
+        self.that = None
 
-    def parse_header(self):
-        ''' Parse the tar header '''
-        self.csum = self.oct(148, 8)
-        if self.csum != sum(self.hdr[:148]) + sum(self.hdr[156:]) + 8 * 32:
-            raise Invalid("Checsum does not match")
-        self.filename = bytes(self.hdr[:100]).split(b'\x00')[0]
-        self.link = self.oct(156, 1)
-        self.mode = 0
-        self.uid = 0
-        self.gid = 0
-        self.size = 0
-        self.mtime = 0
-        try:
-            self.mode = self.oct(100, 8)
-            self.uid = self.oct(108, 8)
-            self.gid = self.oct(116, 8)
-            self.size = self.oct(124, 12)
-            self.mtime = self.oct(136, 12)
-        except Invalid:
-            if not self.link:
-                raise
-        if self.link:
-            self.target = bytes(self.hdr[157:257]).split(b'\x00')[0]
-        else:
-            self.target = None
-
-    def oct(self, offset, width):
-        ''' Return numeric value of octal field '''
-        retval = 0
-        for chr in self.hdr[offset:offset + width]:
-            if chr == 32:
-                continue
-            if chr == 0:
-                break
-            if 0x30 <= chr <= 0x37:
-                retval *= 8
-                retval += chr - 0x30
+    def ns_render(self):
+        ''' ... '''
+        mode = self.mode.val
+        if self.magic.txt != "ustar":
+            if self.name.txt[-1] == '/':
+                mode |= self.tree.stat.S_IFDIR
             else:
-                raise Invalid(
-                    "Bad octal field [%d:%d] %s" % (
-                        offset,
-                        offset + width,
-                        str(bytes(self.hdr[offset:offset + width]))
-                    )
-                )
-        return retval
+                mode |= self.tree.stat.S_IFREG
+            return [
+                self.tree.stat.mode_bits(mode),
+                "0",
+                self.uid.val,
+                self.gid.val,
+                self.size.val,
+                self.tree.stat.timestamp(self.mtime.val),
+            ]
 
-class TarFile():
+        if self.flag.txt == "0":
+            mode |= self.tree.stat.S_IFREG
+        elif self.flag.txt == "5":
+            mode |= self.tree.stat.S_IFDIR
+        return [
+            self.tree.stat.mode_bits(mode),
+            "0",
+            self.uname.txt,
+            self.gname.txt,
+            self.size.val,
+            self.tree.stat.timestamp(self.mtime.val),
+        ]
+
+    def get_that(self):
+        ''' ... '''
+        if self.flag.txt not in ('', '0'):
+            self.that = None
+            return self.hi
+        if self.size.val == 0:
+            self.that = None
+            return self.hi
+        if self.hi + self.size.val > len(self.tree.this):
+            print(self.this, "TAR past end", self)
+            self.that = None
+            return self.hi
+        self.that = ov.This(self.tree, lo=self.hi, width = self.size.val).insert()
+        if self.namespace.ns_this is None:
+            self.namespace.ns_set_this(self.that.that)
+        else:
+            print(self.tree.this, "NS ALREADY", self)
+            print("\t", self.that)
+            print("\t", self.namespace)
+        tail = self.that.hi & 0x1ff
+        if tail:
+            y = FilePadding(self.tree, self.that.hi, 0x200 - tail).insert()
+            return y.hi
+        return self.that.hi
+
+class TarFile(ov.OctetView):
 
     ''' A UNIX tar(1) file '''
 
@@ -128,20 +191,34 @@ class TarFile():
             return
         if TarFile in [*this.parents][0].by_class:
             return
-        self.namespace = NameSpace(
-            name = "",
-            separator = "",
-            root = this,
-        )
+        super().__init__(this)
+        ptr = 0
+        self.stat = unix_stat.UnixStat()
+        self.namespace = NameSpace(name = "", separator = "", root = this)
         try:
-            entry = TarEntry(self, this, 0)
-        except Invalid as e:
+            y = TarEntry(self, ptr).insert()
+            ptr = y.get_that()
+        except End:
             return
-        self.children = [entry]
-        this.type = "Tar_file"
-        this.add_note("Tar_file")
-        while entry.next < len(this) and this[entry.next]:
-            entry = TarEntry(self, this, entry.next)
-            self.children.append(entry)
+        except Invalid:
+            return
+        this.add_type("Tarfile")
+        this.add_note("Tarfile")
+        while ptr < len(this):
+            try:
+                y = TarEntry(self, ptr).insert()
+                ptr = y.get_that()
+            except End:
+                y = EndOfArchive(self, ptr, width = 512).insert()
+                ptr = y.hi
+                break
+            except Invalid as err:
+                print(this, "ERR", err)
+                y = ov.Dump(self, ptr, ptr + 512).insert()
+                ptr = y.hi
+                break
+        if ptr < len(this):
+            ov.Opaque(self, lo=ptr, hi=len(this)).insert()
         this.add_interpretation(self, self.namespace.ns_html_plain)
+        self.add_interpretation(more=True)
         this.taken = True
