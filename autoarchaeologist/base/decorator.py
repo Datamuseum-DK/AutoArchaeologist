@@ -62,7 +62,7 @@ class Decorator():
         fo.write("<pre>\n")
         fo.write(self.html_link_to(self.top, "top"))
         fo.write("</pre>\n")
-        # XXX index.Index(self).produce(fo)
+        self.top.index.Index(self.top).produce(fo)
 
         fo.write("<H2>Top level artifacts</H2>")
         fo.write("<table>\n")
@@ -138,9 +138,8 @@ class Decorator():
         if this != self.top and self.top.download_links and self.top.download_limit > len(this):
             fo.write(" - " + self.html_link_to(this, "download", suf=".bin"))
         fo.write("</pre>\n")
-        # XXX
-        #if this.ns_roots:
-        #    index.Index(this).produce(fo)
+        if this.ns_roots:
+            self.top.index.Index(this).produce(fo)
 
     def html_suffix(self, fo, _this):
         ''' Tail of all the HTML pages '''

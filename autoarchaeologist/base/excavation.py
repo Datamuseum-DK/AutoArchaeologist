@@ -99,6 +99,8 @@ class Excavation(result_page.ResultPage):
 
         os.makedirs(html_dir, exist_ok=True)
 
+        self.index = index
+
         if link_prefix is None:
             # use "file://{abs path to html_dir}/"
             dir_fd = os.open(".", os.O_RDONLY)
