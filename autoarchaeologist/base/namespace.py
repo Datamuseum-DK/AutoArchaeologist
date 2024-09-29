@@ -179,6 +179,8 @@ class NameSpace():
 
     def ns_find(self, names, cls=None, **kwargs):
         ''' Find a path, optionally creating nodes '''
+        while names and names[-1] == '':
+            names.pop(-1)
         found = list(self.ns_lookup(names[0]))
         if not found and cls is None:
             return None
