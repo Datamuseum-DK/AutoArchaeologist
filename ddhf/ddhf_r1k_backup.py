@@ -3,7 +3,7 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.ddhf.decorated_context import DDHF_Excavation, main
+import ddhf
 
 from autoarchaeologist.generic import ansi_tape_labels
 from autoarchaeologist.rational.r1k_backup import R1kBackup
@@ -36,7 +36,7 @@ class TypeCase(type_case.Ascii):
         super().__init__()
         self.set_slug(0, ' ', '«nul»', self.EOF)
 
-class R1KBACKUP(DDHF_Excavation):
+class R1KBACKUP(ddhf.DDHF_Excavation):
 
     ''' Rational R1000/400 Backup tape '''
 
@@ -62,7 +62,7 @@ class R1KBACKUP(DDHF_Excavation):
         )
 
 if __name__ == "__main__":
-    main(
+    ddhf.main(
         R1KBACKUP,
         html_subdir="r1k_backup",
         ddhf_topic = "Rational R1000/400",
