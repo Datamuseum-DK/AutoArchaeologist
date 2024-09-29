@@ -3,7 +3,7 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 
 from autoarchaeologist.vendor.zilog import mcz
 from autoarchaeologist.vendor.zilog import zdos_basic
