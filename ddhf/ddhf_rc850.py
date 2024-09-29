@@ -13,7 +13,7 @@ class Rc850(ddhf.DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        cpm_exc.std_cpm_excavation(self)
+        ddhf.cpm_exc.std_cpm_excavation(self)
 
         self.from_bitstore(
             "RC/RC850/CPM",
