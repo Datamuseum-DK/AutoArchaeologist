@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Compress(1) format
 '''
@@ -8,7 +14,7 @@ import tempfile
 
 class Compress():
 
-    ''' A UNIX tar(1) file '''
+    ''' A compress(1)'ed file '''
 
     def __init__(self, this):
         if len(this) <= 8:
@@ -23,7 +29,7 @@ class Compress():
         self.that = this.create(bits=open(tmpfilename, "rb").read())
         os.remove(tmpfilename)
         this.add_type("Compressed file")
-        self.that.add_note("Unompressed file")
+        self.that.add_note("Uncompressed file")
         this.add_interpretation(self, self.render)
 
     def render(self, fo, _this):

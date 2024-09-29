@@ -33,8 +33,8 @@
 import struct
 import time
 
-from ..base import namespace
-from ..base import octetview as ov
+from ...base import namespace
+from ...base import octetview as ov
 
 class NotCredible(Exception):
     ''' dont trust this '''

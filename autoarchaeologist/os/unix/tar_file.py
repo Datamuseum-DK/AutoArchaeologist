@@ -1,9 +1,15 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    TAR(1) format
 '''
 
-from ..base import namespace
-from ..base import octetview as ov
+from ...base import namespace
+from ...base import octetview as ov
 from . import unix_stat
 
 class Invalid(Exception):

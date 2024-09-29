@@ -11,7 +11,7 @@
 
 from ....base import octetview as ov
 from ....base import namespace
-from ....unix.unix_stat import UnixStat
+from ....os.unix.unix_stat import UnixStat
 
 class ArHdr(ov.Struct):
     ''' see ⟦309830465⟧ '''

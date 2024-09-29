@@ -7,8 +7,8 @@ import ddhf
 
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
-from autoarchaeologist.unix import tar_file
-from autoarchaeologist.unix import compress
+from autoarchaeologist.os.unix import tar_file
+from autoarchaeologist.os.unix import compress
 
 class DkuugEuug(ddhf.DDHF_Excavation):
 

@@ -1,12 +1,17 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Autodetect UNIX filesystems
    ---------------------------
-
 '''
 
 from . import unix_fs as ufs
 
-from ..base import octetview as ov
+from ...base import octetview as ov
 
 class Daddr40(ov.Opaque):
     ''' The daddr field of on-disk inodes is weird '''
