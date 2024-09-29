@@ -3,7 +3,7 @@ Intel ISIS Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 
 from autoarchaeologist.intel import isis
 from autoarchaeologist.generic import textfiles

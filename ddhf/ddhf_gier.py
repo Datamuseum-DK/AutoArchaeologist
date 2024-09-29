@@ -3,7 +3,7 @@ GIER Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 
 from autoarchaeologist.regnecentralen import gier_text
 from autoarchaeologist.generic import samesame

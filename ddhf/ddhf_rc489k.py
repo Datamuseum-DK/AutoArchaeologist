@@ -3,7 +3,7 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.generic import textfiles

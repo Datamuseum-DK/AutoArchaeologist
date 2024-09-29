@@ -3,7 +3,7 @@ DKUUG and EUUG Conference tapes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame

@@ -3,7 +3,7 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.Wang import wang_wps

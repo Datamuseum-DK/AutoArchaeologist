@@ -3,7 +3,7 @@ Christian Rovsing A/S CR80 Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 
 from autoarchaeologist.christianrovsing import cr80_sysone
 from autoarchaeologist.christianrovsing import cr80_fs2

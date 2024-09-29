@@ -3,7 +3,7 @@ Rational R1000/400 DFS Tapes from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
+import ddhf
 
 from autoarchaeologist.generic import sccs_id
 from autoarchaeologist.base import type_case
