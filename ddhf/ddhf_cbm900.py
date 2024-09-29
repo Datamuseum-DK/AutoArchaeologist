@@ -12,10 +12,17 @@ Commodore CBM-900 Artifacts from Datamuseum.dk's BitStore
 import ddhf
 from autoarchaeologist.base import type_case
 
-from autoarchaeologist.os.unix import guess_unix_fs
+from autoarchaeologist.os.unix import unix_fs
 from autoarchaeologist.vendor.commodore import cbm900
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
+
+class Cbm900FsParams(unix_fs.UnixFsParams):
+
+    BLOCK_SIZES = (512, )
+    POSSIBLE_BYTE_ORDERS = ((0, 2, 1),)
+    CLASSES = (unix_fs.UnixFsLittleEndianBogus,)
+
 
 class CBM900(ddhf.DDHF_Excavation):
 
@@ -24,6 +31,8 @@ class CBM900(ddhf.DDHF_Excavation):
     floppy images.
     '''
 
+    #UNIX_FS_PARAMS = Cbm900FsParams()
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -31,7 +40,7 @@ class CBM900(ddhf.DDHF_Excavation):
         self.type_case = type_case.WellKnown("iso8859-1")
 
         self.add_examiner(*cbm900.examiners)
-        self.add_examiner(guess_unix_fs.GuessUnixFs)
+        self.add_examiner(unix_fs.FindUnixFs)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
 
