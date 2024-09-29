@@ -57,7 +57,7 @@ class Decorator():
             file.write(self.CSS)
         fn = self.top.filename_for(self.top)
         fo = open(fn.filename, "w")
-        self.html_prefix(fo, self)
+        self.html_prefix(fo, self.top)
 
         fo.write("<pre>\n")
         fo.write(self.html_link_to(self.top, "top"))
