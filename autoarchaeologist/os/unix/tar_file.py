@@ -57,6 +57,16 @@ class TarEntry(ov.Struct):
         if csf[-2] != 0x00:
             raise Invalid("Checksum[-2] non-zero")
 
+        for i in csf:
+            if i not in b'01234567 \x00':
+                raise Invalid("Checksum not valid %s" % str(csf))
+
+        csf = bytes(csf[:-2]).lstrip(b'\x20')
+        try:
+            rsum = int(csf, 8)
+        except ValueError:
+            raise Invalid("Checksum not valid %s" % str(csf))
+
         csum = 0
         for i in range(0x200):
             if 148 <= i < 156:
@@ -64,10 +74,9 @@ class TarEntry(ov.Struct):
             else:
                 csum += tree.this[lo + i]
 
-        csf = bytes(csf[:-2]).lstrip(b'\x20')
-        if int(csf, 8) != csum:
+        if rsum != csum:
             raise Invalid(
-                "Wrong checksum 0x%x != 0x%x (%s)" % (csum, int(csf, 8), str(csf))
+                "Wrong checksum 0x%x != 0x%x (%s)" % (csum, rsum, str(csf))
             )
 
         super().__init__(
