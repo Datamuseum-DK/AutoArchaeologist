@@ -3,8 +3,8 @@ Regnecentralen RC850 Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+import ddhf
+import ddhf.cpm_exc
 
 class Rc850(ddhf.DDHF_Excavation):
 

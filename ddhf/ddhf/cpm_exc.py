@@ -9,10 +9,10 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from ..base import type_case
-from ..generic import samesame
-from ..generic import textfiles
-from ..DigitalResearch import cpm
+from autoarchaeologist.base import type_case
+from autoarchaeologist.generic import samesame
+from autoarchaeologist.generic import textfiles
+from autoarchaeologist.DigitalResearch import cpm
 
 cpm.cpm_filename_typecase.set_slug(0x5f, '_', '_')
 cpm.cpm_filename_typecase.set_slug(0x3b, ';', ';')

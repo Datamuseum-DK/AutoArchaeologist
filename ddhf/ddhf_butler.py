@@ -3,8 +3,8 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+import ddhf
+import ddhf.cpm_exc
 
 class Butler(ddhf.DDHF_Excavation):
     ''' All Butler artifacts '''
@@ -12,7 +12,7 @@ class Butler(ddhf.DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        cpm_exc.std_cpm_excavation(self)
+        ddhf.cpm_exc.std_cpm_excavation(self)
 
         self.from_bitstore(
             "COMPANY/BOGIKA",

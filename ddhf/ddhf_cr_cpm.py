@@ -3,8 +3,8 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist import ddhf
-from autoarchaeologist.ddhf import cpm_exc
+import ddhf
+import ddhf.cpm_exc
 
 class CrCpm(ddhf.DDHF_Excavation):
 
