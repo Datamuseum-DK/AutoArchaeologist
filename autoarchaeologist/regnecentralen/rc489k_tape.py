@@ -119,25 +119,25 @@ class Rc489kSaveHead(ov.Struct):
             tvers_=ov.Text(6),
             tdate_=ov.Text(15),
             tseg_=ov.Text(9),
-            tlbl_=ov.Text(15),
-            f07_=ov.Text(9),
+            tlbl_=ov.Text(24),
             f08_=ov.Be24,
             f09_=ov.Be24,
-            segm_=ov.Be24,
-            f11_=ov.Be24,
-            f12_=ov.Be24,
-            f13_=ov.Text(9),
-            f14_=ov.Be24,
-            f15_=ov.Be24,
-            f16_=ov.Be24,
-            f17_=ov.Be24,
-            f18_=ov.Be24,
-            f19_=ov.Be24,
-            f20_=ov.Be24,
-            f21_=ov.Be24,
-            f22_=ov.Be24,
+            segm_=ov.Be24,		# maximal block length in segments
+            maxpartial_=ov.Be24,	# maximal no of entries in partial catalogs
+            scatentries_=ov.Be24,	# no of entries in the save catalog
+            szcat_=ov.Text(12),		# name of save catalog
+            lower_entry_=ov.Be24,	# lower entry base for save catalog
+            upper_entry_=ov.Be24,	# upper entry base for save catalog
+            szsavecat_=ov.Be24,		# size of save catalog in segments
+            dumptime_=ShortClock,	# shortclock for dumptime (= tail (6) in save catalog
+					# entry in main catalog
+            version_=ov.Be24,		# version
+            release_=ov.Be24,		# release <12 + subrelease
+            lensynccat_=ov.Be24,	# length of sync block preceeding partial catalogs (halfwords)
+            lensyncarea_=ov.Be24,	# length of sync blockfollowing areas (halfwords)
+					# (only release 3.0 and newer)
             f99_=ov.Array(6, ov.Be24),
-            vertical=True,
+            # vertical=True,
         )
 
 class Rc489kSaveDirEnt(ov.Struct):
@@ -145,12 +145,20 @@ class Rc489kSaveDirEnt(ov.Struct):
         super().__init__(
             up,
             lo,
-            f00_=ov.Array(3, ov.Be24),
+            first_slice_=ov.Be24,
+            entry_base_lower_=ov.Be24,
+            entry_base_upper_=ov.Be24,
             filename_=ov.Text(12),
             entry_tail_=Rc489kEntryTail,
-            f06_=ov.Array(4, ov.Be24),
-            f07_=ov.Text(12),
-            f08_=ov.Array(4, ov.Be24),
+            scope_=ov.Be24,
+            actual_scope_=ov.Be24,
+            new_scope_=ov.Be24,
+            disk_nbr_=ov.Be24,
+            new_disk_=ov.Text(12),
+            last_change_=ShortClock,
+            vol_count_=ov.Be24,
+            file_count_=ov.Be24,
+            block_count_=ov.Be24,
         )
 
     def ns_render(self):
@@ -161,7 +169,9 @@ class Rc489kSaveDirExt(ov.Struct):
         super().__init__(
             up,
             lo,
-            f00_=ov.Array(3, ov.Be24),
+            first_slice_=ov.Be24,
+            entry_base_lower_=ov.Be24,
+            entry_base_upper_=ov.Be24,
             filename_=ov.Text(12),
             entry_tail_=Rc489kEntryTail,
         )
@@ -169,18 +179,28 @@ class Rc489kSaveDirExt(ov.Struct):
     def ns_render(self):
         return self.entry_tail.ns_render()
 
-class Rc489kSaveSubHead(ov.Struct):
+class Rc489kSaveCatalogHead(ov.Struct):
     def __init__(self, up, lo):
         super().__init__(
             up,
             lo,
-            f00_=ov.Array(8, ov.Be24),
-            nvol_=ov.Be24,
-            f01_=ov.Array(5, ov.Be24),
+            cat_base_lower_=ov.Be24,
+            cat_base_upper_=ov.Be24,
+            std_base_lower_=ov.Be24,
+            std_base_upper_=ov.Be24,
+            user_base_lower_=ov.Be24,
+            user_base_upper_=ov.Be24,
+            max_base_lower_=ov.Be24,
+            max_base_upper_=ov.Be24,
+            ndisk_=ov.Be24,
+            n_copies_=ov.Be24,
+            n_volcopy1_=ov.Be24,
+            n_volcopy2_=ov.Be24,
+            max_tape_seg_=ov.Be24,
             vertical=True,
             more=True,
         )
-        self.addfield("vols", ov.Array(self.nvol.val, ov.Text(12), vertical=True))
+        self.addfield("vols", ov.Array(self.ndisk.val, ov.Text(12), vertical=True))
         self.addfield("lbl", ov.Text(12))
         self.done(0x300)
 
@@ -232,7 +252,7 @@ class Rc489kTodo():
         self.up = up
         self.de = entry
         self.filename = self.de.filename.txt.strip()
-        self.flag = self.de.f00[0].val >> 12
+        self.flag = self.de.first_slice.val >> 12
         self.need = self.de.entry_tail.nseg * 0x300
         self.got = 0
         self.pieces = []
@@ -270,7 +290,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
 
         self.hdr = Rc489kSaveHead(self, 0).insert()
         self.index = []
-        if self.hdr.tvers.txt == "empty ":
+        if 1 or self.hdr.tvers.txt == "empty ":
             ov.Opaque(self, lo=self.hdr.hi, hi=len(this)).insert()
         elif self.has480:
             self.do_index()
@@ -304,6 +324,8 @@ class Rc489kSaveTapeFile(ov.OctetView):
                 y = ov.Opaque(self, lo=rec.lo, hi=rec.hi).insert()
                 y.rendered = "WorkPackageMarker"
 
+                if len(recs) < 3:
+                    break
                 for _n in range(3):
                     rec = recs.pop(0)
                     for x in range(0, len(rec), 0x300):
@@ -343,7 +365,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
         self.bishdr = None
         for adr, _rec in self.iter_index_blocks():
             if self.subhdr is None:
-                self.subhdr = Rc489kSaveSubHead(self, adr).insert()
+                self.subhdr = Rc489kSaveCatalogHead(self, adr).insert()
             elif self.bishdr is None:
                 self.bishdr = ov.Opaque(self, adr, 0x300).insert()
             else:
