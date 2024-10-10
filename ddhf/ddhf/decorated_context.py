@@ -90,11 +90,17 @@ class DDHF_Excavation(excavation.Excavation):
     def from_argv(self):
         ''' Process extra command line arguments '''
         for fn in sys.argv[1:]:
+            if not os.path.isfile(fn) or not os.path.getsize(fn):
+                continue
+            print("Loading", fn)
             ext = os.path.splitext(fn)
             try:
                 if ext[1] in (".tap", ".TAP"):
-                    s = simh_tap_file.SimhTapContainer(filename = fn)
-                    self.add_top_artifact(s, description=fn)
+                    try:
+                        s = simh_tap_file.SimhTapContainer(filename = fn)
+                        self.add_top_artifact(s, description=fn)
+                    except simh_tap_file.BadTAPFile as err:
+                        print("ERROR:", fn, err)
                 elif ext[1] in (".imd", ".IMD"):
                     s = imd_file.ImdContainer(filename = fn)
                     self.add_top_artifact(s, description=fn)
