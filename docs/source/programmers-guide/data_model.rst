@@ -84,3 +84,31 @@ Holds the information about one code point in a character set
 * Has a "short" Unicode single-position, representation suitable for (hex)dumps
 * Has a "long" Unicode representation which is "does the right thing" (for instance newlines)
 * Can have flags (INVALID, IGNORE, EOF and others) which affect interpretation
+
+Containers
+----------
+
+Some input artifacts will be raw bytes, for instance a hard disk
+image, others will be container formats such as ``.IMD``, ``SIMH-TAP``
+and ``ZIP``.
+
+If we wanted to, we could ingest these containers, examine them
+with ``OctetView`` and create the artifacts they contain for further
+examination.
+
+But our audience is not here to see how ``IMD`` files are constructed,
+so it makes more sense to not instantiate the container files directly,
+but only what they contain.
+
+This is what ``containers`` do, and some of them even do it with the
+``OctetView``, they just dont create an HTML interpretation.
+
+Collections
+-----------
+
+AA will be used on artifacts from various public collections, Datamuseum.DK's
+own BitArchive, Al Kossow & CHM's bitsavers.org and so on.
+
+The collection classes makes it easier to pull in artifacts from
+such well known collections, and cache the downloaded artifacts
+to reduce traffic.
