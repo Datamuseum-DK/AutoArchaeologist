@@ -12,10 +12,8 @@ import html
 from itertools import zip_longest
 
 from . import bintree
-from . import interpretation
 from . import octetview as ov
 from . import result_page
-from .. import record
 
 class Record(bintree.BinTreeLeaf):
     '''
@@ -240,6 +238,7 @@ class ArtifactBase(result_page.ResultPage):
         return note in self.notes
 
     def iter_all_children(self):
+        ''' Recursively iterate all children once '''
         done = set()
         todo = [ self ]
         while todo:
@@ -267,10 +266,6 @@ class ArtifactBase(result_page.ResultPage):
             for child in self.children:
                 assert child != self, (child, self)
                 yield from child.iter_notes(recursive)
-
-    def record(self, layout, **kwargs):
-        ''' Extract a compound record '''
-        return record.Extract_Record(self, layout, **kwargs)
 
     def filename_for(self, *args, **kwargs):
         ''' ask excavation '''
@@ -363,11 +358,14 @@ class ArtifactBase(result_page.ResultPage):
         for i in self.descriptions:
             file.write("    Description: " + i + "\n")
         if self.types:
-            file.write("    Types: " + ", ".join(sorted(self.types)) + "\n")
+            file.write("    Types: ")
+            file.write(", ".join(sorted(self.types)) + "\n")
         if self.notes:
-            file.write("    Notes: " + ", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
+            file.write("    Notes: ")
+            file.write(", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
         if self.names:
-            file.write("    Names: " + ", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
+            file.write("    Names: ")
+            file.write(", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
         file.write("</pre>\n")
 
     def html_page(self, file, domore=False):
@@ -385,10 +383,9 @@ class ArtifactBase(result_page.ResultPage):
             file.write("<H3>NB: Comments at End</H3>\n")
 
         if not self.rp_interpretations:
-            if self.children:
-                self.html_interpretation_children(file, self)
-            self.html_default_interpretation(file, self)
-        elif self.emit_interpretations(file, domore):
+            self.add_interpretation(self, self.html_default_interpretation)
+
+        if self.emit_interpretations(file, domore):
             retval = True
 
         if self.comments:
@@ -430,7 +427,8 @@ class ArtifactBase(result_page.ResultPage):
                 if nsps:
                     # Not quite: See CBM900 ⟦e681055fa⟧
                     for nsp in sorted(nsps):
-                        file.write(txt + "└─ " + link + " »" + html.escape(nsp.ns_path()) + "« " + desc + '\n')
+                        file.write(txt + "└─ " + link)
+                        file.write(" »" + html.escape(nsp.ns_path()) + "« " + desc + '\n')
                 else:
                     file.write(txt + "└─" + link + " " + desc + '\n')
         return prefix + "    "
@@ -438,21 +436,6 @@ class ArtifactBase(result_page.ResultPage):
     def html_description(self):
         ''' Descriptions, one per line '''
         return "<br>\n".join(sorted(self.descriptions))
-
-    def html_default_interpretation(self, file, this, max_lines=None, **kwargs):
-        ''' Default interpretation is a hexdump '''
-
-        if max_lines is None:
-            max_lines = self.top.MAX_LINES
-        tmp = ov.OctetView(this)
-        file.write("<H3>Hex Dump</H3>\n")
-        file.write("<pre>\n")
-        for cnt, line in enumerate(tmp.render(**kwargs)):
-            if max_lines and cnt > max_lines:
-                file.write("[…truncated at %d lines…]\n" % max_lines)
-                break
-            file.write(html.escape(line) + '\n')
-        file.write("</pre>\n")
 
     def hexdump(self, lo, hi, width=32, fmt="%02x"):
         ''' General (hex)dump helper '''
@@ -468,6 +451,27 @@ class ArtifactBase(result_page.ResultPage):
         dump = " ".join(fmt % x for x in self[lo:hi])
         pad = " " * (len(fmt % 0xff) + 1) * (width - (hi - lo))
         yield dump + pad + "   ┆" + octets + "┆"
+
+    def html_default_interpretation(self, file, this, max_lines=None, width=None, **kwargs):
+        ''' Default interpretation is a hexdump '''
+
+        if max_lines is None:
+            max_lines = self.top.MAX_LINES
+        if width is None:
+            width = 64
+        file.write("<H3>Hex Dump</H3>\n")
+        file.write("<pre>\n")
+        tmp = ov.OctetView(this)
+        if len(self._keys) > 0:
+            file.write("Dumping the first 0x%x bytes of each record\n" % width)
+            for key,rec in sorted(self._keys.items()):
+                ov.Octets(tmp, lo = rec.lo, hi=rec.hi, width=width, maxlines=1).insert()
+        for cnt, line in enumerate(tmp.render(**kwargs)):
+            if max_lines and cnt > max_lines:
+                file.write("[…truncated at %d lines…]\n" % max_lines)
+                break
+            file.write(html.escape(line) + '\n')
+        file.write("</pre>\n")
 
 class ArtifactStream(ArtifactBase):
 
@@ -531,14 +535,12 @@ class ArtifactStream(ArtifactBase):
         ''' Deprecated '''
 
     def tobytes(self):
+        ''' Return as bytes '''
         return self.bdx.tobytes()
 
     def writetofile(self, file):
+        ''' Write to file as bytes '''
         file.write(self.bdx)
-
-    def record(self, layout, **kwargs):
-        ''' Extract a compound record '''
-        return record.Extract_Record(self, layout, **kwargs)
 
 class ArtifactFragmented(ArtifactBase):
     '''
@@ -601,6 +603,7 @@ class ArtifactFragmented(ArtifactBase):
             yield rec.frag
 
     def tobytes(self):
+        ''' Return as bytes '''
         i = bytearray()
         for j in self:
             i.append(j)
