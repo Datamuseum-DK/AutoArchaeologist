@@ -15,14 +15,18 @@ from . import bintree
 class Octets(bintree.BinTreeLeaf):
     ''' Base class, just some random octets '''
 
-    def __init__(self, tree, lo, width=None, hi=None, name=None):
+    def __init__(self, tree, lo, width=None, hi=None, name=None, maxlines=None):
         if hi is None:
             assert width is not None
             hi = lo + width
         assert hi > lo
         self.tree = tree
         self.this = tree.this
+        self.maxlines = maxlines
         super().__init__(lo, hi, name=name)
+        if width is None:
+            width = len(self)
+        self.width = width
 
     def __len__(self):
         return self.hi - self.lo
@@ -66,7 +70,12 @@ class Octets(bintree.BinTreeLeaf):
 
     def render(self):
         ''' Render hexdumped + text-column '''
-        yield from self.this.hexdump(lo=self.lo, hi=self.hi, width=len(self))
+        hd = self.this.hexdump(lo=self.lo, hi=self.hi, width=self.width)
+        if self.maxlines is None:       
+            yield from hd
+            return
+        for i,j in zip(range(self.maxlines), hd):
+            yield j
 
 class Dump(Octets):
     ''' basic (hex)dump '''
