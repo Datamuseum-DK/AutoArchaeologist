@@ -11,9 +11,7 @@
 
 import os
 import mmap
-import hashlib
 import tempfile
-import html
 
 from . import artifact
 from . import index
@@ -145,6 +143,10 @@ class Excavation(result_page.ResultPage):
         return -1
 
     def adopt(self, this):
+        ''' Adopt an artifact '''
+        if len(this) == 0:
+            print("Proposed artifact is empty", this)
+            return
         this.top = self
         self.add_artifact(this)
 
@@ -175,18 +177,16 @@ class Excavation(result_page.ResultPage):
         else:
             that = artifact.ArtifactStream(what)
         that.set_digest()
-        # print("ATA", that, that.digest)
         digest = that.digest
 
         this = self.hashes.get(digest)
         if this:
             this.add_description(description)
             raise DuplicateArtifact(this, description)
-        else:
-            this = that
-            this.add_description(description)
-            self.adopt(this)
-            this.add_parent(self)
+        this = that
+        this.add_description(description)
+        self.adopt(this)
+        this.add_parent(self)
         return this
 
     def add_file_artifact(self, filename, description=None, **kwargs):
@@ -298,15 +298,13 @@ class Excavation(result_page.ResultPage):
 
     def iter_types(self):
         ''' Duck-type as Artifact '''
-        if False:
-            yield None
+        yield from []
 
     def iter_notes(self):
         ''' Duck-type as Artifact '''
-        if False:
-            yield None
+        yield from []
 
-    def summary(self, *args, **kwargs):
+    def summary(self, *_args, **_kwargs):
         return "The entire excavation"
 
     def calculate_metrics(self):
