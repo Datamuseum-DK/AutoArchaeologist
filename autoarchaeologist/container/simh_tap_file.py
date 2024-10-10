@@ -27,19 +27,28 @@ class SimhTapContainer(artifact.ArtifactFragmented):
         adr = (0, 0)
         ptr = 0
         offset = 0
-        while ptr < len(octets):
+        while ptr <= len(octets) - 4:
             i = ov.Le32(ovt, ptr)
             if verbose:
                 print("M", adr, hex(i.val))
             ptr = i.hi
             if i.val == 0:
+                # Tape mark
                 adr = (adr[0] + 1, 0)
                 continue
             if i.val == 0xffffffff:
+                if ptr != len(octets):
+                    raise BadTAPFile("Stuff after EOT")
                 break
-            if i.val > 0x00ffffff:
+            if (i.val >> 24) == 0xff:
+                # reserved magic words
                 continue
             j = (i.val + 1) & ~1
+            if ptr + 8 + j > len(octets):
+                if len(self) == 0:
+                    raise BadTAPFile("Does not look like a SIMH-TAP file")
+                print("Truncated SIMH-TAP file", filename)
+                break
             frag = octets[ptr:ptr + i.val]
             ptr += j
             self.add_fragment(
@@ -53,8 +62,9 @@ class SimhTapContainer(artifact.ArtifactFragmented):
             adr = (adr[0], adr[1] + 1)
             j = ov.Le32(ovt, ptr)
             if i.val != j.val:
-                raise BadTAPFile("Pre & Post disagree")
+                print("Pre & Post disagree (0x%x vs. 0x%x)" % (i.val, j.val))
+                if len(self) == 0:
+                    raise BadTAPFile("Pre & Post disagree")
+                break
             ptr = j.hi
-        if ptr != len(octets):
-            raise BadTAPFile("Stuff after EOT")
         self.completed()
