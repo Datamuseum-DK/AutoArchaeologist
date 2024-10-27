@@ -19,11 +19,15 @@ class Preamble(ov.Struct):
             wc_=ov.Be16,
             more=True,
         )
-        if self.wc.val > 0xffe0:
+        if 0xffe0 < self.wc.val < 0xfff8:
+            print("PP", hex(self.wc.val), hex(self.hi), hex(len(tree.this)))
             self.add_field(
                 "preamble",
                 ov.Array(0xffff - self.wc.val, ov.Be16,)
             )
+            self.good = True
+        else:
+            self.good = False
         self.done()
 
 
@@ -80,8 +84,8 @@ class AutoLoad(ov.OctetView):
 
     def __init__(self, this):
 
-        if not this.top in this.parents:
-            return
+        #if not this.top in this.parents:
+        #    return
 
         super().__init__(this)
 
@@ -89,16 +93,19 @@ class AutoLoad(ov.OctetView):
         while adr < len(this) and this[adr] == 0:
             adr += 1
 
+        if len(this) - adr < 0x40:
+            return
         sync = SyncByte(self, adr, width=1).insert()
 
         preamble = Preamble(self, sync.hi).insert()
-        if preamble.wc.val < 0xffe0:
+        if not preamble.good:
             #print(this, "Bad preamble", preamble)
             return
-        that = this.create(start = sync.lo, stop = preamble.hi)
-        that.add_type("BinaryLoaderPreamble")
 
         this.add_type("AutoLoader")
+
+        that = this.create(start = sync.lo, stop = preamble.hi)
+        that.add_type("BinaryLoaderPreamble")
 
         wc = ov.Be16(self, preamble.hi)
         if wc.val > 0xff80:
@@ -106,9 +113,8 @@ class AutoLoad(ov.OctetView):
         else:
             loader = BinaryLoader(self, preamble.hi, ov.Le16).insert()
         if loader.wc.val < 0xff80:
-            print(this, "Bad binary loader", loader)
-            this.add_type("AutoLoader-BAD")
             return
+
         that = this.create(start = loader.lo, stop = loader.hi)
         that.add_type("BinaryLoader")
 
