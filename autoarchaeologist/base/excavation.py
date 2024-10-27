@@ -218,6 +218,14 @@ class Excavation(result_page.ResultPage):
                 ex(this)
                 if this.taken:
                     break
+        for that in list(self.hashes.values()):
+            that.part()
+        while self.queue:
+            this = self.queue.pop(0)
+            for ex in self.examiners:
+                ex(this)
+                if this.taken:
+                    break
         self.busy = False
 
     def polish(self):

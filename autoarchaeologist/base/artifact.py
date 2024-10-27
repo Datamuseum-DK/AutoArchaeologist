@@ -267,6 +267,20 @@ class ArtifactBase(result_page.ResultPage):
                 assert child != self, (child, self)
                 yield from child.iter_notes(recursive)
 
+    def part(self):
+        ''' Instantiate any interstitial child artifacts '''
+        if self.rp_interpretations:
+            return
+        if not self.children:
+            return
+        a0 = 0
+        for lo, hi, _this in sorted(self.layout):
+            if a0 < lo:
+                self.create(start=a0, stop=lo)
+            a0 = hi
+        if a0 < len(self):
+            self.create(start=a0, stop=len(self))
+
     def filename_for(self, *args, **kwargs):
         ''' ask excavation '''
         return self.top.filename_for(self, *args, **kwargs)
@@ -383,7 +397,10 @@ class ArtifactBase(result_page.ResultPage):
             file.write("<H3>NB: Comments at End</H3>\n")
 
         if not self.rp_interpretations:
-            self.add_interpretation(self, self.html_default_interpretation)
+            if self.children:
+                self.add_interpretation(self, self.html_interpretation_children)
+            else:
+                self.add_interpretation(self, self.html_default_interpretation)
 
         if self.emit_interpretations(file, domore):
             retval = True
@@ -464,7 +481,7 @@ class ArtifactBase(result_page.ResultPage):
         tmp = ov.OctetView(this)
         if len(self._keys) > 0:
             file.write("Dumping the first 0x%x bytes of each record\n" % width)
-            for key,rec in sorted(self._keys.items()):
+            for rec in sorted(self._keys.values()):
                 ov.Octets(tmp, lo = rec.lo, hi=rec.hi, width=width, maxlines=1).insert()
         for cnt, line in enumerate(tmp.render(**kwargs)):
             if max_lines and cnt > max_lines:
