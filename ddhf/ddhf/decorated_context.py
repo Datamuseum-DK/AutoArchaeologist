@@ -13,7 +13,7 @@ import sys
 import os
 
 from autoarchaeologist.base import excavation, decorator
-from autoarchaeologist.container import simh_tap_file, plain_file, imd_file
+from autoarchaeologist.container import argv
 from autoarchaeologist.collection.datamuseum_dk import FromBitStore
 
 class Decorator(decorator.Decorator):
@@ -90,25 +90,7 @@ class DDHF_Excavation(excavation.Excavation):
     def from_argv(self):
         ''' Process extra command line arguments '''
         for fn in sys.argv[1:]:
-            if not os.path.isfile(fn) or not os.path.getsize(fn):
-                continue
-            print("Loading", fn)
-            ext = os.path.splitext(fn)
-            try:
-                if ext[1] in (".tap", ".TAP"):
-                    try:
-                        s = simh_tap_file.SimhTapContainer(filename = fn)
-                        self.add_top_artifact(s, description=fn)
-                    except simh_tap_file.BadTAPFile as err:
-                        print("ERROR:", fn, err)
-                elif ext[1] in (".imd", ".IMD"):
-                    s = imd_file.ImdContainer(filename = fn)
-                    self.add_top_artifact(s, description=fn)
-                else:
-                    s = plain_file.PlainFileArtifact(fn)
-                    self.add_top_artifact(s, description=fn)
-            except excavation.DuplicateArtifact:
-                pass
+            argv.argv_file(self, fn)
 
 OK_ENVS = {
     "AUTOARCHAEOLOGIST_HTML_DIR": "html_dir",
