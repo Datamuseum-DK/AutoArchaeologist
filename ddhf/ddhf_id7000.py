@@ -7,21 +7,12 @@ import ddhf
 
 from autoarchaeologist.base import type_case
 
-from autoarchaeologist.regnecentralen import domus_fs
-from autoarchaeologist.regnecentralen import rc3600_fdtape
-from autoarchaeologist.regnecentralen import rc3600_fcopy
-from autoarchaeologist.regnecentralen import rc7000_comal
-from autoarchaeologist.regnecentralen import rc3600_ldfs
 from autoarchaeologist.generic import bigtext
-from autoarchaeologist.data_general import absbin
-from autoarchaeologist.data_general import relbin
-from autoarchaeologist.data_general import papertapechecksum
-from autoarchaeologist.regnecentralen import rcsl
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import intel_hex
 
-class DomusDS2089(type_case.DS2089):
+class DS2089(type_case.DS2089):
     ''' typical use charset '''
 
     def __init__(self):
@@ -38,19 +29,19 @@ class DomusDS2089(type_case.DS2089):
 class TextFile(textfiles.TextFile):
     ''' Non-parity '''
 
-    TYPE_CASE = DomusDS2089()
+    TYPE_CASE = DS2089()
     MAX_TAIL=512*6
 
 class TextFileEven(textfiles.TextFile):
     ''' Even-parity '''
 
-    TYPE_CASE = type_case.EvenPar(DomusDS2089())
+    TYPE_CASE = type_case.EvenPar(DS2089())
     MAX_TAIL=512*6
 
 class TextFileOdd(textfiles.TextFile):
     ''' Odd-parity '''
 
-    TYPE_CASE = type_case.OddPar(DomusDS2089())
+    TYPE_CASE = type_case.OddPar(DS2089())
     MAX_TAIL=512*6
 
 class Id7000(ddhf.DDHF_Excavation):
@@ -60,7 +51,7 @@ class Id7000(ddhf.DDHF_Excavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.type_case = DomusDS2089()
+        self.type_case = DS2089()
 
         self.add_examiner(bigtext.BigText)
         self.add_examiner(samesame.SameSame)
