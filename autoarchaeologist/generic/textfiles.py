@@ -30,6 +30,8 @@ class TextFile():
     MIN_LINES = 1
 
     def __init__(self, this):
+        if this.children:
+            return
         if len(this) > self.MAX_LENGTH:
             return
 
