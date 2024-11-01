@@ -103,7 +103,6 @@ class Tab():
         width = len(self.hdr)
         while True:
             width += 1
-            print(" @", width, len(self.entries))
             ntabs = {}
             fail = False
             for entries in self.entries.values():
@@ -122,7 +121,6 @@ class Tab():
             if fail:
                 continue
             i = max(len(tab) for tab in ntabs.values())
-            print(" =", width, len(ntabs), i)
             if i < 1.2 * PAGE_SIZE:
                 break
         yield from ntabs.values()
