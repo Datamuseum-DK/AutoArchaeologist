@@ -12,7 +12,7 @@
 from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
-from autoarchaeologist.DigitalResearch import cpm
+from autoarchaeologist.vendor.digital_research import cpm
 
 cpm.cpm_filename_typecase.set_slug(0x5f, '_', '_')
 cpm.cpm_filename_typecase.set_slug(0x3b, ';', ';')

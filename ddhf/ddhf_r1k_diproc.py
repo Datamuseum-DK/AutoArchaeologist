@@ -4,7 +4,7 @@ Rational R1000/400 Diag Processor Firmware from Datamuseum.dk's BitStore
 
 import ddhf
 
-from autoarchaeologist.rational import r1k_diag
+from autoarchaeologist.vendor.rational import r1k_diag
 
 class R1KDIPROC(ddhf.DDHF_Excavation):
 

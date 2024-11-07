@@ -5,7 +5,7 @@ Intel ISIS Artifacts from Datamuseum.dk's BitStore
 
 import ddhf
 
-from autoarchaeologist.intel import isis
+from autoarchaeologist.vendor.intel import isis
 from autoarchaeologist.generic import textfiles
 
 class IntelISIS(ddhf.DDHF_Excavation):

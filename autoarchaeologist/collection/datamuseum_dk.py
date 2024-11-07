@@ -60,7 +60,11 @@ class FromBitStore():
         self.media_types = media_types
 
         for i in args:
-            self.process_arg(i)
+            try:
+                self.process_arg(i)
+            except urllib.error.URLError as err:
+                print("Network down?", err)
+                break
 
     def process_arg(self, arg):
         ''' Separate arguments into bitstore idents and bitstore keywords '''

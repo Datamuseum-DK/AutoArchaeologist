@@ -7,12 +7,12 @@ import ddhf
 
 from autoarchaeologist.generic import sccs_id
 from autoarchaeologist.base import type_case
-from autoarchaeologist.rational import dfs_tape
-from autoarchaeologist.rational import r1k_assy
-from autoarchaeologist.rational import r1k_configuration
-from autoarchaeologist.rational import r1k_ucode
-from autoarchaeologist.rational import r1k_m200
-from autoarchaeologist.rational import r1k_experiment
+from autoarchaeologist.vendor.rational import dfs_tape
+from autoarchaeologist.vendor.rational import r1k_assy
+from autoarchaeologist.vendor.rational import r1k_configuration
+from autoarchaeologist.vendor.rational import r1k_ucode
+from autoarchaeologist.vendor.rational import r1k_m200
+from autoarchaeologist.vendor.rational import r1k_experiment
 
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles

@@ -7,17 +7,17 @@ import ddhf
 
 from autoarchaeologist.base import type_case
 
-from autoarchaeologist.regnecentralen import domus_fs
-from autoarchaeologist.regnecentralen import rc3600_fdtape
-from autoarchaeologist.regnecentralen import rc3600_fcopy
-from autoarchaeologist.regnecentralen import rc7000_comal
-from autoarchaeologist.regnecentralen import rc3600_ldfs
-from autoarchaeologist.regnecentralen import rc3600_autoload
+from autoarchaeologist.vendor.regnecentralen import domus_fs
+from autoarchaeologist.vendor.regnecentralen import rc3600_fdtape
+from autoarchaeologist.vendor.regnecentralen import rc3600_fcopy
+from autoarchaeologist.vendor.regnecentralen import rc7000_comal
+from autoarchaeologist.vendor.regnecentralen import rc3600_ldfs
+from autoarchaeologist.vendor.regnecentralen import rc3600_autoload
 from autoarchaeologist.generic import bigtext
-from autoarchaeologist.data_general import absbin
-from autoarchaeologist.data_general import relbin
-from autoarchaeologist.data_general import papertapechecksum
-from autoarchaeologist.regnecentralen import rcsl
+from autoarchaeologist.vendor.data_general import absbin
+from autoarchaeologist.vendor.data_general import relbin
+from autoarchaeologist.vendor.data_general import papertapechecksum
+from autoarchaeologist.vendor.regnecentralen import rcsl
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 

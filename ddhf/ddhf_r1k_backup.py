@@ -6,11 +6,11 @@
 import ddhf
 
 from autoarchaeologist.generic import ansi_tape_labels
-from autoarchaeologist.rational.r1k_backup import R1kBackup
-from autoarchaeologist.rational.r1k_e3_objects import R1kE3Objects
-from autoarchaeologist.rational.r1k_assy import R1kAssyFile
-from autoarchaeologist.rational.r1k_6zero import R1k6ZeroSegment
-from autoarchaeologist.rational.r1k_seg_heap import R1kSegHeap
+from autoarchaeologist.vendor.rational.r1k_backup import R1kBackup
+from autoarchaeologist.vendor.rational.r1k_e3_objects import R1kE3Objects
+from autoarchaeologist.vendor.rational.r1k_assy import R1kAssyFile
+from autoarchaeologist.vendor.rational.r1k_6zero import R1k6ZeroSegment
+from autoarchaeologist.vendor.rational.r1k_seg_heap import R1kSegHeap
 from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic.samesame import SameSame

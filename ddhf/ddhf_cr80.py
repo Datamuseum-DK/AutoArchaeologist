@@ -5,9 +5,9 @@ Christian Rovsing A/S CR80 Artifacts from Datamuseum.dk's BitStore
 
 import ddhf
 
-from autoarchaeologist.christianrovsing import cr80_sysone
-from autoarchaeologist.christianrovsing import cr80_fs2
-from autoarchaeologist.intel import isis
+from autoarchaeologist.vendor.christianrovsing import cr80_sysone
+from autoarchaeologist.vendor.christianrovsing import cr80_fs2
+from autoarchaeologist.vendor.intel import isis
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.vendor.zilog import mcz
 
