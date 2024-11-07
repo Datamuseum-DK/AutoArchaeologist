@@ -25,6 +25,7 @@ class Rc489kNameSpace(namespace.NameSpace):
     ''' ... '''
 
     TABLE = (
+        ( "r", "entry-base"),
         ( "r", "mode"),
         ( "r", "kind"),
         ( "r", "key"),
@@ -61,6 +62,47 @@ def short_clock(word):
     ut = (word << 19) * 100e-6
     t0 = (366+365)*24*60*60
     return time.strftime("%Y-%m-%dT%H:%M", time.gmtime(ut - t0 ))
+
+class ShortClock(ov.Be24):
+    '''
+       Time is kept in a double word (=48 bits) counting units of
+       100µs since 1968-01-01T00:00:00 local time.
+
+       A ShortClock throws the 5 MSB and 19 LSB bits away, which
+       gives a resolution a tad better than a minute and a range
+       of almost 28 years.
+    '''
+
+    def render(self):
+        ''' Render as ISO8601 without timezone '''
+        yield short_clock(self.val)
+
+class DWord(ov.Struct):
+    ''' A double word '''
+
+    def __init__(self, up, lo):
+        super().__init__(
+            up,
+            lo,
+            w0_=ov.Be24,
+            w1_=ov.Be24,
+        )
+
+    def render(self):
+        yield "(0x%x" % self.w0.val + ",0x%x)" % self.w1.val
+
+class Rc489kBasePair(DWord):
+
+    def render(self):
+        if 0 and self.w0.val == self.w1.val:
+            yield "├" + str(self.w0.val) + "┤"
+        else:
+            lo = min(self.w0.val, self.w1.val)
+            hi = max(self.w0.val, self.w1.val)
+            yield "├0x%06x" % lo + "┄0x%06x" % hi + "┤"
+
+    def __eq__(self, other):
+        return self.w0.val == other.w0.val and self.w1.val == other.w1.val
 
 class Rc489kEntryTail(ov.Struct):
     ''' The ten words which describe a file '''

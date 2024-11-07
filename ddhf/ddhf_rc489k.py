@@ -30,7 +30,7 @@ class Rc489kEvenPar(type_case.EvenPar):
 
 class TextFile(textfiles.TextFile):
     ''' Text files with even parity'''
-    MAX_TAIL = 0xc0000
+    MAX_TAIL = 0x1f700
 
 class TextFileEvenParity(TextFile):
     ''' Text files with even parity'''
@@ -61,6 +61,9 @@ class Rc489k(ddhf.DDHF_Excavation):
             "RC/RC4000/TEST",
             "RC/RC9000",
             "RC/RC9000/TAPE",
+            "RC/RC3500/TAPE",
+            "30003100",
+            "30007477",
         )
 
 if __name__ == "__main__":

@@ -75,7 +75,7 @@ class Rc489kBinOutEntry(ov.Struct):
                 self.namespace = Rc489kNameSpace(
                     name = self.create.name.txt.rstrip(),
                     parent = self.tree.namespace,
-                    priv = self.create.entry_tail,
+                    priv = self,
                 )
             elif i.txt == 'newcat':
                 self.add_field("newcat", Rc489kBinOutNewCat)
@@ -93,6 +93,9 @@ class Rc489kBinOutEntry(ov.Struct):
                 self.add_field("huh", ov.Text(6))
                 break
         self.done()
+
+    def ns_render(self):
+        return ["?"] + self.create.entry_tail.ns_render()
 
     def commit(self):
         ''' Commit and create artifact if possible '''
