@@ -3,12 +3,12 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.vendor.dansk_data_elektronik import mikados
+
+import ddhf
 
 class Mikados(ddhf.DDHF_Excavation):
     ''' All MIKADOS artifacts '''

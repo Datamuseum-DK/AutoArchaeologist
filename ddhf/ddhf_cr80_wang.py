@@ -3,11 +3,11 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.Wang import wang_wps
 from autoarchaeologist.Wang import wang_text
+
+import ddhf
 
 class Wang(ddhf.DDHF_Excavation):
 

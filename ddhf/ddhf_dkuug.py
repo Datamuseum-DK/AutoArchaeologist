@@ -3,12 +3,12 @@ DKUUG and EUUG Conference tapes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.os.unix import tar_file
 from autoarchaeologist.os.unix import compress
+
+import ddhf
 
 class DkuugEuug(ddhf.DDHF_Excavation):
 

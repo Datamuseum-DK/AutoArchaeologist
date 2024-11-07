@@ -3,10 +3,10 @@ GIER Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.vendor.regnecentralen import gier_text
 from autoarchaeologist.generic import samesame
+
+import ddhf
 
 class GIER(ddhf.DDHF_Excavation):
 

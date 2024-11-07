@@ -3,8 +3,6 @@ Rational R1000/400 DFS Tapes from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.generic import sccs_id
 from autoarchaeologist.base import type_case
 from autoarchaeologist.vendor.rational import dfs_tape
@@ -16,6 +14,8 @@ from autoarchaeologist.vendor.rational import r1k_experiment
 
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
+
+import ddhf
 
 class TextFile(textfiles.TextFile):
     ''' Custom credibility '''

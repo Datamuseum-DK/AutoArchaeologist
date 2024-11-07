@@ -9,13 +9,14 @@ Regnecentralen RC900
 ~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.os.unix import unix_fs
 from autoarchaeologist.os.unix import compress
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
+
+import ddhf
 
 class Rc900FsParams(unix_fs.UnixFsParams):
 

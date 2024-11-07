@@ -3,8 +3,6 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.generic import ansi_tape_labels
 from autoarchaeologist.vendor.rational.r1k_backup import R1kBackup
 from autoarchaeologist.vendor.rational.r1k_e3_objects import R1kE3Objects
@@ -14,6 +12,8 @@ from autoarchaeologist.vendor.rational.r1k_seg_heap import R1kSegHeap
 from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic.samesame import SameSame
+
+import ddhf
 
 class TextFile(textfiles.TextFile):
     ''' Custom credibility '''

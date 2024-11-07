@@ -3,10 +3,10 @@ Intel ISIS Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.vendor.intel import isis
 from autoarchaeologist.generic import textfiles
+
+import ddhf
 
 class IntelISIS(ddhf.DDHF_Excavation):
     ''' Intel ISIS Floppy Disks '''

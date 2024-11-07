@@ -3,14 +3,14 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.generic import bigtext
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import intel_hex
+
+import ddhf
 
 class DS2089(type_case.DS2089):
     ''' typical use charset '''

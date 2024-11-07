@@ -9,13 +9,14 @@ Commodore CBM-900 Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.os.unix import unix_fs
 from autoarchaeologist.vendor.commodore import cbm900
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
+
+import ddhf
 
 class Cbm900FsParams(unix_fs.UnixFsParams):
 

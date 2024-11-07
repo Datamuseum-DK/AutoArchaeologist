@@ -47,6 +47,8 @@ class FromBitStore():
 
     ''' Pull in top-level artifacts from Datamuseum.dk's bitstore '''
 
+    FORMATS = BITSTORE_FORMATS
+
     def __init__(self, top, *args, media_types=None, cache_dir=None):
         self.top = top
         if cache_dir:
@@ -82,16 +84,12 @@ class FromBitStore():
         else:
             self.fetch_pattern(arg)
 
-    def cache_fetch(self, key, url):
+    def cache_fetch_file(self, key, url):
         ''' Fetch something if not cached '''
         cache_file = os.path.join(self.cache_dir, key)
         try:
             fi = open(cache_file, "rb")
-            return mmap.mmap(
-                fi.fileno(),
-                0,
-                access=mmap.ACCESS_READ,
-            )
+            return cache_file
         except FileNotFoundError:
             pass
         print("fetching " + url)
@@ -99,7 +97,15 @@ class FromBitStore():
             body = urllib.request.urlopen(url).read()
         except urllib.error.HTTPError:
             return None
-        open(cache_file, "wb").write(body)
+        with open(cache_file, "wb") as file:
+            file.write(body)
+        return cache_file
+
+    def cache_fetch(self, key, url):
+        ''' Fetch something if not cached '''
+        cache_file = self.cache_fetch_file(key, url)
+        if not cache_file:
+            return cache_file
         fi = open(cache_file, "rb")
         return mmap.mmap(
             fi.fileno(),
@@ -132,6 +138,12 @@ class FromBitStore():
         body = body.split('>', maxsplit=1)[-1]
         body = body.split('</textarea>')[0]
         return body
+
+    def fetch_artifact_file(self, arg):
+        ''' Fetch the actual bits from the bitstore '''
+        url = PROTOCOL + '://' + SERVERNAME + "/bits/" + arg
+        filename = self.cache_fetch_file(arg + ".bin", url)
+        return filename
 
     def fetch_artifact(self, arg, expected):
         ''' Fetch the actual bits from the bitstore '''
@@ -174,7 +186,7 @@ class FromBitStore():
         if self.media_types and not self.check_media_type(meta):
             return
 
-        handler = BITSTORE_FORMATS.get(meta.BitStore.Format.val)
+        handler = self.FORMATS.get(meta.BitStore.Format.val)
         if handler is None:
             print(arg, "Ignored, unknown format", meta.BitStore.Format.val)
             return
@@ -242,7 +254,7 @@ class FromBitStore():
             _line3 = lines.pop(0)	# Excavation
             line4 = lines.pop(0)
             line5 = lines.pop(0)
-            j = BITSTORE_FORMATS.get(line4[1:])
+            j = self.FORMATS.get(line4[1:])
             if j is None:
                 print("FORMAT? --", line4, line5)
                 continue

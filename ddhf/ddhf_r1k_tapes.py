@@ -3,8 +3,6 @@ Rational R1000/400 Tapes from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
 from autoarchaeologist.vendor.rational import r1k_archive
 from autoarchaeologist.vendor.rational.r1k_assy import R1kAssyFile
@@ -12,6 +10,8 @@ from autoarchaeologist.generic.samesame import SameSame
 from autoarchaeologist.os.unix.compress import Compress
 from autoarchaeologist.os.unix.tar_file import TarFile
 from autoarchaeologist.generic import textfiles
+
+import ddhf
 
 class R1K(ddhf.DDHF_Excavation):
 

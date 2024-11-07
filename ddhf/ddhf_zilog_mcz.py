@@ -3,11 +3,11 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.vendor.zilog import mcz
 from autoarchaeologist.vendor.zilog import zdos_basic
 from autoarchaeologist.generic import textfiles
+
+import ddhf
 
 class ZilogMCZ(ddhf.DDHF_Excavation):
 

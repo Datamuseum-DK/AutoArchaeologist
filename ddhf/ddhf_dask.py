@@ -3,12 +3,12 @@ GIER Artifacts from Datamuseum.dk's BitStore
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.vendor.regnecentralen import gier_text
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.base import type_case
+
+import ddhf
 
 class DaskTegn(textfiles.TextFile):
     ''' Everything is credible '''

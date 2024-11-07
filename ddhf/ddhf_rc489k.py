@@ -3,15 +3,16 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
-from autoarchaeologist.regnecentralen import rc489k_tape
-from autoarchaeologist.regnecentralen import rc489k_binout
-from autoarchaeologist.regnecentralen import rcsl
-from autoarchaeologist.regnecentralen import gier_text
+from autoarchaeologist.vendor.regnecentralen import rc489k_tape
+from autoarchaeologist.vendor.regnecentralen import rc489k_binout
+from autoarchaeologist.vendor.regnecentralen import rcsl
+from autoarchaeologist.vendor.regnecentralen import gier_text
+
+import ddhf
 
 class Rc489kTypeCase(type_case.DS2089):
     ''' RC489k default type case '''

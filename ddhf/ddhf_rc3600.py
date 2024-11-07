@@ -3,8 +3,6 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import ddhf
-
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.vendor.regnecentralen import domus_fs
@@ -20,6 +18,8 @@ from autoarchaeologist.vendor.data_general import papertapechecksum
 from autoarchaeologist.vendor.regnecentralen import rcsl
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
+
+import ddhf
 
 class DomusDS2089(type_case.DS2089):
     ''' RC3600 typical use charset '''
