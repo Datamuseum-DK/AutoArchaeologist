@@ -166,7 +166,7 @@ class Excavation(result_page.ResultPage):
         for i in args:
             self.examiners.append(i)
 
-    def add_top_artifact(self, what, description=None):
+    def add_top_artifact(self, what, description=None, dup_ok=False):
         ''' Add a top-level artifact '''
 
         if not description:
@@ -182,6 +182,8 @@ class Excavation(result_page.ResultPage):
         this = self.hashes.get(digest)
         if this:
             this.add_description(description)
+            if dup_ok:
+                return this
             raise DuplicateArtifact(this, description)
         this = that
         this.add_description(description)
