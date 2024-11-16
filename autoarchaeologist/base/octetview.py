@@ -202,8 +202,22 @@ class Le32(Octets):
         self.val |= self.this[lo + 1] << 8
         self.val |= self.this[lo]
 
+class Le64(Octets):
+    ''' Eight bytes Little Endian '''
+
+    def __init__(self, tree, lo, **kwargs):
+        super().__init__(tree, lo, width=8, **kwargs)
+        self.val = self.this[lo + 7] << 56
+        self.val |= self.this[lo + 6] << 48
+        self.val |= self.this[lo + 5] << 40
+        self.val |= self.this[lo + 4] << 32
+        self.val |= self.this[lo + 3] << 24
+        self.val |= self.this[lo + 2] << 16
+        self.val |= self.this[lo + 1] << 8
+        self.val |= self.this[lo]
+
     def render(self):
-        yield "0x%08x" % self.val
+        yield "0x%016x" % self.val
 
 class Be16(Octets):
     ''' Two bytes Big Endian '''
@@ -240,6 +254,23 @@ class Be32(Octets):
 
     def render(self):
         yield "0x%08x" % self.val
+
+class Be64(Octets):
+    ''' Eight bytes Big Endian '''
+
+    def __init__(self, tree, lo, **kwargs):
+        super().__init__(tree, lo, width=8, **kwargs)
+        self.val = self.this[lo + 0] << 56
+        self.val |= self.this[lo + 1] << 48
+        self.val |= self.this[lo + 2] << 40
+        self.val |= self.this[lo + 3] << 32
+        self.val |= self.this[lo + 4] << 24
+        self.val |= self.this[lo + 5] << 16
+        self.val |= self.this[lo + 6] << 8
+        self.val |= self.this[lo + 7]
+
+    def render(self):
+        yield "0x%016x" % self.val
 
 class L2301(Octets):
     ''' Four bytes Deranged Endian '''
