@@ -81,6 +81,7 @@ class Rc3600(ddhf.DDHF_Excavation):
         self.from_bitstore(
             "-30001762",		# Defective
             "RC/RC3600/DOMUS",
+            "RC/RC3600/SW",
             "RC/RC3600/HW",
             "RC/RC3600/LOADER",
             "RC/RC3600/MUSIL",
