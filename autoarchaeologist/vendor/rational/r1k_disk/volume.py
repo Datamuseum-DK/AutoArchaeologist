@@ -5,9 +5,9 @@
    ==============================
 '''
 
-from ...generic import disk
-from ...base import octetview as ov
-from ...base import namespace as ns
+from ....generic import disk
+from ....base import octetview as ov
+from ....base import namespace as ns
 
 from .defs import LSECSHIFT, NameSpace
 from .superblock import SuperBlock

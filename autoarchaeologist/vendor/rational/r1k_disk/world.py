@@ -27,7 +27,7 @@ Note: [...] The D2 mapping is:
 
 '''
 
-from ...base import bitview as bv
+from ....base import bitview as bv
 
 from .defs import AdaArray
 from .object import ObjSector

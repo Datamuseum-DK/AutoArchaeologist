@@ -21,8 +21,8 @@
 
 '''
 
-from ...base import bitview as bv
-from ...base import namespace as ns
+from ....base import bitview as bv
+from ....base import namespace as ns
 
 ELIDE_FREELIST = True
 ELIDE_BADLIST = True
@@ -110,8 +110,6 @@ class NameSpace(ns.NameSpace):
     ''' ... '''
 
     TABLE = (
-        ("r", "vp_id"),
-        ("r", "segno"),
         ("r", "snapshot"),
         ("r", "other2a"),
         ("r", "col9"),
@@ -123,15 +121,13 @@ class NameSpace(ns.NameSpace):
         ("r", "npg"),
         ("r", "mgr"),
         ("r", "mobj"),
-        ("r", "name"),
-        ("r", "artifact"),
+        ("l", "name"),
+        ("l", "artifact"),
     )
 
     def ns_render(self):
         seg = self.ns_priv
         return [
-            str(seg.vpid.val),
-            hex(seg.segno.val),
             hex(seg.snapshot.val),
             hex(seg.other2a.val),
             hex(seg.col9.val),

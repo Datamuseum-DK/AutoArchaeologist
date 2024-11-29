@@ -5,7 +5,7 @@
    ======
 '''
 
-from ...base import bitview as bv
+from ....base import bitview as bv
 
 from .defs import AdaArray, ELIDE_SYSLOG
 from .object import ObjSector

@@ -5,7 +5,7 @@
    ================
 '''
 
-from ...base import bitview as bv
+from ....base import bitview as bv
 from .defs import ELIDE_FREELIST
 from .object import ObjSector
 

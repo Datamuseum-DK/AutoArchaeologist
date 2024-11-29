@@ -5,9 +5,9 @@
    =================
 '''
 
-from ...base import bitview as bv
+from ....base import bitview as bv
+from ....generic import disk
 
-from ...generic import disk
 from .defs import SECTBITS, LSECSHIFT, DoubleSectorBitView, ELIDE_BADLIST, DiskAddress
 
 class BadSector(disk.Sector):

@@ -5,7 +5,7 @@
    =====
 '''
 
-from ...base import bitview as bv
+from ....base import bitview as bv
 
 from .defs import SECTBITS, AdaArray
 from .object import ObjSector

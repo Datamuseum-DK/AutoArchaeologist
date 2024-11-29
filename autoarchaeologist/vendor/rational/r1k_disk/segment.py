@@ -5,9 +5,10 @@
    ========================
 '''
 
+from ....base import bitview as bv
+
 from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT, LSECSIZE, NameSpace
 from .object import ObjSector, BadObject
-from ...base import bitview as bv
 
 UNREAD = memoryview(b'_UNREAD_' * (LSECSIZE // 8))
 
@@ -185,7 +186,7 @@ class SegmentDesc(bv.Struct):
         that = ovtree.this.create(records=bits)
         that.add_note('R1k_Segment')
         that.add_note("tag_%02x" % self.col9.val)
-        that.add_note("vpid_%02x" % self.vpid.val)
+        that.add_note("vpid_%04d" % self.vpid.val)
         name = "%03x:%06x:%x" % (self.vpid.val, self.segno.val, self.version.val)
         self.namespace = NameSpace(
             parent = ovtree.namespace,
