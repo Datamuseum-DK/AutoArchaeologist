@@ -26,7 +26,7 @@ class ResultPage():
         self.unique += 1
         return retval
 
-    def add_interpretation(self, owner, func, more=False):
+    def add_interpretation(self, owner, func, more=None):
         ''' Add an interpretation '''
         self.rp_interpretations.append((owner, func, more))
 
@@ -50,10 +50,13 @@ class ResultPage():
         ''' emit registered interpretations '''
         retval = False
         for _owner, func, more in self.rp_interpretations:
-            if domore or not more:
-                fo.write('<div>\n')
-                func(fo, self)
-                fo.write('</div>\n')
             if more:
                 retval = True
+            if domore and more is  False:
+                continue
+            if not domore and more is True:
+                continue
+            fo.write('<div>\n')
+            func(fo, self)
+            fo.write('</div>\n')
         return retval

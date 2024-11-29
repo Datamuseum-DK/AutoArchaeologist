@@ -23,7 +23,7 @@ class HtmlInterpretation():
        hangs around.
     '''
 
-    def __init__(self, this, title, more=False):
+    def __init__(self, this, title, more=None):
         self.this = this
         self.title = title
         self.filename = this.tmpfile_for().filename
