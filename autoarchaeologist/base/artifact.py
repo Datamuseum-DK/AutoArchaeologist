@@ -136,15 +136,31 @@ class ArtifactBase(result_page.ResultPage):
 
     def bits(self, lo=None, width=None, hi=None):
         ''' Get all bits as bitstring '''
-        assert lo is None
-        assert hi is None
-        assert width is None
-        lo = 0
-        hi = len(self) << 3
+        if lo is None:
+            lo = 0
+        if hi is None and width is not None:
+            hi = lo + width
+        if hi is None:
+            hi = len(self) << 3
+        assert lo & 7 == 0
+        assert hi & 7 == 0
         retval = []
+        yet = 0
         for chunk in self.iter_chunks():
+            cbits = len(chunk) * 8
+            if yet + cbits < lo:
+                yet += cbits
+                continue
             for i in chunk:
+                if yet + 8 < lo:
+                    yet += 8
+                    continue
                 retval.append(bin(256 | i)[-8:])
+                yet += 8
+                if yet >= hi:
+                    break
+            if yet >= hi:
+                break
         return "".join(retval)[lo & 7:hi - (lo & ~7)]
 
     def writetofile(self, file):
