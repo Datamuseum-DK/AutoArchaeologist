@@ -145,8 +145,11 @@ def Text(width, glyph_width=8, rstrip = False):
 class Pointer_Class(Bits):
             
     TARGET = None
+    WIDTH = None
             
     def __init__(self, bvtree, lo, width=None):
+        if width is None:
+            width = self.WIDTH
         if width is None:
             width = bvtree.POINTER_WIDTH
         super().__init__(bvtree, lo, width=width)
@@ -158,10 +161,27 @@ class Pointer_Class(Bits):
     def dst(self):
         if self.cached_dst is None:
             i = list(self.tree.find(self.val, self.val+1))
+            if len(i) == 0:
+                return None
             if len(i) > 1:
-                print("Multiple destinations", len(i), self)
-            if len(i) > 0:
-                self.cached_dst = i[0]
+                print("Pointer", hex(self.lo), "Has multiple destinations", len(i))
+                return None
+            dst = i[0]
+            if dst.lo != self.val:
+                print(
+                    "Pointer at",
+                    hex(self.lo),
+                    "Points to",
+                    hex(self.val),
+                    "which is",
+                    hex(self.val - dst.lo),
+                    "into object at",
+                    hex(dst.lo),
+                    "which is class",
+                    dst.__class__.__name__,
+                )
+                return None
+            self.cached_dst = dst
         return self.cached_dst
             
     def render(self):
@@ -181,10 +201,11 @@ class Pointer_Class(Bits):
             src = self
         dot.add_edge(src, self.val)
             
-def Pointer(cls=None):
+def Pointer(cls=None, width=None):
         
     class ClsPointer(Pointer_Class):
         TARGET = cls
+        WIDTH = width
             
     return ClsPointer
 

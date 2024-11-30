@@ -11,7 +11,8 @@ class DotGraph():
     def __init__(self, out, bintree):
         self.out = out
         self.bintree = bintree
-        self.n_edges = 0
+        self.edges = []
+        self.nodes = set()
 
     def head(self):
         ''' Emit the start of the dot syntax '''
@@ -20,20 +21,33 @@ class DotGraph():
         self.out.write('node [shape=box]\n')
 
     def walk(self):
-        ''' Walk the bintree '''
-        for leaf in self.bintree:
-            leaf.dot_node(self)
+        ''' Walk the bintree, find edges '''
         for leaf in self.bintree:
             leaf.dot_edges(self)
 
+        for leaf in self.bintree:
+            if leaf.lo in self.nodes:
+                label, attr,  = leaf.dot_node(self)
+                if label is None:
+                     label = leaf.__class__.__name__
+                label += "\\n0x%x" % leaf.lo
+                l = [ 'label="' + label + '"']
+                if attr is not None:
+                     l += attr
+                self.out.write("A%x\t" % leaf.lo)
+                self.out.write('[' + ','.join(l) + ']\n')
+
     def tail(self):
         ''' Emit the end of the dot syntax '''
+        for src, dst in self.edges:
+            self.out.write("A%x -> A%x\n" % (src.lo, dst))
         self.out.write("}\n")
 
     def add_edge(self, src, dst):
         ''' Add an edge from src (bintree.Leaf) to dst (int) '''
-        self.out.write("A%x -> A%x\n" % (src.lo, dst))
-        self.n_edges += 1
+        self.edges.append((src, dst))
+        self.nodes.add(src.lo)
+        self.nodes.add(dst)
 
 def add_interpretation(this, bintree):
 
@@ -48,6 +62,6 @@ def add_interpretation(this, bintree):
 
         with this.add_html_interpretation('Dot Graph') as out:
             out.write('<A href="' + fn.link + '">')
-            out.write('Graphviz dot(1) file (%d edges)' % dot.n_edges)
+            out.write('Graphviz dot(1) file (%d edges)' % len(dot.edges))
             out.write('</A>\n')
-        print(this, "DOT: %d edges" % dot.n_edges)
+        print(this, "DOT: %d edges" % len(dot.edges))

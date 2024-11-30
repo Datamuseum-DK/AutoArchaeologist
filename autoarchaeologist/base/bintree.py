@@ -47,6 +47,7 @@ class BinTreeLeaf():
 
     def dot_node(self, _dot):
         ''' ... '''
+        return None, None
 
     def dot_edges(self, _dot, _src=None):
         ''' ... '''
