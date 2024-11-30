@@ -45,7 +45,7 @@ class StdHead(bv.Struct):
             hd_004_n_=-32,
             hd_005_n_=-32,
             hd_006_n_=-32,
-            hd_007_n_=-32,
+            hd_007_p_=bv.Pointer(),
             hd_008_n_=-32,
             hd_009_p_=bv.Pointer(),
             hd_010_n_=-32,
@@ -53,12 +53,12 @@ class StdHead(bv.Struct):
             hd_012_n_=1,
             hd_013_n_=-32,
             hd_014_n_=-32,
-            hd_015_n_=-32,
-            hd_016_n_=-32,
-            hd_017_n_=-32,
-            hd_018_p_=bv.Pointer(),
-            hd_019_n_=-32,
-            hd_020_n_=-32,
+            #hd_015_n_=-32,
+            #hd_016_n_=-32,
+            #hd_017_n_=-32,
+            #hd_018_p_=bv.Pointer(),
+            #hd_019_n_=-32,
+            #hd_020_n_=-32,
         )
 
 class PointerArray(bv.Struct):
