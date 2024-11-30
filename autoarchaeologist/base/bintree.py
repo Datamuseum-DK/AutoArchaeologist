@@ -45,6 +45,12 @@ class BinTreeLeaf():
             return False
         return self.lo == other.lo and self.hi == other.hi
 
+    def dot_node(self, _dot):
+        ''' ... '''
+
+    def dot_edges(self, _dot, _src=None):
+        ''' ... '''
+
 class BinTree():
 
     '''
@@ -358,6 +364,12 @@ class Struct():
                         yield "  " + j[-1]
             yield "}"
 
+    def dot_edges(self, dot, src=None):
+        if src is None:
+            src = self
+        for name, fld in self.fields:
+            fld.dot_edges(dot, src)
+
 def Array(struct_class, count, what, vertical=None):
     ''' An array of things '''
 
@@ -394,6 +406,12 @@ def Array(struct_class, count, what, vertical=None):
                         for j in i.render():
                             yield fmt % n + j
                     yield ']'
+
+            def dot_edges(self, dot, src=None):
+                if src is None:
+                    src = self
+                for fld in self.array:
+                    fld.dot_edges(dot, src)
 
         return Array_Class
 

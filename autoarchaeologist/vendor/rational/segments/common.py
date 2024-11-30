@@ -6,6 +6,7 @@
 '''
 
 from ....base import bitview as bv
+from ....base import dot_graph
 
 class Unallocated(bv.Opaque):
     ''' ... '''
@@ -46,16 +47,16 @@ class StdHead(bv.Struct):
             hd_006_n_=-32,
             hd_007_n_=-32,
             hd_008_n_=-32,
-            hd_009_p_=-32,
+            hd_009_p_=bv.Pointer(),
             hd_010_n_=-32,
-            hd_011_p_=-32,
+            hd_011_p_=bv.Pointer(),
             hd_012_n_=1,
             hd_013_n_=-32,
             hd_014_n_=-32,
             hd_015_n_=-32,
             hd_016_n_=-32,
             hd_017_n_=-32,
-            hd_018_p_=-32,
+            hd_018_p_=bv.Pointer(),
             hd_019_n_=-32,
             hd_020_n_=-32,
         )
@@ -117,12 +118,12 @@ class Segment(bv.BitView):
         self.spelunk()
         if True:
             for lo, hi in self.gaps():
-                print("  GAP", hex(lo), hex(hi), hex(hi - lo))
+                print(this, "GAP", hex(lo), hex(hi), hex(hi - lo))
+        dot_graph.add_interpretation(this, self)
         self.add_interpretation()
 
     def add_interpretation(self, title="BitView", more=False, **kwargs):
         ''' Render via UTF-8 file '''
-        tfn = self.this.add_utf8_interpretation(title, more=more)
-        with open(tfn.filename, "w", encoding="utf-8") as file:
+        with self.this.add_utf8_interpretation(title, more=more) as file:
             for line in self.render(default_width=128, **kwargs):
                 file.write(line + '\n')

@@ -158,8 +158,9 @@ class Pointer_Class(Bits):
     def dst(self):
         if self.cached_dst is None:
             i = list(self.tree.find(self.val, self.val+1))
-            assert len(i) in (0, 1)
-            if len(i) == 1:
+            if len(i) > 1:
+                print("Multiple destinations", len(i), self)
+            if len(i) > 0:
                 self.cached_dst = i[0]
         return self.cached_dst
             
@@ -172,6 +173,13 @@ class Pointer_Class(Bits):
             yield "0x" + self.tree.adrfmt % self.val + "→NOTHING"
             return
         yield "0x" + self.tree.adrfmt % self.val + "→" + i.bt_name
+
+    def dot_edges(self, dot, src=None):
+        if not self.val:
+            return
+        if src is None:
+            src = self
+        dot.add_edge(src, self.val)
             
 def Pointer(cls=None):
         

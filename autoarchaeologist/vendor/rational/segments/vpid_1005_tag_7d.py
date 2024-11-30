@@ -101,7 +101,6 @@ class V1005T7D(Segment):
         self.seg_heap = SegHeap(self, 0).insert()
         self.std_head = StdHead(self, self.seg_heap.hi).insert()
 
-
         y = PointerArray(self, self.std_head.hd_011_p.val, dimension=101).insert()
         for i in y:
             G00(self, i.val).insert()
