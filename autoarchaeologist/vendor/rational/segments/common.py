@@ -53,12 +53,6 @@ class StdHead(bv.Struct):
             hd_012_n_=1,
             hd_013_n_=-32,
             hd_014_n_=-32,
-            #hd_015_n_=-32,
-            #hd_016_n_=-32,
-            #hd_017_n_=-32,
-            #hd_018_p_=bv.Pointer(),
-            #hd_019_n_=-32,
-            #hd_020_n_=-32,
         )
 
 class PointerArray(bv.Struct):
@@ -106,11 +100,11 @@ class Segment(bv.BitView):
     POINTER_WIDTH = 32
 
     def __init__(self, this):
-        print("SEG", self.VPID, "%x" % self.TAG)
         if self.TAG is not None and not this.has_note("tag_%02x" % self.TAG):
             return
         if self.VPID is not None and not this.has_note("vpid_%04d" % self.VPID):
             return
+        print(this, "SEG", self.VPID, "%x" % self.TAG)
         super().__init__(bits = this.bits())
         self.this = this
         self.type_case = this.type_case
