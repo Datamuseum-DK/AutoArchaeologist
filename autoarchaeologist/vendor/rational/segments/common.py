@@ -57,7 +57,7 @@ class StdHead(bv.Struct):
 
 class PointerArray(bv.Struct):
 
-    def __init__(self, bvtree, lo, cls=bv.Pointer_Class, dimension=None):
+    def __init__(self, bvtree, lo, cls=None, dimension=None):
         super().__init__(
             bvtree,
             lo,

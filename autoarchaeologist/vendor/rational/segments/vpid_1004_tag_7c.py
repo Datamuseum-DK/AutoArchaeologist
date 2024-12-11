@@ -253,26 +253,13 @@ class V1004T7C(Segment):
             # Possibly the array limits of hd_009_p
             U26(self, self.std_head.hd_007_p.val).insert()
 
+
         if True:
             U09(self, self.std_head.hd_009_p.val).insert()
 
         y = PointerArray(
             self,
             self.std_head.hd_011_p.val,
-            dimension=101
+            dimension=101,
+            cls=U00,
         ).insert()
-
-        for i in y:
-            U00(self, i.val).insert()
-
-        while True:
-            # I cannot find any references to these U09-trees
-            # It might simply be garbage copies of the tree at
-            # head.hd_009.
-            did = False
-            for lo, hi in self.gaps():
-                U09(self, lo).insert()
-                did = True
-                break
-            if not did:
-                break
