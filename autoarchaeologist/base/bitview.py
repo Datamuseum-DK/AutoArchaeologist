@@ -146,6 +146,7 @@ class Pointer_Class(Bits):
             
     TARGET = None
     WIDTH = None
+    ELIDE = None
             
     def __init__(self, bvtree, lo, width=None):
         if width is None:
@@ -164,7 +165,23 @@ class Pointer_Class(Bits):
             if len(i) == 0:
                 return None
             if len(i) > 1:
-                print("Pointer", hex(self.lo), "Has multiple destinations", len(i))
+                dst = set()
+                for j in i:
+                    t = j.__class__.__name__
+                    if j.lo < self.val: 
+                        t += "+0x%x" % (self.val - j.lo)
+                    dst.add(t)
+                print(
+                    self.tree.this,
+                    "Pointer at",
+                    hex(self.lo),
+                    "points to",
+                    hex(self.val),
+                    "with",
+                    len(i),
+                    "destinations of class",
+                    ",".join(list(dst)),
+                )
                 return None
             dst = i[0]
             if dst.lo != self.val:
@@ -185,6 +202,8 @@ class Pointer_Class(Bits):
         return self.cached_dst
             
     def render(self):
+        if self.ELIDE and self.val in self.ELIDE:
+            return
         if not self.val:
             yield "∅"
             return
@@ -201,11 +220,12 @@ class Pointer_Class(Bits):
             src = self
         dot.add_edge(src, self.val)
             
-def Pointer(cls=None, width=None):
+def Pointer(cls=None, width=None, elide=None):
         
     class ClsPointer(Pointer_Class):
         TARGET = cls
         WIDTH = width
+        ELIDE = elide
             
     return ClsPointer
 
@@ -214,7 +234,8 @@ def Constant(width=32, value=0):
         def __init__(self, bvtree, lo, width=width, value=value):
             super().__init__(bvtree, lo, width=width)
             self.val = int(self.bits(), 2)
-            assert self.val == value
+            if self.val != value:
+                print(bvtree.this, "WARNING: bv.Constant at 0x%x is 0x%x instead of 0x%x" % (self.lo, self.val, value))
             
         def render(self):
             yield "CONST(0x%x)" % self.val
