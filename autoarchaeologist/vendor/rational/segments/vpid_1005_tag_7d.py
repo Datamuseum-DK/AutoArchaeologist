@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 
 '''
-   Group Segments - VPID 1005 - TAG 0x7d
-   =====================================
+   VPID 1005 - TAG 0x7d
+   =========================================
+
+   FE_HANDBOOK.PDf 187p
+
+    Note: […] The D2 mapping is:
+
+        […]
+        GROUP           1005
+        […]
 
 '''
     
 from ....base import bitview as bv
-from .common import Segment, Unallocated, SegHeap, StdHead, PointerArray, StringArray
+from .common import Segment, SegHeap, StdHead, PointerArray
 
 class Bla99(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -55,7 +63,6 @@ class G02(bv.Struct):
             lo,
             g02_000_p_=-0x236,
         )
-        #self.points_to(bvtree, self.g02_000_p.val, G03)
 
 class G03(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -68,13 +75,6 @@ class G03(bv.Struct):
             g03_004_b_=-32,
             g03_005_b_=-32,
             g03_006_b_=-1,
-            #g03_001_b_=G10,
-            #g03_002_b_=G10,
-            #g03_003_b_=G10,
-            #g03_004_b_=-254,
-            #g03_005_p_=G11,
-            #g03_012_p_=G11,
-            #g03_013_z__=-128,
         )
         #assert self.u03_013_z_.val == 0
 
@@ -96,12 +96,16 @@ class V1005T7D(Segment):
     TAG = 0x7d
 
     def spelunk(self):
-        open("/tmp/_b", "w").write(self.bits.replace('0', '-'))
 
         self.seg_heap = SegHeap(self, 0).insert()
         self.std_head = StdHead(self, self.seg_heap.hi).insert()
 
-        y = PointerArray(self, self.std_head.hd_011_p.val, dimension=101).insert()
+        y = PointerArray(
+            self,
+            self.std_head.hd_011_p.val,
+            dimension=101
+        ).insert()
+
         for i in y:
             G00(self, i.val).insert()
 

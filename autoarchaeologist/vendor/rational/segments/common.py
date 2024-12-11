@@ -50,9 +50,9 @@ class StdHead(bv.Struct):
             hd_009_p_=bv.Pointer(),
             hd_010_n_=-32,
             hd_011_p_=bv.Pointer(),
-            hd_012_n_=1,
+            hd_012_n_=-32,
             hd_013_n_=-32,
-            hd_014_n_=-32,
+            hd_014_n_=1,
         )
 
 class PointerArray(bv.Struct):
@@ -69,7 +69,7 @@ class PointerArray(bv.Struct):
             self.add_field("pa_max", -32)
             assert self.pa_min.val == 0
             dimension = self.pa_max.val
-        self.add_field("array", bv.Array(dimension, cls, vertical=True))
+        self.add_field("array", bv.Array(dimension, bv.Pointer(cls), vertical=True))
         self.done()
 
     def __iter__(self):
@@ -85,6 +85,8 @@ class StringArray(bv.Struct):
             sa_max_=-32,
             more = True,
         )
+        if self.sa_min.val != 1:
+            print("SA_MIN", self.sa_min.val)
         assert self.sa_min.val == 1
         self.add_field("text", bv.Text(self.sa_max.val))
         self.txt = self.text.txt
@@ -121,3 +123,14 @@ class Segment(bv.BitView):
         with self.this.add_utf8_interpretation(title, more=more) as file:
             for line in self.render(default_width=128, **kwargs):
                 file.write(line + '\n')
+
+    def find_all(self, match, start=0, stop=None, width=32):
+        b = self.bits
+        if stop is None:
+            stop = len(b)
+        match=bin((1<<width)|match)[3:]
+        while start < stop:
+            start = b.find(match, start, stop)
+            if start == -1: return
+            yield start
+            start += 1

@@ -68,16 +68,6 @@ class V1003T7B(Segment):
     VPID = 1003
     TAG = 0x7b
 
-    def find_all(self, match, start=0, stop=None, width=32):
-        b = self.bits
-        if stop is None:
-            stop = len(b)
-        match=bin((1<<width)|match)[3:]
-        while start < stop:
-            start = b.find(match, start, stop)
-            if start == -1: return
-            yield start
-            start += 1
 
     def spelunk(self):
 
