@@ -6,6 +6,14 @@
 
    This is the Directory Managers persistent segment.
 
+   FE_HANDBOOK.PDf 187p
+
+    Note: […] The D2 mapping is:
+
+        […]
+        DIRECTORY        1009
+        […]
+
 '''
 
 from ....base import bitview as bv
@@ -19,22 +27,66 @@ class DirNo(bv.Struct):
             dirno_=-31,
         )
 
-class StringPointer(bv.Struct):
+    def render(self):
+        yield "[DIRECTORY,%d,1]" % self.dirno.val
+
+class Vpid(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            ptr_=-32,
+            vpid_=-10,
         )
-        bvtree.points_to(self.ptr.val, cm.StringArray)
 
     def render(self):
-        if self.ptr.val == 0:
-            retval = "∅"
-        else:
-            i = list(self.tree.find(self.ptr.val, self.ptr.val+1))
-            retval = "→»" + i[0].txt + '«'
-        yield retval.ljust(50)
+        yield "Vpid %d" % self.vpid.val
+
+class ObjId(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            objid_=-31,
+        )
+
+    def render(self):
+        yield "[,%d,]" % self.objid.val
+
+class StringPointer(bv.Pointer(cm.StringArray)):
+    ''' ... '''
+
+    def render(self):
+        if not self.val:
+            yield from super().render()
+            return
+        dst = self.dst()
+        retval = list(super().render())
+        yield retval[0] + "(»" + dst.txt + "«)"
+
+class D00(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            hd_000_n_=-32,
+            hd_001_n_=-32,
+            hd_002_n_=-32,
+            hd_003_n_=-32,
+            hd_004_n_=-32,
+            hd_005_n_=-32,
+            hd_006_n_=-32,
+            hd_007_p_=bv.Pointer(D01),
+            hd_008_n_=-32,
+            hd_009_p_=bv.Pointer(Bla12),
+            hd_010_n_=-32,
+            hd_011_p_=bv.Pointer(D04),
+            hd_012_n_=-32,
+            hd_013_n_=-32,
+            hd_014_n_=-1,
+        )
+
 
 class Bla12(bv.Struct):
 
@@ -112,7 +164,8 @@ class Bla3(bv.Struct):
             bvtree,
             lo,
             b3_000_=bv.Pointer(Bla4),
-            b3_001_n_=-35,
+            b3_locked_=-3,
+            b3_002_n_=32,	# too big to be snapshot
         )
 
     def visit(self, *args):
@@ -138,38 +191,104 @@ class Bla4(bv.Struct):
         #    self.b4_001.dst().visit(*args)
 
 class ObjClass(bv.Struct):
-    
+
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            cls_=-6,
+            rclass_=-6,
+            subclass_=-10,
         )
         # See 5d3bfb73b, 00_class, 75_tag, seg_0ea8df
-        self.class_name = {
-            1: "ADA",
-            2: "DDB",
-            3: "FILE",
-            4: "USER",
-            5: "GROUP",
-            6: "SESSION",
-            7: "TAPE",
-            8: "TERMINAL",
-            9: "DIRECTORY",
-            10: "CONFIGURATION",
-            11: "CODE_SEGMENT",
-            12: "LINK",
-            13: "NULL_DEVICE",
-            14: "PIPE",
-            15: "ARCHIVED_CODE",
-            16: "PROGRAM_LIBRARY",
-            17: "NATIVE_SEGMENT_MAP",
-        }.get(self.cls.val)
+        x = {
+            1: ("ADA", {
+                    2: "WORLD",
+                    3: "DIRECTORY",
+                    4: "SUBSYSTEM",
+                    5: "SPEC_VIEW",
+                    6: "LOAD_VIEW",
+                    8: "GENERIC_PROCEDURE",
+                    9: "GENERIC_FUNCTION",
+                    10: "GENERIC_PACKAGE",
+                    12: "PACKAGE_INSTANTIATION",
+                    13: "PACKAGE_SPEC",
+                    16: "PROCEDURE_INSTANTIATION",
+                    17: "PROCEDURE_SPEC",
+                    20: "FUNCTION_INSTANTIATION",
+                    21: "FUNCTION_SPEC",
+                    28: "PROCEDURE_BODY",
+                    29: "FUNCTION_BODY",
+                    31: "TASK_BODY",
+                    32: "PACKAGE_BODY",
+                    33: "UNRECOGNIZABLE",
+                    39: "COMPILATION_UNIT",
+                    56: "MAIN_PROCEDURE_SPEC",
+                    57: "MAIN_PROCEDURE_BODY",
+                    59: "MAIN_FUNCTION_BODY",
+                    62: "LOADED_PROCEDURE_SPEC",
+                    63: "LOADED_FUNCTION_SPEC",
+                    66: "COMBINED_VIEW",
+                    77: "SYSTEM_SUBSYSTEM",
+                }
+            ),
+            2: ("DDB", {}),
+            3: ("FILE", {
+                    0: "NIL",
+                    42: "TEXT",
+                    43: "BINARY",
+                    47: "SWITCH",
+                    46: "ACTIVITY",
+                    48: "SEARCH_LIST",
+                    49: "OBJECT_SET",
+                    51: "POSTSCRIPT",
+                    52: "SWITCH_DEFINITION",
+                    61: "COMPATIBILITY_DATABASE",
+                    70: "CMVC_DATABASE",
+                    71: "DOCUMENT_DATABASE",
+                    72: "CONFIGURATION",
+                    73: "VENTURE",
+                    74: "WORK_ORDER",
+                    80: "CMVC_ACCESS",
+                    83: "MARKUP",
+                    555: "BINARY_GATEWAY",
+                    597: "REMOTE_TEXT_GATEWAY",
+                }
+            ),
+            4: ("USER", {}),
+            5: ("GROUP", {}),
+            6: ("SESSION", {}),
+            7: ("TAPE", {}),
+            8: ("TERMINAL", {}),
+            9: ("DIRECTORY", {}),
+            10: ("CONFIGURATION", {}),
+            11: ("CODE_SEGMENT", {}),
+            12: ("LINK", {}),
+            13: ("NULL_DEVICE", {}),
+            14: ("PIPE", {}),
+            15: ("ARCHIVED_CODE", {}),
+            16: ("PROGRAM_LIBRARY", {}),
+            17: ("NATIVE_SEGMENT_MAP", {}),
+        }.get(self.rclass.val)
+        if x is None:
+            self.class_name = None
+            subclasses = {}
+        else:
+            self.class_name, subclasses = x
         if not self.class_name:
-            self.class_name = "CLASS(0x%x)" % self.cls.val
+            self.class_name = "%d" % self.rclass.val
+        self.subclass_name = subclasses.get(self.subclass.val)
+        if not self.subclass_name and self.subclass.val == 0:
+            self.subclass_name = "NIL"
+        elif not self.subclass_name:
+            self.subclass_name = "%d" % self.subclass.val
 
     def render(self):
-        yield self.class_name
+        yield "%d.%d (%s.%s)" % (
+            self.rclass.val,
+            self.subclass.val,
+            self.class_name,
+            self.subclass_name,
+        )
 
 class Bla5(bv.Struct):
 
@@ -178,30 +297,57 @@ class Bla5(bv.Struct):
             bvtree,
             lo,
             b5_dir_=DirNo,
-            b5_001_=StringPointer,
+            b5_name_=StringPointer,
             b5_002__=bv.Constant(32, 0),
-            b5_003_=bv.Pointer(VersionTree),
+            b5_version_tree_=bv.Pointer(VersionTree),
             b5_004__=bv.Constant(32, 0),
-            b5_005_=bv.Pointer(DirTree),
-            b5_objnbr_=-31,
-            b5_007_n_=-9,
-            b5_007a_n_=-1,
+            b5_dir_tree_=bv.Pointer(DirTree),
+            b5_objnbr_=ObjId,
+            b5_var_=-9,
+            b5_control_point_=-1,
             b5_world_=DirNo,
-            b5_008z_n_=44,
+            b5_class_=ObjClass,
+            b5_vpid_=Vpid,
+            b5_008_=11,
+            b5_009_=-1,
+            b5_frozen_=-1,
+            b5_controlled_=-1,
+            b5_slushy_=-1,
+            b5_state_=-3,
             more=True,
+            vertical=True,
         )
-        if self.b5_007_n.val == 2:
-            self.add_field("b5_010_p", bv.Pointer(Acl))
+        if self.b5_var.val == 2:
+            self.add_field("b5_010_p", bv.Pointer(B55))
         else:
-            self.add_field("b5_010_p", DirNo)
-            self.add_field("b5_011_b", -1)
-            b5_010_p_=-32,
+            self.add_field("b5_dir_ctrl_point", DirNo)
+            self.add_field("b5_011_b_", bv.Constant(1,0))
         self.done()
 
     def visit(self, *args):
         print("        B5", self)
         if self.b5_005.val:
             self.b5_005.dst().visit(*args)
+
+class B55(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            b55_000_n_=-10,
+            b55_control_point_=DirNo,
+            b55_switches_n_=DirNo,
+            vertical=True,
+            more=True,
+        )
+        if self.b55_000_n.val == 0x202:
+            self.add_field("array", bv.Array(9, AclEntry))
+            self.add_field("b55_11_n", -74)
+            self.add_field("b55_target", -28)
+            self.add_field("b55_13_n", -1)
+        self.done()
+
 
 class DirTree(bv.Struct):
 
@@ -251,7 +397,7 @@ class VersionLeaf(bv.Struct):
             bvtree,
             lo,
             ve_ver_n_=-31,
-            ve_obj_n_=-31,
+            ve_obj_n_=ObjId,
             ve_left_=bv.Pointer(VersionLeaf),
             ve_right_=bv.Pointer(VersionLeaf),
             ve_004_n_=-1,
@@ -288,22 +434,6 @@ class DirBranch(bv.Struct):
         if self.de_r.val:
             self.de_r.dst().visit(*args)
 
-class Acl(bv.Struct):
-
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            acl_000_n_=-10,
-            acl_001_n_=-31,
-            acl_switches_n_=-31,
-            more=True,
-        )
-        if self.acl_000_n.val == 0x202:
-            self.add_field("array", bv.Array(9, AclEntry))
-            self.add_field("acl_12_n", -103)
-        self.done()
-
 class AclEntry(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -334,25 +464,35 @@ class AclEntry(bv.Struct):
         if self.mode.val:
             yield subj + "=>" + mode
 
-class HeadSomething(bv.Struct):
+class D01(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             hs_000_p_=-32,
-            hs_010_p_=bv.Pointer(),
+            hs_010_p_=bv.Pointer(D02),
         )
 
-class HeadSomething2(bv.Struct):
+class D02(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             hs_000_p_=-32,
-            hs_010_p_=bv.Pointer(),
+            hs_010_p_=bv.Pointer(D03),
             hs_020_n_=-32,
             hs_030_n_=-32,
         )
+
+class D03(cm.PointerArray):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(bvtree, lo, cls=NameList, elide={0,})
+
+class D04(cm.PointerArray):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(bvtree, lo, cls=Directory, dimension=0x2717, elide={0,})
 
 class Etwas(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -365,6 +505,15 @@ class Etwas(bv.Struct):
             ew_003_p_=-32,
         )
 
+class NameList(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            zw_000_p__=bv.Constant(32, 0),
+            text_=bv.Pointer(cm.StringArray),
+            next_=bv.Pointer(NameList),
+        )
 
 class V1009T81(cm.Segment):
 
@@ -374,24 +523,8 @@ class V1009T81(cm.Segment):
     def spelunk(self):
 
         self.seg_heap = cm.SegHeap(self, 0).insert()
-        self.std_head = cm.StdHead(self, self.seg_heap.hi).insert()
-
-        self.b12_head = Bla12(self, self.std_head.hd_009_p.val).insert()
-
-        self.hs1 = HeadSomething(self,  self.std_head.hd_007_p.val).insert()
-        self.hs2 = HeadSomething2(self,  self.hs1.hs_010_p.val).insert()
-
-        self.b18 = cm.PointerArray(
-            self,
-            self.hs2.hs_010_p.val,
-            bv.Pointer(NameChain, elide={0,}),
-        ).insert()
-
-        cls = bv.Array(0x2717, bv.Pointer(Directory), vertical=True)
-        self.dirs = cls(self, self.std_head.hd_011_p.val).insert()
-
-	# Maybe DirBranch from a GC ?
-        # bv.Array(2062, Etwas)(self, 0x5a680b9, vertical=True).insert()
+        self.d00 = D00(self, self.seg_heap.hi).insert()
+        self.investigate_name_hash()
 
     def find_dir(self, nbr):
         print("FINDDIR", nbr)
@@ -401,6 +534,25 @@ class V1009T81(cm.Segment):
         if pdir.val != 0:
             i = list(pdir.dst().find_dir(nbr))
             print("I", len(i), i[0])
+
+    def investigate_name_hash(self):
+        d01 = self.d00.hd_007_p.dst()
+        d02 = d01.hs_010_p.dst()
+        d03 = d02.hs_010_p.dst()
+        fn = self.this.filename_for(suf=".namehash.txt")
+        with open(fn.filename, "w") as out:
+            for n, i in enumerate(d03):
+                if i.val == 0:
+                    continue
+                d = i.dst()
+                while True:
+                    s = d.text.dst()
+                    out.write(hex(n) + " ")
+                    out.write(bytes(s.iter_glyphs()).hex())
+                    out.write(" # " + s.txt + "\n")
+                    if d.next.val == 0:
+                        break
+                    d = d.next.dst()
 
     def wander(self):
         self.find_dir(1)

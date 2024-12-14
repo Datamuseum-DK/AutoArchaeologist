@@ -93,6 +93,9 @@ class A03(bv.Struct):
             a03_055_n_=-1,
         )
 
+    def dot_node(self, dot):
+        return "0x%x\\n?0x%x\\n0x%x" % (self.a03_050_n.val, self.a03_051_n.val, self.a03_055_n.val), ["shape=triangle"]
+
 class A04(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -101,6 +104,10 @@ class A04(bv.Struct):
             a04_050_n_=bv.Pointer(A05),
             a04_051_n_=-35,
         )
+
+    def dot_node(self, dot):
+        return "?0x%x" % self.a04_051_n.val, None
+
 
 class A05(bv.Struct):
     def __init__(self, bvtree, lo):

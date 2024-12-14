@@ -51,25 +51,24 @@ class StdHead(bv.Struct):
             hd_010_n_=-32,
             hd_011_p_=bv.Pointer(),
             hd_012_n_=-32,
-            hd_013_n_=-32,
-            hd_014_n_=1,
         )
 
 class PointerArray(bv.Struct):
 
-    def __init__(self, bvtree, lo, cls=None, dimension=None):
+    def __init__(self, bvtree, lo, cls=None, dimension=None, elide=None):
         super().__init__(
             bvtree,
             lo,
             vertical=True,
             more = True,
         )
+        self.elide = elide
         if dimension is None:
             self.add_field("pa_min", -32)
             self.add_field("pa_max", -32)
             assert self.pa_min.val == 0
             dimension = self.pa_max.val
-        self.add_field("array", bv.Array(dimension, bv.Pointer(cls), vertical=True))
+        self.add_field("array", bv.Array(dimension, bv.Pointer(cls, elide=elide), vertical=True))
         self.done()
 
     def __iter__(self):
@@ -92,8 +91,15 @@ class StringArray(bv.Struct):
         self.txt = self.text.txt
         self.done()
 
+    def iter_glyphs(self):
+        yield from self.text.iter_glyphs()
+
     def render(self):
-        yield '»' + self.txt + '«'
+        yield 'StringArray {»' + self.txt + '«}'
+
+    def dot_node(self, dot):
+        return "»" + self.txt + '«', ["shape=plaintext"]
+
 
 class Segment(bv.BitView):
 
@@ -131,6 +137,7 @@ class Segment(bv.BitView):
         match=bin((1<<width)|match)[3:]
         while start < stop:
             start = b.find(match, start, stop)
-            if start == -1: return
+            if start == -1:
+                return
             yield start
             start += 1
