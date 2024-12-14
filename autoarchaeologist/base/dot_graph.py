@@ -27,10 +27,11 @@ class DotGraph():
 
         for leaf in self.bintree:
             if leaf.lo in self.nodes:
-                label, attr,  = leaf.dot_node(self)
-                if label is None:
-                     label = leaf.__class__.__name__
+                label_extra, attr,  = leaf.dot_node(self)
+                label = leaf.__class__.__name__
                 label += "\\n0x%x" % leaf.lo
+                if label_extra:
+                     label += "\\n" + label_extra 
                 l = [ 'label="' + label + '"']
                 if attr is not None:
                      l += attr
