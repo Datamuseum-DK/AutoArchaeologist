@@ -74,6 +74,9 @@ class PointerArray(bv.Struct):
     def __iter__(self):
         yield from self.array
 
+    def __getitem__(self, idx):
+        return self.array[idx]
+
 class StringArray(bv.Struct):
     ''' String on Array format'''
     def __init__(self, bvtree, lo):
