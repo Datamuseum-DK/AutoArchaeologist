@@ -125,7 +125,7 @@ class Segment(bv.BitView):
             for lo, hi in self.gaps():
                 print(this, "GAP", hex(lo), hex(hi), hex(hi - lo))
         dot_graph.add_interpretation(this, self)
-        self.add_interpretation()
+        self.add_interpretation(more=True)
 
     def add_interpretation(self, title="BitView", more=False, **kwargs):
         ''' Render via UTF-8 file '''
