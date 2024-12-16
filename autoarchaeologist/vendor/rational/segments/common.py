@@ -103,6 +103,26 @@ class StringArray(bv.Struct):
     def dot_node(self, dot):
         return "»" + self.txt + '«', ["shape=plaintext"]
 
+class StringPointer(bv.Pointer(StringArray)):
+    ''' ... '''
+
+    def text(self):
+        if self.val:
+            dst = self.dst()
+            return '»' + dst.txt + '«'
+        return ""
+
+    def dot_node(self, dot):
+        return "→ %s" % self.text(), ["shape=plaintext"]
+
+    def render(self):
+        if not self.val:
+            yield from super().render()
+            return
+        dst = self.dst()
+        retval = list(super().render())
+        yield retval[0] + "(»" + dst.txt + "«)"
+
 
 class Segment(bv.BitView):
 
@@ -144,3 +164,63 @@ class Segment(bv.BitView):
                 return
             yield start
             start += 1
+
+    def pointers_internal(self, lo, hi):
+        print("PEGO", hex(lo), hex(hi))
+        for adr in range(lo, hi - 32):
+            p = int(self.bits[adr:adr+32], 2)
+            if p < lo or p > hi:
+                continue
+            for hit in self.find(p):
+                if hit.lo != p:
+                    continue
+                print(
+                    hex(lo),
+                    "+", hex(adr - lo),
+                    "->",
+                    hex(hit.lo),
+                    hit.__class__.__name__,
+                )
+    def pointers_inside(self, lo, hi):
+        print("POUT", hex(lo), hex(hi))
+        for adr in range(lo, hi - 32):
+            p = int(self.bits[adr:adr+32], 2)
+            if p < 0x1000:
+                continue
+            for hit in self.find(p):
+                if hit.lo != p:
+                    continue
+                print(
+                    hex(lo),
+                    "+", hex(adr - lo),
+                    "->",
+                    hex(hit.lo),
+                    hit.__class__.__name__,
+                )
+
+    def pointers_into(self, lo, hi):
+        print("PIN", hex(lo), hex(hi))
+        for adr in range(lo, hi):
+            for hit in self.find_all(adr):
+                w = list(self.find(hit))
+                if not w:
+                    print(
+                        hex(lo),
+                        "+",
+                        hex(adr-lo),
+                        "<-",
+                        hex(hit),
+                        "= .+",
+                        hex(hit-lo),
+                    )
+                else:
+                    for x in w:
+                        print(
+                            hex(lo),
+                            "+",
+                            hex(adr-lo),
+                            "<-",
+                            hex(hit),
+                            x.__class__.__name__,
+                            hex(hit - x.lo)
+                        )
