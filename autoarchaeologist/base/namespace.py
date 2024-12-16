@@ -134,7 +134,10 @@ class NameSpace():
         ''' Render recursively '''
         if not self.ns_children:
             return
-        file.write("<H3>" + self.KIND + "</H3>\n")
+
+        if self.KIND:
+            file.write("<H3>" + self.KIND + "</H3>\n")
+
         file.write("<div>")
 
         tbl = [x.ns_render() for y, x in self.ns_recurse() if y > 0]
