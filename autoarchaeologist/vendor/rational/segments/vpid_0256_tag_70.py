@@ -133,6 +133,8 @@ class X04(bv.Struct):
 class NameSpace(namespace.NameSpace):
     ''' ... '''
 
+    KIND = "EEDB filesystem"
+
     TABLE = (
         ("r", "flag"),
         ("r", "vpid"),
@@ -179,3 +181,7 @@ class V0256T70(Segment):
         ).insert()
 
         self.this.add_interpretation(self, self.namespace.ns_html_plain)
+        self.this.top.add_interpretation(self, self.html_interpretation)
+
+    def html_interpretation(self, file, this):
+        self.namespace.ns_html_plain(file, this)
