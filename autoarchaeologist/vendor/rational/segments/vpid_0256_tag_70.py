@@ -163,10 +163,6 @@ class V0256T70(Segment):
             separator = "",
         )
 
-        with self.this.add_utf8_interpretation("What we have figured out") as file:
-            file.write(__doc__)
-
-
         self.seg_heap = SegHeap(self, 0).insert()
 
         self.x00 = X00(self, self.seg_heap.hi).insert()
@@ -180,8 +176,16 @@ class V0256T70(Segment):
             elide={0,},
         ).insert()
 
+        self.this.add_type("EEDB Filesystem")
         self.this.add_interpretation(self, self.namespace.ns_html_plain)
         self.this.top.add_interpretation(self, self.html_interpretation)
+        with self.this.add_utf8_interpretation("What we have figured out") as file:
+            file.write(__doc__)
+
+
 
     def html_interpretation(self, file, this):
-        self.namespace.ns_html_plain(file, this)
+        file.write("<H3>EEDB filesystem</H3>")
+        file.write("<P>")
+        file.write(self.this.summary(link=True))
+        file.write("</P>\n")

@@ -22,12 +22,13 @@ class SegHeap(bv.Struct):
             allocated_=-32,
         )
 
-        unused = self.hi + self.first_free.val - 1
-        if unused < bvtree.hi:
+        lo = self.hi + self.first_free.val - 1
+        hi = self.allocated.val
+        if lo < bvtree.hi and hi < bvtree.hi and lo < hi:
             self.unalloc = Unallocated(
                 bvtree,
-                lo = unused,
-                hi = self.allocated.val + 1,
+                lo = lo,
+                hi = hi + 1,
             )
             self.unalloc.insert()
 

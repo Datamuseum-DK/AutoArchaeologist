@@ -98,10 +98,18 @@
 '''
 
 from ....base import bitview as bv
+from ....base import namespace
 from . import common as cm
 
 DM04_OFFSET = 6302
 DM04_SIZE = 10007
+
+
+class NameSpace(namespace.NameSpace):
+    ''' ... '''
+
+    KIND = "Environment filesystem"
+            
 
 class DirNo(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -302,6 +310,11 @@ class DM05(bv.Struct):
         path = path + [ name ]
         out.write(prefix +
             'Path    : ' + '.'.join(path) + '\n'
+        )
+        NameSpace(
+            name = '.'.join(path),
+            parent = self.tree.namespace,
+            priv = self,
         )
         if self.b5_var.val == 2:
             dm06 = self.b5_010_p.dst()
@@ -719,6 +732,11 @@ class V1009T81(cm.Segment):
 
     def spelunk(self):
 
+        self.namespace = NameSpace(
+            name = "",
+            separator = "",
+        )
+
         self.groups = {}
         self.users = {}
         self.seg_heap = cm.SegHeap(self, 0).insert()
@@ -732,10 +750,12 @@ class V1009T81(cm.Segment):
         for i in sorted(self.groups.items()):
             print("G", i)
 
-        with self.this.add_utf8_interpretation("What we have figured out") as file:
-            file.write(__doc__)
+        self.this.top.add_interpretation(self, self.html_interpretation)
 
         fn = self.build_show_dir_info()
+
+        self.this.add_interpretation(self, self.namespace.ns_html_plain)
+
         with self.this.add_html_interpretation("Show_directory_information simulated") as file:
             file.write('<A href="' + fn.link + '">')
             file.write('Simulated output from show_directory_information.\n')
@@ -745,6 +765,9 @@ class V1009T81(cm.Segment):
 <P>A) On the R1000 the 'Target =' lines are not indented properly.</P>
 <P>B) This output has a "Path" line with the absolute path.</P>
 ''')
+        with self.this.add_utf8_interpretation("What we have figured out") as file:
+            file.write(__doc__)
+
 
     def find_dir(self, nbr):
         key = (DM04_OFFSET + nbr) % DM04_SIZE
@@ -761,3 +784,10 @@ class V1009T81(cm.Segment):
         with open(fn.filename, "w", encoding="utf8") as out:
             self.find_dir(1).show_directory_information(out, "", [])
         return fn
+
+    def html_interpretation(self, file, this):
+        file.write("<H3>Environment filesystem</H3>")
+        file.write("<P>")
+        file.write(self.this.summary(link=True))
+        file.write("</P>\n")
+
