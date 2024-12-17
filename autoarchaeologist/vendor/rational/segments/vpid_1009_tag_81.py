@@ -109,6 +109,20 @@ class NameSpace(namespace.NameSpace):
     ''' ... '''
 
     KIND = "Environment filesystem"
+
+    TABLE = (
+        ("r", "dir_nbr"),
+        ("l", "class"),
+        ("l", "subclass"),
+        ("r", "obj_nbr"),
+        ("r", "version"),
+        ("l", "name"),
+        ("l", "artifact"),
+    )
+
+    def ns_render(self):
+        meta = self.ns_priv
+        return meta + super().ns_render()
             
 
 class DirNo(bv.Struct):
@@ -311,12 +325,6 @@ class DM05(bv.Struct):
         out.write(prefix +
             'Path    : ' + '.'.join(path) + '\n'
         )
-        NameSpace(
-            name = '.'.join(path),
-            parent = self.tree.namespace,
-            # We cannot pass self as priv, it prevents releasing memory
-            # priv = self,
-        )
         if self.b5_var.val == 2:
             dm06 = self.b5_010_p.dst()
         else:
@@ -387,6 +395,35 @@ class DM05(bv.Struct):
         else:
             out.write(prefix + "No children.\n")
         out.write('\n')
+
+        # We cannot pass self as priv, it prevents releasing memory
+
+        if self.b5_version_tree.val:
+            for ver, nbr in self.b5_version_tree.dst().recurse_version_tree():
+                NameSpace(
+                    name = '.'.join(path),
+                    parent = self.tree.namespace,
+                    priv = [
+                         str(self.b5_dir.val),
+                         self.b5_class.class_name,
+                         self.b5_class.subclass_name,
+                         nbr,
+                         ver,
+                    ],
+                )
+        else:
+            ver, nbr = ("", "")
+            NameSpace(
+                name = '.'.join(path),
+                parent = self.tree.namespace,
+                priv = [
+                     str(self.b5_dir.val),
+                     self.b5_class.class_name,
+                     self.b5_class.subclass_name,
+                     nbr,
+                     ver,
+                ],
+            )
 
 class DM06(bv.Struct):
 
@@ -599,18 +636,13 @@ class VersionTree(bv.Struct):
         )
 
     def current_version(self):
-        return list(self.recurse_version_tree(self.b6_000.dst()))[-1]
+        return list(self.recurse_version_tree())[-1]
 
-    def recurse_version_tree(self, vbr):
-        assert isinstance(vbr, VersionLeaf)
-        if vbr.ve_left.val:
-            yield from self.recurse_version_tree(vbr.ve_left.dst())
-        yield (vbr.ve_ver_n.val, vbr.ve_obj_n.val)
-        if vbr.ve_right.val:
-            yield from self.recurse_version_tree(vbr.ve_right.dst())
+    def recurse_version_tree(self):
+        yield from self.b6_000.dst().recurse_version_leaf()
 
     def show_directory_information(self, out, dm05, prefix):
-        versions = list(self.recurse_version_tree(self.b6_000.dst()))
+        versions = list(self.recurse_version_tree())
         out.write(prefix + 'Versions: %d' % len(versions))
         out.write('; Retention Count: %d' % dm05.b5_retention_count.val)
         out.write('; Default: [%s,%d,1]' % (dm05.b5_class.class_name, versions[-1][1]))
@@ -635,6 +667,14 @@ class VersionLeaf(bv.Struct):
             ve_right_=bv.Pointer(VersionLeaf),
             ve_004_n_=-1,
         )
+
+    def recurse_version_leaf(self):
+        if self.ve_left.val:
+            yield from self.ve_left.dst().recurse_version_leaf()
+        yield (self.ve_ver_n.val, self.ve_obj_n.val)
+        if self.ve_right.val:
+            yield from self.ve_right.dst().recurse_version_leaf()
+
 
 class ChildBranch(bv.Struct):
 
@@ -768,6 +808,8 @@ class V1009T81(cm.Segment):
 ''')
         with self.this.add_utf8_interpretation("What we have figured out") as file:
             file.write(__doc__)
+
+        self.this.add_type("DirectoryManagerData")
 
 
     def find_dir(self, nbr):
