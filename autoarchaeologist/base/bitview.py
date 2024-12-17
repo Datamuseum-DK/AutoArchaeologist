@@ -8,6 +8,8 @@
 from ..base import bintree
 from ..base import octetview as ov
 
+class_cache = {}
+
 class String():
     ''' ... '''
 
@@ -31,6 +33,8 @@ class OvBits(ov.Octets):
         yield "}"
 
 class Bits(bintree.BinTreeLeaf):
+
+    rendered = None
 
     def __init__(self, tree, lo, width=None, hi=None, name=None):
         if hi is None:
@@ -65,8 +69,11 @@ class Bits(bintree.BinTreeLeaf):
         return self
 
     def render(self):
-        ''' Render hexdumped + text-column '''
-        yield self.tree.bits[self.lo:self.hi]
+        ''' Render as bits '''
+        if self.rendered is None:
+            yield self.tree.bits[self.lo:self.hi]
+        else:
+            yield self.rendered
 
 class BitView(bintree.BinTree):
 
@@ -91,13 +98,22 @@ class Opaque(Bits):
 
 class Number(Bits):
 
+    fmt = None
+
+    fmts = ["0x%%0%dx" % ((x + 3) // 4) for x in range(129)]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.val = int(self.bits(), 2)
-        self.fmt = "0x%%0%dx" % ((len(self) + 3) // 4)
 
     def render(self):
-        yield self.fmt % self.val
+        if self.fmt:
+            yield self.fmt % self.val
+        elif len(self) < len(self.fmts):
+            yield self.fmts[len(self)] % self.val
+        else:
+            fmt = "0x%%0%dx" % ((len(self) + 3) // 4)
+            yield fmt % self.val
 
 class Struct(bintree.Struct, Bits):
 
@@ -219,8 +235,8 @@ class Pointer_Class(Bits):
         if src is None:
             src = self
         dot.add_edge(src, self.val)
-            
-def Pointer(cls=None, width=None, elide=None):
+
+def make_pointer(cls=None, width=None, elide=None):
         
     class ClsPointer(Pointer_Class):
         TARGET = cls
@@ -229,16 +245,37 @@ def Pointer(cls=None, width=None, elide=None):
             
     return ClsPointer
 
-def Constant(width=32, value=0):
+def Pointer(cls=None, width=None, elide=None):
+
+    key = str(("Pointer", cls, width, elide))
+    ptr = class_cache.get(key)
+    if not ptr:
+         ptr = make_pointer(cls, width, elide)
+         class_cache[key] = ptr
+    return ptr
+
+def make_constant(width=32, value=0):
     class ClsConstant(Bits):
         def __init__(self, bvtree, lo, width=width, value=value):
             super().__init__(bvtree, lo, width=width)
             self.val = int(self.bits(), 2)
             if self.val != value:
-                print(bvtree.this, "WARNING: bv.Constant at 0x%x is 0x%x instead of 0x%x" % (self.lo, self.val, value))
+                print(bvtree.this,
+                    "WARNING: bv.Constant at 0x%x is 0x%x instead of 0x%x" % (
+                        self.lo, self.val, value
+                    )
+                )
             
         def render(self):
             yield "CONST(0x%x)" % self.val
 
     return ClsConstant
+
+def Constant(width=32, value=0):
+    key = str(("Constant", width, value))
+    ptr = class_cache.get(key)
+    if not ptr:
+         ptr = make_constant(width, value)
+         class_cache[key] = ptr
+    return ptr
 

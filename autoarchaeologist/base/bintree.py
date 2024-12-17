@@ -210,9 +210,10 @@ class BinTree():
         if not first:
             return
         while self.todo:
+            # NB: Must stay on todo to prevent endless recursion
             lo, cls = self.todo[0]
             if not list(self.find(lo, lo + 1)):
-                i = cls(self, lo).insert()
+                cls(self, lo).insert()
             self.todo.pop(0)
 
 class Struct():

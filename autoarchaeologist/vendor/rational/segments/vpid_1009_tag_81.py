@@ -314,7 +314,8 @@ class DM05(bv.Struct):
         NameSpace(
             name = '.'.join(path),
             parent = self.tree.namespace,
-            priv = self,
+            # We cannot pass self as priv, it prevents releasing memory
+            # priv = self,
         )
         if self.b5_var.val == 2:
             dm06 = self.b5_010_p.dst()
