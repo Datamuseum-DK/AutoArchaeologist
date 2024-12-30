@@ -171,10 +171,6 @@ class SegmentDesc(bv.Struct):
             extents.pop(-1)
         if not extents:
             return
-        #if self.vpid.val not in (1004, 1005, 1009,):
-        #    return
-        #if self.col9.val not in (0x7c, 0x7d, 0x81,):
-        #    return
         for extent in extents:
             if extent is not None:
                 lo = extent.lba.val << LSECSHIFT
@@ -188,6 +184,17 @@ class SegmentDesc(bv.Struct):
         that.add_note("tag_%02x" % self.col9.val)
         that.add_note("vpid_%04d" % self.vpid.val)
         name = "%03x:%06x:%x" % (self.vpid.val, self.segno.val, self.version.val)
+        segidx = ovtree.this.top.by_class["r1k_segs"]
+        n2 = "%03x:%06x" % (self.vpid.val, self.segno.val)
+        if n2 not in segidx:
+             segidx[n2] = {}
+        if self.version.val in segidx[n2]:
+             print("Collision", name)
+             for i, j in segidx[n2].items():
+                 print("  ", i, j)
+        assert self.version.val not in segidx[n2]
+        segidx[n2][self.version.val] = that
+
         self.namespace = NameSpace(
             parent = ovtree.namespace,
             name = name,

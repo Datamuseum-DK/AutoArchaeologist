@@ -27,6 +27,9 @@ class Volume(disk.Disk):
         if not this.top in this.parents:
             return
 
+        if "r1k_segs" not in this.top.by_class:
+            this.top.by_class["r1k_segs"] = {}
+
         super().__init__(
             this,
             geometry=[[1655, 15, 45, 1024]],
@@ -36,6 +39,7 @@ class Volume(disk.Disk):
         self.volnbr = self.sblk.volnbr.val
         self.namespace = NameSpace(
             name="",
+            separator="",
         )
 
         if True:
