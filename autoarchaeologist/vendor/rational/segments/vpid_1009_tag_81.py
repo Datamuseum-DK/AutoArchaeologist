@@ -323,7 +323,7 @@ class DM05(bv.Struct):
         name = self.b5_name.dst().txt
         path = path + [ name ]
         out.write(prefix +
-            'Path    : ' + '.'.join(path) + '\n'
+            'Path    : ' + '/'.join(path) + '\n'
         )
         if self.b5_var.val == 2:
             dm06 = self.b5_010_p.dst()
@@ -401,7 +401,7 @@ class DM05(bv.Struct):
         if self.b5_version_tree.val:
             for ver, nbr in self.b5_version_tree.dst().recurse_version_tree():
                 NameSpace(
-                    name = '.'.join(path),
+                    name = '/'.join(path),
                     parent = self.tree.namespace,
                     priv = [
                          str(self.b5_dir.val),
@@ -414,7 +414,7 @@ class DM05(bv.Struct):
         else:
             ver, nbr = ("", "")
             NameSpace(
-                name = '.'.join(path),
+                name = '/'.join(path),
                 parent = self.tree.namespace,
                 priv = [
                      str(self.b5_dir.val),
