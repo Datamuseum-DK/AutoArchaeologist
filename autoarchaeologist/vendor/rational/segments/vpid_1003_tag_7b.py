@@ -17,7 +17,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import Segment, Unallocated, SegHeap, StdHead, PointerArray, StringArray
+from .common import ManagerSegment, StdHead, PointerArray
 
 class F00(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -63,24 +63,25 @@ class F03(bv.Struct):
             f03_099_n_=-333,
         )
 
-class V1003T7B(Segment):
+class V1003T7B(ManagerSegment):
 
     VPID = 1003
     TAG = 0x7b
+    TOPIC = "File"
 
+    def spelunk_manager(self):
 
-    def spelunk(self):
+        self.std_head = StdHead(self, self.seg_head.hi).insert()
 
-        self.seg_heap = SegHeap(self, 0).insert()
-
-        self.std_head = StdHead(self, self.seg_heap.hi).insert()
-
-        y = PointerArray(
-            self,
-            self.std_head.hd_011_p.val,
-            dimension=1009,
-            cls = bv.Pointer(F00),
-        ).insert()
+        try:
+            y = PointerArray(
+                self,
+                self.std_head.hd_011_p.val,
+                dimension=1009,
+                cls = F00,
+            ).insert()
+        except Exception as err:
+            print(self.this, "V1003T7B", "PA/F00 failed", err)
 
         bv.Array(108, F03)(
             self,

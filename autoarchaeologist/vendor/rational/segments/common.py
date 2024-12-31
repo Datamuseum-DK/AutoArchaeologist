@@ -5,8 +5,12 @@
    =========================================
 '''
 
+import time
+
 from ....base import bitview as bv
 from ....base import dot_graph
+
+from . import pure
 
 class Unallocated(bv.Opaque):
     ''' ... '''
@@ -32,6 +36,16 @@ class SegHeap(bv.Struct):
             )
             self.unalloc.insert()
 
+class SegHead(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            sh_flg_=-1,
+            sh_seg_=-22,
+            sh_vpid_=-10,
+        )
+
 class StdHead(bv.Struct):
 
     def __init__(self, bvtree, lo):
@@ -39,13 +53,12 @@ class StdHead(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            hd_000_n_=-32,
             hd_001_n_=-32,
             hd_002_n_=-32,
             hd_003_n_=-32,
             hd_004_n_=-32,
             hd_005_n_=-32,
-            hd_006_n_=-32,
+            hd_006_n_=-31,
             hd_007_p_=bv.Pointer(),
             hd_008_n_=-32,
             hd_009_p_=bv.Pointer(),
@@ -53,6 +66,22 @@ class StdHead(bv.Struct):
             hd_011_p_=bv.Pointer(),
             hd_012_n_=-32,
         )
+
+class TimeStamp(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            day_=-16,
+            sec_=-16,
+        )
+        self.ts = (self.day.val - (69 * 365 + 18)) * 86400 + self.sec.val * 2
+        gm = time.gmtime(self.ts)
+        self.tstamp = time.strftime("%Y%m%d_%H%M%S", gm)
+
+    def render(self):
+        yield self.tstamp
 
 class PointerArray(bv.Struct):
 
@@ -225,3 +254,19 @@ class Segment(bv.BitView):
                             x.__class__.__name__,
                             hex(hit - x.lo)
                         )
+
+class ManagerSegment(Segment):
+
+    def spelunk(self):
+
+        self.this.add_note(self.TOPIC + "-State")
+        self.seg_heap = SegHeap(self, 0).insert()
+        self.seg_head = SegHead(self, self.seg_heap.hi).insert()
+        if self.seg_head.sh_flg.val:
+            try:
+                self.spelunk_manager()
+            except Exception as err:
+                print(self.this, self.__class__.__name__, "BOOM", err)
+                raise
+        else:
+            pure.Pure(self)

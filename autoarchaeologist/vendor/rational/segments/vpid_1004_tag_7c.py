@@ -16,7 +16,29 @@
 '''
     
 from ....base import bitview as bv
-from .common import Segment, Unallocated, SegHeap, StdHead, PointerArray, StringArray
+from .common import ManagerSegment, PointerArray, TimeStamp
+
+class UHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            hd_001_n_=-32,
+            hd_002_n_=-32,
+            hd_003_n_=-32,
+            hd_004_n_=-32,
+            hd_005_n_=-32,
+            hd_006_n_=-31,
+            hd_007_p_=bv.Pointer(),
+            hd_008_n_=-32,
+            hd_009_p_=bv.Pointer(),
+            hd_010_n_=-32,
+            hd_011_p_=bv.Pointer(),
+            hd_012_n_=-32,
+        )
+
 
 class U00(bv.Struct):
     def __init__(self, bvtree, lo, **kwargs):
@@ -149,7 +171,9 @@ class U10(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            u10_000_b_=-49,
+            u10_000_b_=-1,
+            u10_002_b_=TimeStamp,
+            u10_003_b_=-16,
             u10_010_b_=-24,
         )
 
@@ -235,31 +259,30 @@ class U26(bv.Struct):
         )
 
 
-class V1004T7C(Segment):
+class V1004T7C(ManagerSegment):
 
     VPID = 1004
     TAG = 0x7c
+    TOPIC = "User"
 
     def find_ptr(self, adr, width=32):
         print("FF", hex(adr), hex(self.bits.find(bin((1<<width)|adr)[3:])))
 
-    def spelunk(self):
+    def spelunk_manager(self):
 
-
-        self.seg_heap = SegHeap(self, 0).insert()
-        self.std_head = StdHead(self, self.seg_heap.hi).insert()
+        self.head = UHead(self, self.seg_head.hi).insert()
 
         if True:
             # Possibly the array limits of hd_009_p
-            U26(self, self.std_head.hd_007_p.val).insert()
+            U26(self, self.head.hd_007_p.val).insert()
 
 
         if True:
-            U09(self, self.std_head.hd_009_p.val).insert()
+            U09(self, self.head.hd_009_p.val).insert()
 
         y = PointerArray(
             self,
-            self.std_head.hd_011_p.val,
+            self.head.hd_011_p.val,
             dimension=101,
             cls=U00,
         ).insert()

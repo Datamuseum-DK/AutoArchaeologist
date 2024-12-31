@@ -54,18 +54,21 @@ class X00(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            x00_000_n_=-161,
-            x00_008_n_=bv.Pointer(X01),
-            x00_010_n_=bv.Pointer(),
-            x00_011_n_=bv.Pointer(),
-            x00_012_n_=bv.Pointer(),
-            x00_013_n_=bv.Pointer(),
-            #x00_014_n_=bv.Pointer(),
-            #x00_015_n_=bv.Pointer(),
-            #x00_016_n_=bv.Pointer(),
-            #x00_017_n_=bv.Pointer(),
+            x00_000_n_=-33,
+            x00_001_n_=-32,
+            more = True,
             vertical=True,
         )
+        if self.x00_001_n.val == 1:
+            self.add_field("x00_005_n", -32)
+            self.add_field("x00_006_n", -32)
+            self.add_field("x00_007_n", -32)
+            self.add_field("x00_008_n", bv.Pointer(X01))
+            self.add_field("x00_010_n", bv.Pointer())
+            self.add_field("x00_011_n", bv.Pointer())
+            self.add_field("x00_012_n", bv.Pointer())
+            self.add_field("x00_013_n", bv.Pointer())
+        self.done()
 
 class X01(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -117,17 +120,30 @@ class X04(bv.Struct):
             lo,
             x99_000_n__=bv.Constant(32, 0),
             x99_010_n_=StringPointer,
-            x99_046_n_=-1,
-            x99_047_n_=-22,
-            x99_048_n_=-10,
+            x99_segkind_=-1,
+            x99_segno_=-22,
+            x99_vpid_=-10,
             x99_049_n__=bv.Constant(32, 0x80),
             x99_080_n_=bv.Pointer(X04),
         )
-        print(self.x99_010_n.dst().txt)
+        self.name = name=self.x99_010_n.dst().txt
+        self.segment = "%03x:%06x" % (
+            self.x99_vpid.val,
+            (1 << 23) | self.x99_segno.val,
+        )
+        segidx = bvtree.this.top.by_class["r1k_segs"]
+        segs = segidx.get(self.segment)
+        if segs:
+            print("EESEG", bvtree.this, name, segs)
+            that = segs[max(segs.keys())]
+        else:
+            that = None
+        # print(self.x99_010_n.dst().txt)
         NameSpace(
-            name=self.x99_010_n.dst().txt,
+            name=self.name,
             parent=bvtree.namespace,
             priv = self,
+            this = that,
         )
 
 class NameSpace(namespace.NameSpace):
@@ -136,7 +152,7 @@ class NameSpace(namespace.NameSpace):
     KIND = "EEDB filesystem"
 
     TABLE = (
-        ("r", "flag"),
+        ("r", "kind"),
         ("r", "vpid"),
         ("r", "segment"),
         ("l", "name"),
@@ -146,9 +162,9 @@ class NameSpace(namespace.NameSpace):
     def ns_render(self):
         meta = self.ns_priv
         return [
-            meta.x99_046_n.val,
-            meta.x99_048_n.val,
-            hex(meta.x99_047_n.val),
+            meta.x99_segkind.val,
+            meta.x99_vpid.val,
+            meta.segment,
         ] + super().ns_render()
 
 class V0256T70(Segment):
@@ -166,7 +182,11 @@ class V0256T70(Segment):
         self.seg_heap = SegHeap(self, 0).insert()
 
         self.x00 = X00(self, self.seg_heap.hi).insert()
+        print(self.this, "V0256T70", self.x00)
+        if self.x00.x00_001_n.val != 1:
+            return
         self.x02 = X02(self, self.x00.x00_011_n.val).insert()
+
 
         PointerArray(
             self,

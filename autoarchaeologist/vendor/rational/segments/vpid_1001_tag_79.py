@@ -16,7 +16,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import Segment, Unallocated, SegHeap, StdHead, PointerArray, StringArray
+from .common import ManagerSegment, PointerArray
 
 class A00(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -24,8 +24,7 @@ class A00(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            hd_000_n_=-32,
-            hd_001_n_=-32,
+            hd_001_n_=-31,
             hd_002_n_=-32,
             hd_003_n_=-32,
             hd_004_n_=-32,
@@ -186,16 +185,15 @@ class A12(bv.Struct):
             a12_004_n_=-33,
         )
 
-class V1001T79(Segment):
+class V1001T79(ManagerSegment):
 
     VPID = 1001
     TAG = 0x79
+    TOPIC = "Ada"
 
-    def spelunk(self):
+    def spelunk_manager(self):
 
-        self.seg_heap = SegHeap(self, 0).insert()
-
-        self.a00 = A00(self, self.seg_heap.hi).insert()
+        self.a00 = A00(self, self.seg_head.hi).insert()
 
         y = PointerArray(
             self,
@@ -210,78 +208,3 @@ class V1001T79(Segment):
             dimension=1009,
             cls=A03,
         ).insert()
-
-        if False:
-            for lo, hi in self.gaps():
-                self.pointers_internal(lo, hi)
-                if lo > 0x40000:
-                    self.pointers_inside(lo, hi)
-                    self.pointers_into(lo, hi)
-        if False:
-            for i in self:
-                if isinstance(i, A05):
-                    self.pointers_internal(i.lo, i.hi)
-                    #self.pointers_inside(i.lo, i.hi)
-                    #self.pointers_into(i.lo, i.hi)
-        return
-
-    def pointers_internal(self, lo, hi):
-        print("PEGO", hex(lo), hex(hi))
-        for adr in range(lo, hi - 32):
-            p = int(self.bits[adr:adr+32], 2)
-            if p < lo or p > hi:
-                continue
-            for hit in self.find(p):
-                if hit.lo != p:
-                    continue
-                print(
-                    hex(lo),
-                    "+", hex(adr - lo),
-                    "->",
-                    hex(hit.lo),
-                    hit.__class__.__name__,
-                )
-    def pointers_inside(self, lo, hi):
-        print("POUT", hex(lo), hex(hi))
-        for adr in range(lo, hi - 32):
-            p = int(self.bits[adr:adr+32], 2)
-            if p < 0x1000:
-                continue
-            for hit in self.find(p):
-                if hit.lo != p:
-                    continue
-                print(
-                    hex(lo),
-                    "+", hex(adr - lo),
-                    "->",
-                    hex(hit.lo),
-                    hit.__class__.__name__,
-                )
-
-    def pointers_into(self, lo, hi):
-        print("PIN", hex(lo), hex(hi))
-        for adr in range(lo, hi):
-            for hit in self.find_all(adr):
-                w = list(self.find(hit))
-                if not w:
-                    print(
-                        hex(lo),
-                        "+",
-                        hex(adr-lo),
-                        "<-",
-                        hex(hit),
-                        "= .+",
-                        hex(hit-lo),
-                    )
-                else:
-                    for x in w:
-                        print(
-                            hex(lo),
-                            "+",
-                            hex(adr-lo),
-                            "<-",
-                            hex(hit),
-                            x.__class__.__name__,
-                            hex(hit - x.lo)
-                        )
-

@@ -174,12 +174,12 @@ class StringPointer(bv.Pointer(cm.StringArray)):
         return "→ %s" % self.text(), ["shape=plaintext"]
 
     def render(self):
-        if not self.val:
-            yield from super().render()
-            return
         dst = self.dst()
-        retval = list(super().render())
-        yield retval[0] + "(»" + dst.txt + "«)"
+        if not hasattr(dst, "txt"):
+            yield from super().render()
+        else:
+            retval = list(super().render())
+            yield retval[0] + "(»" + dst.txt + "«)"
 
 class DM00(bv.Struct):
 
@@ -188,8 +188,8 @@ class DM00(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            hd_000_n_=-32,
-            hd_001_n_=-32,
+            #hd_000_n_=-32,
+            hd_001_n_=-31,
             hd_002_n_=-32,
             hd_003_n_=-32,
             hd_004_n_=-32,
@@ -766,12 +766,13 @@ class NameList(bv.Struct):
             next_=bv.Pointer(NameList),
         )
 
-class V1009T81(cm.Segment):
+class V1009T81(cm.ManagerSegment):
 
     VPID = 1009
     TAG = 0x81
+    TOPIC = "Directory"
 
-    def spelunk(self):
+    def spelunk_manager(self):
 
         self.namespace = NameSpace(
             name = "",
@@ -780,8 +781,8 @@ class V1009T81(cm.Segment):
 
         self.groups = {}
         self.users = {}
-        self.seg_heap = cm.SegHeap(self, 0).insert()
-        self.d00 = DM00(self, self.seg_heap.hi).insert()
+
+        self.d00 = DM00(self, self.seg_head.hi).insert()
         self.dm04 = self.d00.dm04.dst()
 
         for leaf in self:

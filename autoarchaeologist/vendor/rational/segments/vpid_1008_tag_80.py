@@ -15,7 +15,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import Segment, SegHeap, StdHead, PointerArray, StringArray
+from .common import ManagerSegment, StdHead, PointerArray, StringArray
 
 
 class T97(bv.Struct):
@@ -53,15 +53,15 @@ class T99(bv.Struct):
             t99_099_z_=bv.Pointer(T99),
         )
 
-class V1008T80(Segment):
+class V1008T80(ManagerSegment):
 
     VPID = 1008
     TAG = 0x80
+    TOPIC = "Terminal"
 
-    def spelunk(self):
+    def spelunk_manager(self):
 
-        self.seg_heap = SegHeap(self, 0).insert()
-        self.std_head = StdHead(self, self.seg_heap.hi).insert()
+        self.std_head = StdHead(self, self.seg_head.hi).insert()
 
         y = PointerArray(
             self,
