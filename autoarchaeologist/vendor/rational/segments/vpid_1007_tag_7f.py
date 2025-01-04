@@ -16,7 +16,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray
+from .common import ManagerSegment, PointerArray, StdHead
 
 class V1007T7F(ManagerSegment):
 

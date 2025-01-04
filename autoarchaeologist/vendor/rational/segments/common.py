@@ -83,6 +83,22 @@ class TimeStamp(bv.Struct):
     def render(self):
         yield self.tstamp
 
+class TimeStampPrecise(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            day_=-16,
+            sec_=-17,
+        )
+        self.ts = (self.day.val - (69 * 365 + 18)) * 86400 + self.sec.val
+        gm = time.gmtime(self.ts)
+        self.tstamp = time.strftime("%Y%m%d_%H%M%S", gm)
+
+    def render(self):
+        yield self.tstamp
+
 class PointerArray(bv.Struct):
 
     def __init__(self, bvtree, lo, cls=None, dimension=None, elide=None):
@@ -196,7 +212,7 @@ class Segment(bv.BitView):
             start += 1
 
     def pointers_internal(self, lo, hi):
-        print("PEGO", hex(lo), hex(hi))
+        print("PINT", hex(lo), hex(hi))
         for adr in range(lo, hi - 32):
             p = int(self.bits[adr:adr+32], 2)
             if p < lo or p > hi:
@@ -229,7 +245,7 @@ class Segment(bv.BitView):
                 )
 
     def pointers_into(self, lo, hi):
-        print("PIN", hex(lo), hex(hi))
+        print("PINTO", hex(lo), hex(hi))
         for adr in range(lo, hi):
             for hit in self.find_all(adr):
                 w = list(self.find(hit))
@@ -270,3 +286,110 @@ class ManagerSegment(Segment):
                 raise
         else:
             pure.Pure(self)
+            self.this.add_note("Pure")
+
+class ObjRef(bv.Struct):
+    def __init__(self, bvtree, lo, **kwargs):
+        super().__init__(
+            bvtree,
+            lo,
+            u04_flg_=-1,
+            u04_mgr_=-31,
+            u04_obj_=-31,
+            u04_mach_=bv.Constant(32, 1),
+            **kwargs,
+        )
+
+    def render(self):
+        yield "%d:<" % self.u04_flg.val + ",".join(
+           [
+               obj_name(self.u04_mgr.val),
+               str(self.u04_obj.val),
+               str(self.u04_mach.val),
+           ]
+        ) + ">"
+
+def obj_name(cls, subclass=None):
+        i = OBJECTS.get(cls)
+        if i is None:
+            cln = "%d" % cls
+            scl = {}
+        else:
+            cln, scl = i
+        if subclass is None:
+            return cln
+        scn = scl.get(subclass)
+        if scn is None:
+            scn = "%d" % subclass
+        return cln + "." + scn
+
+# See 5d3bfb73b, 00_class, 75_tag, seg_0ea8df
+OBJECTS = {
+    1: ("ADA", {
+            2: "WORLD",
+            3: "DIRECTORY",
+            4: "SUBSYSTEM",
+            5: "SPEC_VIEW",
+            6: "LOAD_VIEW",
+            8: "GENERIC_PROCEDURE",
+            9: "GENERIC_FUNCTION",
+            10: "GENERIC_PACKAGE",
+            12: "PACKAGE_INSTANTIATION",
+            13: "PACKAGE_SPEC",
+            16: "PROCEDURE_INSTANTIATION",
+            17: "PROCEDURE_SPEC",
+            20: "FUNCTION_INSTANTIATION",
+            21: "FUNCTION_SPEC",
+            28: "PROCEDURE_BODY",
+            29: "FUNCTION_BODY",
+            31: "TASK_BODY",
+            32: "PACKAGE_BODY",
+            33: "UNRECOGNIZABLE",
+            39: "COMPILATION_UNIT",
+            56: "MAIN_PROCEDURE_SPEC",
+            57: "MAIN_PROCEDURE_BODY",
+            59: "MAIN_FUNCTION_BODY",
+            62: "LOADED_PROCEDURE_SPEC",
+            63: "LOADED_FUNCTION_SPEC",
+            66: "COMBINED_VIEW",
+            77: "SYSTEM_SUBSYSTEM",
+        }
+    ),
+    2: ("DDB", {}),
+    3: ("FILE", {
+            0: "NIL",
+            42: "TEXT",
+            43: "BINARY",
+            47: "SWITCH",
+            46: "ACTIVITY",
+            48: "SEARCH_LIST",
+            49: "OBJECT_SET",
+            51: "POSTSCRIPT",
+            52: "SWITCH_DEFINITION",
+            61: "COMPATIBILITY_DATABASE",
+            70: "CMVC_DATABASE",
+            71: "DOCUMENT_DATABASE",
+            72: "CONFIGURATION",
+            73: "VENTURE",
+            74: "WORK_ORDER",
+            80: "CMVC_ACCESS",
+            83: "MARKUP",
+            555: "BINARY_GATEWAY",
+            597: "REMOTE_TEXT_GATEWAY",
+        }
+    ),
+    4: ("USER", {}),
+    5: ("GROUP", {}),
+    6: ("SESSION", {}),
+    7: ("TAPE", {}),
+    8: ("TERMINAL", {}),
+    9: ("DIRECTORY", {}),
+    10: ("CONFIGURATION", {}),
+    11: ("CODE_SEGMENT", {}),
+    12: ("LINK", {}),
+    13: ("NULL_DEVICE", {}),
+    14: ("PIPE", {}),
+    15: ("ARCHIVED_CODE", {}),
+    16: ("PROGRAM_LIBRARY", {}),
+    17: ("NATIVE_SEGMENT_MAP", {}),
+}

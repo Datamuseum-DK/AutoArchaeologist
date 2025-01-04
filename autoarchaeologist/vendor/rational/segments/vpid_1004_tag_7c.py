@@ -16,7 +16,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray, TimeStamp
+from .common import ManagerSegment, PointerArray, TimeStampPrecise, ObjRef
 
 class UHead(bv.Struct):
 
@@ -95,34 +95,19 @@ class U03(bv.Struct):
             u03_001_b_=U10,
             u03_002_b_=U10,
             u03_003_b_=U10,
-            u03_004_c_=U04,
-            u03_005_c_=U04,
-            u03_006_c_=-32,	# = 0x01
-            u03_007_n_=-32,	# = {0x0, 0x1}
+            u03_004_c_=ObjRef,
+            u03_005_c_=ObjRef,
+            u03_006__=bv.Constant(32, 1),
+            u03_007_=-32,
             u03_009_s_=U17,
             u03_020_s_=U17,
             u03_099_z__=-128,	# = 0x0
             vertical=True,
             **kwargs,
         )
-        assert self.u03_006_c.val == 1
-        #assert self.u03_015_z_.val == 0
-        #assert self.u03_026_z_.val == 0
-        assert self.u03_099_z_.val == 0
 
     def dot_node(self, dot):
         return None, ["color=orange"]
-
-class U04(bv.Struct):
-    def __init__(self, bvtree, lo, **kwargs):
-        super().__init__(
-            bvtree,
-            lo,
-            u04_000_n_=-63,
-            u04_001_c_=-32,
-            **kwargs,
-        )
-        assert self.u04_001_c.val == 1
 
 class U07(bv.Struct):
     def __init__(self, bvtree, lo, **kwargs):
@@ -171,62 +156,43 @@ class U10(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            u10_000_b_=-1,
-            u10_002_b_=TimeStamp,
-            u10_003_b_=-16,
+            u10_000_b__=bv.Constant(1, 0),
+            u10_002_b_=TimeStampPrecise,
+            u10_003_b_=-15,
             u10_010_b_=-24,
         )
 
-class U13(bv.Struct):
+class ListHead(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            u13_010_n_=bv.Pointer(U15),
+            entry_=bv.Pointer(ListEntry),
         )
 
     def dot_node(self, dot):
         return None, ["shape=plaintext"]
 
-class U14(bv.Struct):
+class ListEntry(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            u14_010_n_=bv.Pointer(U16),
+            obj_=ObjRef,
+            next_=bv.Pointer(ListEntry),
         )
-
-    def dot_node(self, dot):
-        return None, ["shape=plaintext"]
-
-class U15(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            u15_010_c_=-32,	# 0x80000005
-            u15_020_n_=-31,
-            u15_030_c_=-32,	# 0x01
-            u15_040_n_=bv.Pointer(U15),
-        )
-        assert self.u15_010_c.val == 0x80000005
-        assert self.u15_030_c.val == 0x1
 
     def dot_node(self, dot):
         return None, ["color=cyan"]
 
-class U16(bv.Struct):
+class SessionList(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            u16_010_c_=-32,	# 0x80000006
-            u16_020_n_=-31,	#
-            u16_030_c_=-32,	# 0x1
-            u16_040_n_=bv.Pointer(U16),
+            u16_010_c_=ObjRef,
+            u16_040_n_=bv.Pointer(SessionList),
         )
-        assert self.u16_010_c.val == 0x80000006
-        assert self.u16_030_c.val == 0x1
 
 class U17(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -234,19 +200,13 @@ class U17(bv.Struct):
             bvtree,
             lo,
             u17_000_n_=-32,
-            u17_010_c_=-32,	# 0x80000005
-            u17_020_n_=-31,
-            u17_030_c_=-32,	# 0x01
-            u17_040_n_=-32,
-            u17_050_n_=-31,
-            u17_060_n_=-32,
-            u17_070_n_=-32,
-            u17_080_p_=bv.Pointer(U13),
-            u17_090_z_=-32,
-            u17_100_p_=bv.Pointer(U14),
+            u17_010_=ObjRef,
+            u17_020_=ObjRef,
+            u17_070__=bv.Constant(32, 0),
+            u17_groups_=bv.Pointer(ListHead),
+            u17_090__=bv.Constant(32, 0),
+            u17_sessions_=bv.Pointer(ListHead),
         )
-        assert self.u17_010_c.val == 0x80000005
-        assert self.u17_030_c.val == 0x1
 
 
 class U26(bv.Struct):

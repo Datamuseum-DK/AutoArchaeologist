@@ -15,7 +15,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray, StdHead
+from .common import ManagerSegment, PointerArray, StdHead, TimeStampPrecise, ObjRef
 
 class Bla99(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -61,7 +61,19 @@ class G02(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            g02_000_p_=-0x236,
+            g02_000_p_=G10,
+            g02_010_p_=G10,
+            g02_020_p_=G10,
+            g02_030_p_=G10,
+            g02_040_p_=ObjRef,
+            g02_050_p_=-32,
+            g02_060_p_=-32,
+            g02_070_p_=-31,
+            g02_080_p_=-32,
+            g02_090_p_=-32,
+            g02_098_p_=-10,
+            g02_099_p_=-10,
+            vertical=True,
         )
 
 class G03(bv.Struct):
@@ -90,6 +102,39 @@ class G04(bv.Struct):
             g04_099_p_=bv.Pointer(G04),
         )
 
+class G10(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            u10_000_b_=-1,
+            u10_002_b_=TimeStampPrecise,
+            u10_003_b_=-15,
+            u10_010_b_=-24,
+        )
+
+class GroupHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            hd_001_n_=-32,
+            hd_002_n_=-32,
+            hd_003_n_=-32,
+            hd_004_n_=-32,
+            hd_005_n_=-32,
+            hd_006_n_=-31,
+            hd_007_p_=bv.Pointer(bv.Array(1024, -1)),
+            hd_008_n_=-32,
+            hd_009_p_=bv.Pointer(G04),
+            hd_010_n_=-32,
+            hd_011_p_=bv.Pointer(),
+            hd_012_n_=-32,
+            hd_013_n_=-33,
+        )
+
 class V1005T7D(ManagerSegment):
 
     VPID = 1005
@@ -98,18 +143,11 @@ class V1005T7D(ManagerSegment):
 
     def spelunk_manager(self):
 
-        self.std_head = StdHead(self, self.seg_heap.hi).insert()
-
-        self.head = StdHead(self, self.seg_head.hi).insert()
+        self.head = GroupHead(self, self.seg_head.hi).insert()
 
         y = PointerArray(
             self,
             self.head.hd_011_p.val,
-            dimension=101
+            dimension=101,
+            cls=G00,
         ).insert()
-
-        for i in y:
-            G00(self, i.val).insert()
-
-        adr = self.head.hd_009_p.val
-        y = G04(self, adr).insert()
