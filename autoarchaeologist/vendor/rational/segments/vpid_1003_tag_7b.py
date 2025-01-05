@@ -17,7 +17,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import ManagerSegment, StdHead, PointerArray
+from . import common as cm
 
 class F00(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -41,29 +41,72 @@ class F01(bv.Struct):
             f01_099_n_=-0x23,
         )
 
+class F04(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            f04_000_n_=-1,
+            f04_001_n_=cm.TimeStampPrecise,
+            f04_002_n_=-15,
+            f04_003_n_=-24,
+        )
+
+class F06(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            f06_000_n_=bv.Array(7, cm.AclEntry, vertical=True),
+            f06_002_n_=-64,
+            f06_updated_=cm.TimedProperty,
+            f06_004_n_=cm.ObjRef,
+            f06_version_=-32,
+        )
+
 class F02(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            f02_099_n_=-1068,
+            vertical=True,
+
+            f02_000_n_=cm.TimedProperty,
+            f02_001_n_=cm.TimedProperty,
+
+            f02_040_n_=-70,
+
+            f02_050_n_=-64,
+            f02_051_n_=-64,
+
+            f02_068_n_=F06,
+            f02_091_n_=F06,
         )
-        # self.int_ptr()
 
-    def int_ptr(self):
-        for a in range(len(self)-32):
-            for b in self.tree.find_all(self.lo + a, self.lo, self.hi):
-                print("F02 0x%x" % self.lo, hex(a), hex(b), hex(b-self.lo))
+class FileHead(bv.Struct):
 
-class F03(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            f03_099_n_=-333,
+            vertical=True,
+            hd_001_n_=-32,
+            hd_002_n_=-32,
+            hd_003_n_=-32,
+            hd_004_n_=-32,
+            hd_005_n_=-32,
+            hd_006_n_=-31,
+            hd_007_p_=bv.Pointer(),
+            hd_008_n_=-32,
+            hd_009_p_=bv.Pointer(cm.BTree),
+            hd_010_n_=-32,
+            hd_011_p_=bv.Pointer(),
+            hd_012_n_=-32,
+            hd_013_n_=-32,
         )
 
-class V1003T7B(ManagerSegment):
+class V1003T7B(cm.ManagerSegment):
 
     VPID = 1003
     TAG = 0x7b
@@ -71,20 +114,11 @@ class V1003T7B(ManagerSegment):
 
     def spelunk_manager(self):
 
-        self.std_head = StdHead(self, self.seg_head.hi).insert()
+        self.std_head = FileHead(self, self.seg_head.hi).insert()
 
-        try:
-            y = PointerArray(
-                self,
-                self.std_head.hd_011_p.val,
-                dimension=1009,
-                cls = F00,
-            ).insert()
-        except Exception as err:
-            print(self.this, "V1003T7B", "PA/F00 failed", err)
-
-        bv.Array(108, F03)(
+        cm.PointerArray(
             self,
-            self.std_head.hd_009_p.val,
-            vertical=True
+            self.std_head.hd_011_p.val,
+            dimension=1009,
+            cls = F00,
         ).insert()

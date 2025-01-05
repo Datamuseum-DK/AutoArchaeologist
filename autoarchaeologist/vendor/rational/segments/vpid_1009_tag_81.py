@@ -518,7 +518,7 @@ class ObjClass(bv.Struct):
             subclass_=-10,
         )
         # See 5d3bfb73b, 00_class, 75_tag, seg_0ea8df
-        cm.OBJECTS.get(self.rclass.val)
+        x = cm.OBJECTS.get(self.rclass.val)
         if x is None:
             self.class_name = None
             subclasses = {}

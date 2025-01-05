@@ -276,6 +276,24 @@ class DiscriminatedRecordHeaderComponent(bv.Struct):
             vertical=True,
         )
 
+class ObjPtr(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            mgr_id_=-64,
+            obj_id_=-64,
+        )
+
+    def render(self):
+        yield "<" + ",".join(
+           [
+               cm.obj_name(self.mgr_id.val),
+               str(self.obj_id.val),
+               "1",
+           ]
+        ) + ">"
+
 class ObjId(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -302,6 +320,37 @@ class Property(bv.Struct):
             lo,
             prop_0_=PureTxt,
             prop_1_=-64,
+        )
+
+class AdaObject(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            ada_000_=Property,
+            ada_001_=Property,
+            ada_002_=-64,
+            ada_003_=-64,
+            ada_004_=-64,
+            ada_005_=Property,
+            ada_006_=ObjId,
+            ada_007_=-64,
+        )
+
+class FileObject(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            file_0_=Property,
+            file_1_=Property,
+            file_2_=UX01,
+            file_3_=-64,
+            file_4_=Property,
+            file_5_=ObjId,
+            file_6_=-64,
         )
 
 class UserObject(bv.Struct):
@@ -394,6 +443,83 @@ class TerminalObject(bv.Struct):
             term_6_=Property,
         )
 
+class DirectoryChild(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            dc_name_=PureTxt,
+            dc_0_=DirNo,
+        )
+
+class DirectoryVersion(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            dc_ver_=-64,
+            dc_no_=DirNo,
+        )
+
+class AdaExtra(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            ae_0_=PureTxt,
+            ae_1_=PureTxt,
+            ae_2_=-40,
+            ae_3_=-24,
+            ae_4_=-1,
+        )
+
+class DirNo(bv.Number):
+    fmt = "%d"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, width=64)
+
+class DirectoryObject(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            dir_dir_no_=DirNo,
+            dir_1_=PureTxt,
+            dir_nver_=-64,
+            more=True,
+        )
+        self.add_field(
+            "versions",
+            bv.Array(self.dir_nver.val, DirectoryVersion, vertical=True),
+        )
+
+        self.add_field("dir_nchild", -64)
+        if self.dir_nchild.val > 0:
+            self.add_field(
+                "children",
+                bv.Array(self.dir_nchild.val, DirectoryChild, vertical=True),
+            )
+
+        self.add_field("def_ver", DirNo) 
+        self.add_field("parent", DirNo)
+        self.add_field("cls", -64)
+        self.add_field("subcls", -64)
+        self.add_field("vpid", -64)
+        self.add_field("ctrlpt", DirNo)
+        self.add_field("tail0", -64)
+        self.add_field("tail1", -64)
+        self.add_field("tail2", -64)
+        self.add_field("tail3", -32)
+        self.add_field("tail4", -32)
+        if self.tail3.val in (0x50000000, 0xf0000000):
+            self.add_field("tail5", -4)
+        if self.cls.val == 1 and self.subcls.val in (2, 4, 6):
+            self.add_field("ada", AdaExtra)
+        self.done()
+       
+
 class NullObject(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -435,7 +561,11 @@ class Object(bv.Struct):
             obj_3_=-64,
             more=True,
         )
-        if self.kind.mgr_id.val == 4:
+        if self.kind.mgr_id.val == 1:
+            self.add_field("obj", AdaObject)
+        elif self.kind.mgr_id.val == 3:
+            self.add_field("obj", FileObject)
+        elif self.kind.mgr_id.val == 4:
             self.add_field("obj", UserObject)
         elif self.kind.mgr_id.val == 5:
             self.add_field("obj", GroupObject)
@@ -445,6 +575,8 @@ class Object(bv.Struct):
             self.add_field("obj", TapeObject)
         elif self.kind.mgr_id.val == 8:
             self.add_field("obj", TerminalObject)
+        elif self.kind.mgr_id.val == 9:
+            self.add_field("obj", DirectoryObject)
         elif self.kind.mgr_id.val == 13:
             self.add_field("obj", NullObject)
         elif self.kind.mgr_id.val == 15:
@@ -492,24 +624,31 @@ class Pure():
 
         self.pure_head = PureHead(tree, 0xa1).insert()
 
-        self.spelunk()
-
-        for i in self.tree.find_all(0x88581):
-            print("FF", hex(i))
-
-        for i in self.tree.find_all(0x885c1):
-            print("FF", hex(i))
+        self.recent = 0
+        try:
+            self.spelunk()
+        except Exception as err:
+            print(tree.this, "BOOM", hex(self.recent), err)
+        self.find_texts()
 
     def spelunk(self):
+        enough = 10000000
         self.sofar = 0
         while self.find_one_thing():
-            continue
+            enough -= 1
+            if enough == 0:
+                return
 
+    def find_texts(self):
+        enough = 1000000
         for lo, hi in self.tree.gaps():
             for adr in range(lo, hi - 100):
                 if self.try_text(adr):
                     y = PureTxt(self.tree, adr)
                     y.insert()
+                    enough -= 1
+                    if enough == 0:
+                        return
 
         for lo, hi in self.tree.gaps():
             if (hi - lo) & 0x3f == 0:
@@ -521,6 +660,7 @@ class Pure():
                 continue
             for adr in range(lo, hi - 100):
                 if self.try_text(adr):
+                    self.recent = adr
                     y = PureTxt(self.tree, adr)
                     if self.expand(y):
                         self.sofar = adr
@@ -529,7 +669,11 @@ class Pure():
 
     def expand(self, txt):
         if txt.txt == "CONSISTENT":
-            Object(self.tree, txt.lo - 64 * 3).insert()
+            try:
+                Object(self.tree, txt.lo - 64 * 3).insert()
+            except Exception as err:
+                print(self.tree.this, "OBJECT BOOM", hex(txt.lo - 64 * 3), err)
+                txt.insert()
             return True
         if txt.txt == "DISCRETE_COMPONENT":
             DiscreteComponent(self.tree, txt.lo).insert()
@@ -555,7 +699,7 @@ class Pure():
             #DiscriminatedRecordHeaderComponent(self.tree, txt.lo).insert()
             return False
         else:
-            txt.insert()
+            return False
 
     def try_text(self, adr):
         x = int(self.tree.bits[adr:adr+64], 2)

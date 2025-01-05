@@ -16,9 +16,9 @@
 '''
     
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray, TimeStampPrecise, ObjRef
+from . import common as cm
 
-class UHead(bv.Struct):
+class UserHead(bv.Struct):
 
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -33,7 +33,7 @@ class UHead(bv.Struct):
             hd_006_n_=-31,
             hd_007_p_=bv.Pointer(),
             hd_008_n_=-32,
-            hd_009_p_=bv.Pointer(),
+            hd_009_p_=bv.Pointer(cm.BTree),
             hd_010_n_=-32,
             hd_011_p_=bv.Pointer(),
             hd_012_n_=-32,
@@ -49,7 +49,7 @@ class U00(bv.Struct):
             u00_001_b_=-32,
             u00_002_p_=bv.Pointer(U02),
             u00_003_z__=-32,
-            u00_004_p_=bv.Pointer(U01),
+            u00_004_p_=bv.Pointer(U00),
             u00_005_n_=-1,
             **kwargs,
         )
@@ -91,12 +91,12 @@ class U03(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            u03_000_b_=U10,	# = {0x1, 0x4, 0x12, 0x23
-            u03_001_b_=U10,
-            u03_002_b_=U10,
-            u03_003_b_=U10,
-            u03_004_c_=ObjRef,
-            u03_005_c_=ObjRef,
+            u03_000_b_=cm.TimedProperty,	# = {0x1, 0x4, 0x12, 0x23
+            u03_001_b_=cm.TimedProperty,
+            u03_002_b_=cm.TimedProperty,
+            u03_003_b_=cm.TimedProperty,
+            u03_004_c_=cm.ObjRef,
+            u03_005_c_=cm.ObjRef,
             u03_006__=bv.Constant(32, 1),
             u03_007_=-32,
             u03_009_s_=U17,
@@ -132,36 +132,6 @@ class U08(bv.Struct):
         assert self.u08_002_c_.val == 1
 
 
-class U09(bv.Struct):
-    def __init__(self, bvtree, lo, **kwargs):
-        super().__init__(
-            bvtree,
-            lo,
-            u09_000_p_=-94,
-            u09_001_z__=-103,
-            u09_002_n_=-8,
-            u09_003_p_=bv.Pointer(U09),
-            u09_004_p_=bv.Pointer(U09),
-            u09_005_p_=bv.Pointer(U09),
-            u09_006_p_=bv.Pointer(U09),
-            **kwargs,
-        )
-        assert self.u09_001_z_.val == 0
-
-    def dot_node(self, dot):
-        return None, ["color=green"]
-
-class U10(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            u10_000_b__=bv.Constant(1, 0),
-            u10_002_b_=TimeStampPrecise,
-            u10_003_b_=-15,
-            u10_010_b_=-24,
-        )
-
 class ListHead(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -178,7 +148,7 @@ class ListEntry(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            obj_=ObjRef,
+            obj_=cm.ObjRef,
             next_=bv.Pointer(ListEntry),
         )
 
@@ -190,7 +160,7 @@ class SessionList(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            u16_010_c_=ObjRef,
+            u16_010_c_=cm.ObjRef,
             u16_040_n_=bv.Pointer(SessionList),
         )
 
@@ -200,8 +170,8 @@ class U17(bv.Struct):
             bvtree,
             lo,
             u17_000_n_=-32,
-            u17_010_=ObjRef,
-            u17_020_=ObjRef,
+            u17_010_=cm.ObjRef,
+            u17_020_=cm.ObjRef,
             u17_070__=bv.Constant(32, 0),
             u17_groups_=bv.Pointer(ListHead),
             u17_090__=bv.Constant(32, 0),
@@ -219,7 +189,7 @@ class U26(bv.Struct):
         )
 
 
-class V1004T7C(ManagerSegment):
+class V1004T7C(cm.ManagerSegment):
 
     VPID = 1004
     TAG = 0x7c
@@ -230,17 +200,13 @@ class V1004T7C(ManagerSegment):
 
     def spelunk_manager(self):
 
-        self.head = UHead(self, self.seg_head.hi).insert()
+        self.head = UserHead(self, self.seg_head.hi).insert()
 
         if True:
             # Possibly the array limits of hd_009_p
             U26(self, self.head.hd_007_p.val).insert()
 
-
-        if True:
-            U09(self, self.head.hd_009_p.val).insert()
-
-        y = PointerArray(
+        y = cm.PointerArray(
             self,
             self.head.hd_011_p.val,
             dimension=101,

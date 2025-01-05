@@ -16,7 +16,10 @@
 '''
     
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray
+from . import common as cm
+
+class Pointer31(bv.Pointer_Class):
+    WIDTH = 31
 
 class A00(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -32,7 +35,8 @@ class A00(bv.Struct):
             hd_006_n_=-32,
             hd_007_p_=bv.Pointer(A13),
             hd_008_n_=-32,
-            hd_009_p_=bv.Pointer(A07),
+            #hd_009_p_=bv.Pointer(A07),
+            hd_009_p_=bv.Pointer(cm.BTree),
             hd_010_n_=-32,
             hd_011_p_=bv.Pointer(),
             hd_012_n_=-32,
@@ -40,44 +44,18 @@ class A00(bv.Struct):
             hd_014_n_=bv.Pointer(A12),
         )
 
-class A13(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            a13_000_n_=-6,
-            a13_001_n_=-32,
-            a13_002_p_=-32,
-            a13_003_n_=-32,
-            a13_004_p_=bv.Pointer(A08),
-            a13_005_n_=-32,
-            a13_006_p_=bv.Pointer(),
-            a13_007_n_=-32,
-            a13_008_p_=bv.Pointer(A09),
-            vertical=True,
-        )
-
-class A01(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            a01_000_n_=-32,
-            a01_001_n_=bv.Pointer(A05),
-            a01_002_n_=-32,
-            a01_003_n_=-32,
-            a01_004_n_=-32,
-            a01_005_n_=-32,
-        )
-
 class A02(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            a02_000_n_=-100,
-            a02_001_n_=bv.Pointer(A02),
+            a02_000_n_=-7,
+            a02_001_n_=-31,
+            a02_003_n_=bv.Constant(31, 1),
+            a02_004_n_=-31,
+            a02_005_n_=bv.Pointer(A02),
         )
+
 
 class A03(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -113,8 +91,24 @@ class A05(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            a05_000_n_=-0x3ae,
+            vertical=True,
+            more=True,
+            a05_000_n_=cm.TimedProperty,
+            a05_001_n_=cm.TimedProperty,
+            a05_040_n_=-38,
+            a05_041_n_=-32,
+            a05_042_n_=-64,
+            a05_043_n_=-32,
+            a05_050_n_=A15,
+            a05_051_n_=A15,
+            a05_094_n_=-32,
         )
+        d = (self.lo + 0x3ae) - self.hi 
+        if d > 0:
+            print("D", d)
+            self.add_field("end", -d)
+        self.done()
+
 
 class A06(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -162,7 +156,25 @@ class A10(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            a10_050_n_=-0x3ae,
+            vertical=True,
+            a10_050_n_=-64,
+            a10_051_n_=-64,
+            a10_084_n_=-24,
+            a10_085_n_=-64,
+            a10_086_n_=-64,
+            a10_087_n_=-32,
+            a10_088_n_=-22,
+            a10_089_n_=-64,
+            a10_090_n_=-64,
+            a10_091_n_=-32,
+            a10_092_n_=-32,
+            a10_093_n_=-64,
+            a10_094_n_=-64,
+            a10_095_n_=-64,
+            a10_096_n_=-64,
+            a10_097_n_=-64,
+            a10_098_n_=-64,
+            a10_099_n_=-32,
         )
 
 class A11(bv.Struct):
@@ -185,7 +197,37 @@ class A12(bv.Struct):
             a12_004_n_=-33,
         )
 
-class V1001T79(ManagerSegment):
+class A13(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            a13_000_n_=-6,
+            a13_001_n_=-32,
+            a13_002_p_=-32,
+            a13_003_n_=-32,
+            a13_004_p_=bv.Pointer(A08),
+            a13_005_n_=-32,
+            a13_006_p_=bv.Pointer(),
+            a13_007_n_=-32,
+            a13_008_p_=bv.Pointer(A09),
+            vertical=True,
+        )
+
+class A15(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            a15_001_n_=-35,
+            a15_002_n_=-32,
+            a15_003_n_=-64,
+            a15_004_n_=cm.TimedProperty,
+            a15_005_n_=cm.ObjRef,
+	)
+
+class V1001T79(cm.ManagerSegment):
 
     VPID = 1001
     TAG = 0x79
@@ -195,16 +237,18 @@ class V1001T79(ManagerSegment):
 
         self.a00 = A00(self, self.seg_head.hi).insert()
 
-        y = PointerArray(
+        y = cm.PointerArray(
             self,
             self.a00.hd_007_p.dst().a13_006_p.val,
             dimension=1009,
             cls=A02,
         ).insert()
 
-        PointerArray(
+        cm.PointerArray(
             self,
             self.a00.hd_011_p.val,
             dimension=1009,
             cls=A03,
         ).insert()
+
+        print(self.this, "FF", list(self.find_all(0x18ffa9e)))

@@ -15,7 +15,7 @@
 '''
     
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray, StdHead, TimeStampPrecise, ObjRef
+from . import common as cm
 
 class Bla99(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -61,11 +61,11 @@ class G02(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            g02_000_p_=G10,
-            g02_010_p_=G10,
-            g02_020_p_=G10,
-            g02_030_p_=G10,
-            g02_040_p_=ObjRef,
+            g02_000_p_=cm.TimedProperty,
+            g02_010_p_=cm.TimedProperty,
+            g02_020_p_=cm.TimedProperty,
+            g02_030_p_=cm.TimedProperty,
+            g02_040_p_=cm.ObjRef,
             g02_050_p_=-32,
             g02_060_p_=-32,
             g02_070_p_=-31,
@@ -90,29 +90,6 @@ class G03(bv.Struct):
         )
         #assert self.u03_013_z_.val == 0
 
-class G04(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            g04_000_z_=-0xcd,
-            g04_096_p_=bv.Pointer(G04),
-            g04_097_p_=bv.Pointer(G04),
-            g04_098_p_=bv.Pointer(G04),
-            g04_099_p_=bv.Pointer(G04),
-        )
-
-class G10(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            u10_000_b_=-1,
-            u10_002_b_=TimeStampPrecise,
-            u10_003_b_=-15,
-            u10_010_b_=-24,
-        )
-
 class GroupHead(bv.Struct):
 
     def __init__(self, bvtree, lo):
@@ -128,14 +105,14 @@ class GroupHead(bv.Struct):
             hd_006_n_=-31,
             hd_007_p_=bv.Pointer(bv.Array(1024, -1)),
             hd_008_n_=-32,
-            hd_009_p_=bv.Pointer(G04),
+            hd_009_p_=bv.Pointer(cm.BTree),
             hd_010_n_=-32,
             hd_011_p_=bv.Pointer(),
             hd_012_n_=-32,
             hd_013_n_=-33,
         )
 
-class V1005T7D(ManagerSegment):
+class V1005T7D(cm.ManagerSegment):
 
     VPID = 1005
     TAG = 0x7d
@@ -145,7 +122,7 @@ class V1005T7D(ManagerSegment):
 
         self.head = GroupHead(self, self.seg_head.hi).insert()
 
-        y = PointerArray(
+        y = cm.PointerArray(
             self,
             self.head.hd_011_p.val,
             dimension=101,

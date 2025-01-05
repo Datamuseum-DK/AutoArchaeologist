@@ -99,6 +99,31 @@ class TimeStampPrecise(bv.Struct):
     def render(self):
         yield self.tstamp
 
+class TimedProperty(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            tp_000_b__=bv.Constant(1, 0),
+            tp_002_b_=TimeStampPrecise,
+            tp_003_b_=-15,
+            tp_004_b_=-24,
+        )
+
+class BTree(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            bt_00_z_=-143,
+            bt_08_z_=-52,
+            bt_09_z_=-10,
+            bt_10_p_=bv.Pointer(BTree),
+            bt_11_p_=bv.Pointer(BTree),
+            bt_12_p_=bv.Pointer(BTree),
+            bt_13_p_=bv.Pointer(BTree),
+        )
+
 class PointerArray(bv.Struct):
 
     def __init__(self, bvtree, lo, cls=None, dimension=None, elide=None):
@@ -283,10 +308,30 @@ class ManagerSegment(Segment):
                 self.spelunk_manager()
             except Exception as err:
                 print(self.this, self.__class__.__name__, "BOOM", err)
-                raise
+                #raise
         else:
             pure.Pure(self)
             self.this.add_note("Pure")
+
+class AclEntry(bv.Struct):
+
+    # Not quite a bitmap...
+    modes = {
+        0x1: "R",
+        0x3: "RW",
+        0x5: "RC",
+        0x6: "CD",
+        0xd: "RCO",
+        0xf: "RCOD",
+    }
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            subj_=-10,
+            mode_=-4,
+        )
 
 class ObjRef(bv.Struct):
     def __init__(self, bvtree, lo, **kwargs):
