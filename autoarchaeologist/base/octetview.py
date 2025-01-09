@@ -202,6 +202,9 @@ class Le32(Octets):
         self.val |= self.this[lo + 1] << 8
         self.val |= self.this[lo]
 
+    def render(self):
+        yield "0x%08x" % self.val
+
 class Le64(Octets):
     ''' Eight bytes Little Endian '''
 
