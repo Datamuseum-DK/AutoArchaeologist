@@ -298,7 +298,7 @@ class Index():
             if len(page) * 20 > PAGE_SIZE:
                 continue
             print("ORPHAN INDEX PAGE", pgno, len(page), len(plist))
-            if pgno == 0 or len(plist[pgno+1]) < len(plist[pgno-1]):
+            if pgno == 0 or (pgno+1 < len(plist) and len(plist[pgno+1]) < len(plist[pgno-1])):
                 while page.tabs:
                     plist[pgno + 1].tabs.insert(0, page.tabs.pop(-1))
                 plist.pop(pgno)
