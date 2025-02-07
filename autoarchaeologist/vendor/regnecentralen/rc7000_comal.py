@@ -315,7 +315,7 @@ class ComalStatement():
         ''' FILE ( number [ , expr ] ) '''
         yield from self.expect(stream, "FILE")
         yield from self.expect(stream, "(")
-        yield from self.expect_number(stream)
+        yield from self.expect_expr(stream)
         if self.peek(stream, ","):
             yield ","
             yield from self.expect_expr(stream)
@@ -537,10 +537,13 @@ class ComalStatement():
         while stream and stream[0] != 0xe2:
             yield from self.expect_var(stream)
             yield from self.expect(stream, "=")
-            yield from self.expect_expr(stream)
-            if not stream or stream[0] == 0xe2:
-                break
-            yield from self.expect(stream, (";", ",",))
+            while stream:
+                yield from self.expect_expr(stream)
+                if stream[0] == 0xe2:
+                    return
+                if self.peek(stream, ";"):
+                    break
+                yield from self.expect(stream, (",", ))
 
     def render_mat(self, stream):
         '''
@@ -560,6 +563,16 @@ class ComalStatement():
 
         if self.peek(stream, "READ"):
             yield "READ"
+            if get_token(stream[0]) == "FILE":
+                yield from self.expect_file(stream)
+            yield from self.expect_var(stream)
+            while self.peek(stream, ','):
+                yield ','
+                yield from self.expect_var(stream)
+            return
+
+        if self.peek(stream, "WRITE"):
+            yield "WRITE"
             if get_token(stream[0]) == "FILE":
                 yield from self.expect_file(stream)
             yield from self.expect_var(stream)
@@ -931,7 +944,8 @@ class ComalSaveFile():
         if self.u_las != 0xffff:
             return
 
-        this = this.create(start=0, stop=offset)
+        if offset != len(this):
+            print(this, "COMAL TAIL", len(this) - offset)
         self.this = this
         this.add_type("COMAL_SAVE")
 
