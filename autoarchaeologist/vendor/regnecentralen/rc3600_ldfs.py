@@ -106,7 +106,12 @@ class LogicalDisk():
                 if sstart < sstop:
                     z = ov.This(tree, lo=sstart, hi=sstop).insert()
                     z.that.add_note(y.name.txt)
+                    for zptr in range(sstart, sstop, 0x80):
+                        if tree.this[zptr:zptr+0x80] == b'_UNREAD_' * 16:
+                            z.that.add_note("UNREAD_SECTOR(S)")
+                            break
                     ns.ns_set_this(z.that)
+                    z.that.add_note(ns.ns_path())
                 if y.f02.val < 0x80:
                     ov.Opaque(tree, lo=sstop, width=0x80-y.f02.val).insert()
             else:
@@ -114,11 +119,15 @@ class LogicalDisk():
                 recsize = 0x10000 - y.f02.val
                 reccount = y.f01.val
                 z = ov.This(tree, lo=sstart, width=recsize*reccount).insert()
+                for zptr in range(sstart, sstart + len(z.that), 0x80):
+                    if tree.this[zptr:zptr+0x80] == b'_UNREAD_' * 16:
+                        z.that.add_note("UNREAD_SECTOR(S)")
+                        break
                 ns.ns_set_this(z.that)
                 rest = (y.length.val << 7) - recsize * reccount
                 if rest > 0:
                     ov.Opaque(tree, lo=z.hi, width=rest).insert()
-                z.that.add_note(y.name.txt)
+                z.that.add_note(ns.ns_path())
 
 
 class DirEnt(ov.Struct):
