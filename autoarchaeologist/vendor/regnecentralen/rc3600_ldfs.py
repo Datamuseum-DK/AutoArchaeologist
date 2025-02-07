@@ -145,7 +145,7 @@ class LdFs(disk.Disk):
             return
 
         # Presently only found on 77c1h26s128b floppies
-        if this[0] != 0x07 or this[1] != 0x3b:
+        if this[0] != 0x07 or this[1] not in (0x39, 0x3b,):
             return
 
         for geom in (
