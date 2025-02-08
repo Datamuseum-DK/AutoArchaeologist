@@ -24,12 +24,18 @@ class Compress():
 
         tmpfilename = tempfile.NamedTemporaryFile().name
 
-        open(tmpfilename + ".Z", "wb").write(this.tobytes())
-        subprocess.run(["uncompress", "-f", tmpfilename + ".Z"])
-        self.that = this.create(bits=open(tmpfilename, "rb").read())
+        open(tmpfilename, "wb").write(this.tobytes())
+        s = subprocess.run(
+            [ "uncompress", "-f" ],
+            stdin=open(tmpfilename, "rb"),
+            capture_output=True
+        )
+        self.that = this.create(bits=s.stdout)
         os.remove(tmpfilename)
         this.add_type("Compressed file")
         self.that.add_note("Uncompressed file")
+        if s.stderr:
+            self.that.add_note("Uncompression error: " + s.stderr.decode('utf-8'))
         this.add_interpretation(self, self.render)
 
     def render(self, fo, _this):
