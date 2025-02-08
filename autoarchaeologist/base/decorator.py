@@ -169,7 +169,7 @@ class Decorator():
             font-family: "Inconsolata", "Courier New", mono-space;
         }
         td,th {
-            padding: 0 10px 0;
+            padding: 0 10px 0; vertical-align: top;
         }
         th {
             position: sticky; top: 0; background-color: #eeeeee;
@@ -177,12 +177,12 @@ class Decorator():
             padding: 5px;
         }
         th.v { writing-mode: sideways-rl; vertical-align: bottom;}
-        th.l { vertical-align: bottom; text-align: left; }
-        th.r { vertical-align: bottom; text-align: right; }
-        th.c { vertical-align: bottom; text-align: center; }
-        td.l { vertical-align: top; text-align: left; }
-        td.r { vertical-align: top; text-align: right; }
-        td.c { vertical-align: top; text-align: center; }
+        th.l { text-align: left; }
+        th.r { text-align: right; }
+        th.c { text-align: center; }
+        td.l { text-align: left; }
+        td.r { text-align: right; }
+        td.c { text-align: center; }
         td.s, th.s { font-size: .8em; }
         tr.stripe:nth-child(2n+1) { background-color: #ddffdd; }
     '''
