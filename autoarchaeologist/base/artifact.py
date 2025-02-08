@@ -184,6 +184,12 @@ class ArtifactBase(result_page.ResultPage):
         ''' Get number of records '''
         return len(self._keys)
 
+    def has_rec(self, key):
+        ''' Get a Record (or None) '''
+        if key not in self._keys:
+            return None
+        return self._keys[key]
+
     def get_rec(self, key):
         ''' Get a Record '''
         return self._keys[key]
@@ -210,7 +216,7 @@ class ArtifactBase(result_page.ResultPage):
 
     def add_namespace(self, namespace):
         ''' Add a namespace reference '''
-        self.namespaces.setdefault(namespace.ns_root, []).append(namespace)
+        self.namespaces.setdefault(namespace.ns_parent, []).append(namespace)
         if namespace.ns_name not in self.names:
             self.names.add(namespace.ns_name)
 
