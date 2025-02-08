@@ -1,6 +1,12 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
-Rational R1000/400 Tapes from Datamuseum.dk's BitStore
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Rational R1000/400 Tapes from Datamuseum.dk's BitStore
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.generic.ansi_tape_labels import AnsiTapeLabels
@@ -13,11 +19,30 @@ from autoarchaeologist.generic import textfiles
 
 import ddhf
 
-class R1K(ddhf.DDHF_Excavation):
+class R1K(ddhf.DDHFExcavation):
 
     '''
     Rational R1000/400 tapes except DFS and backup tapes
     '''
+
+    BITSTORE = (
+        "-30000530",	# == 30000409
+        "-30000537",	# == 30000405
+        "-30000750",	# DFS
+        "-30000528",	# DFS
+        "-30000744",	# DFS
+        "-30000407",	# DFS
+        "-30000408",	# PNG
+        "-30000743",	# DFS
+        "-30000410",	# PNG
+        "-30000406",	# PNG
+        "-30000746",	# Defects tape
+        "-30000533",	# ASIS(AIX)
+        "-30000544",	# PAM arrival backup, different format.
+        "RATIONAL_1000/TAPE",
+        #"30000747",
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -29,24 +54,6 @@ class R1K(ddhf.DDHF_Excavation):
         self.add_examiner(TarFile)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(SameSame)
-
-        self.from_bitstore(
-            "-30000530",	# == 30000409
-            "-30000537",	# == 30000405
-            "-30000750",	# DFS
-            "-30000528",	# DFS
-            "-30000744",	# DFS
-            "-30000407",	# DFS
-            "-30000408",	# PNG
-            "-30000743",	# DFS
-            "-30000410",	# PNG
-            "-30000406",	# PNG
-            "-30000746",	# Defects tape
-            "-30000533",	# ASIS(AIX)
-            "-30000544",	# PAM arrival backup, different format.
-            "RATIONAL_1000/TAPE",
-            #"30000747",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

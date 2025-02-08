@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Regnecentralen RC4000/RC8000/RC9000 Artifacts from Datamuseum.dk's BitStore
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,9 +43,22 @@ class TextFileEvenParity(TextFile):
     ''' Text files with even parity'''
     TYPE_CASE = Rc489kEvenPar()
 
-class Rc489k(ddhf.DDHF_Excavation):
+class Rc489k(ddhf.DDHFExcavation):
 
     ''' All RC4000, RC8000 and RC9000 artifacts '''
+
+    BITSTORE = (
+        "RC/RC8000/DISK",
+        "RC/RC8000/PAPERTAPE",
+        "RC/RC8000/TAPE",
+        "RC/RC4000/SW",
+        "RC/RC4000/TEST",
+        "RC/RC9000",
+        "RC/RC9000/TAPE",
+        "RC/RC3500/TAPE",
+        "30003100",
+        "30007477",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -53,19 +72,6 @@ class Rc489k(ddhf.DDHF_Excavation):
         self.add_examiner(TextFileEvenParity)
         self.add_examiner(samesame.SameSame)
         self.add_examiner(gier_text.GIER_Text)
-
-        self.from_bitstore(
-            "RC/RC8000/DISK",
-            "RC/RC8000/PAPERTAPE",
-            "RC/RC8000/TAPE",
-            "RC/RC4000/SW",
-            "RC/RC4000/TEST",
-            "RC/RC9000",
-            "RC/RC9000/TAPE",
-            "RC/RC3500/TAPE",
-            "30003100",
-            "30007477",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

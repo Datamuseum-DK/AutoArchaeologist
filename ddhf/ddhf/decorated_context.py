@@ -67,6 +67,8 @@ class DDHF_Excavation(excavation.Excavation):
         Excavation decorated for DataMuseum.dk
     '''
 
+    BITSTORE = ()
+
     def __init__(
         self,
         ddhf_topic=None,
@@ -89,8 +91,14 @@ class DDHF_Excavation(excavation.Excavation):
 
     def from_argv(self):
         ''' Process extra command line arguments '''
+        do_bitstore = len(sys.argv) == 1
         for fn in sys.argv[1:]:
+            if fn == "-b":
+                do_bitstore = True
+                continue
             argv.argv_file(self, fn)
+        if do_bitstore:
+            self.from_bitstore(*self.BITSTORE)
 
 OK_ENVS = {
     "AUTOARCHAEOLOGIST_HTML_DIR": "html_dir",

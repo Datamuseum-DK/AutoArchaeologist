@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Regnecentralen RC3600/RC7000 Artifacts from Datamuseum.dk's BitStore
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -44,9 +50,13 @@ class TextFileOdd(textfiles.TextFile):
     TYPE_CASE = type_case.OddPar(DS2089())
     MAX_TAIL=512*6
 
-class Id7000(ddhf.DDHF_Excavation):
+class Id7000(ddhf.DDHFExcavation):
 
     ''' All ID-7000 artifacts '''
+
+    BITSTORE = (
+        "DDE/ID-7000",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -59,10 +69,6 @@ class Id7000(ddhf.DDHF_Excavation):
         self.add_examiner(TextFile)
         self.add_examiner(TextFileEven)
         self.add_examiner(TextFileOdd)
-
-        self.from_bitstore(
-            "DDE/ID-7000",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

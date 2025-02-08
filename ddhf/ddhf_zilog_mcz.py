@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Zilog MCZ/1 Artifacts from Datamuseum.dk's BitStore
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -9,9 +15,13 @@ from autoarchaeologist.generic import textfiles
 
 import ddhf
 
-class ZilogMCZ(ddhf.DDHF_Excavation):
+class ZilogMCZ(ddhf.DDHFExcavation):
 
     ''' Zilog MCZ Floppy Disks '''
+
+    BITSTORE = (
+        "COMPANY/ZILOG",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -20,14 +30,9 @@ class ZilogMCZ(ddhf.DDHF_Excavation):
         self.add_examiner(zdos_basic.ZdosBasic)
         self.add_examiner(textfiles.TextFile)
 
-        self.from_bitstore(
-            "COMPANY/ZILOG",
-        )
-
 if __name__ == "__main__":
     ddhf.main(
         ZilogMCZ,
         html_subdir="zilog_mcz",
         ddhf_topic = "Zilog MCZ Floppy Disks",
-        # ddhf_topic_link = 'https://datamuseum.dk/wiki/CR80',
     )

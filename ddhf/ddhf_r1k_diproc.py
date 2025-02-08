@@ -1,24 +1,30 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
-Rational R1000/400 Diag Processor Firmware from Datamuseum.dk's BitStore
+   Rational R1000/400 Diag Processor Firmware from Datamuseum.dk's BitStore
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.vendor.rational import r1k_diag
 
 import ddhf
 
-class R1KDIPROC(ddhf.DDHF_Excavation):
+class R1KDIPROC(ddhf.DDHFExcavation):
 
     ''' Rational R1000/400 Diag Processor firmware '''
 
+    BITSTORE = (
+        "30002517",
+        "30003041",
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
         self.add_examiner(r1k_diag.R1kDiagFirmWare)
-
-        self.from_bitstore(
-            "30002517",
-            "30003041",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

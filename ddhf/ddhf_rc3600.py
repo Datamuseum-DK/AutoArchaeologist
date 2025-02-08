@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Regnecentralen RC3600/RC7000 Artifacts from Datamuseum.dk's BitStore
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,6 +13,7 @@ from autoarchaeologist.base import type_case
 
 from autoarchaeologist.vendor.regnecentralen import domus_fs
 from autoarchaeologist.vendor.regnecentralen import rc3600_fdtape
+from autoarchaeologist.vendor.regnecentralen import rc3600_bootable_fd
 from autoarchaeologist.vendor.regnecentralen import rc3600_fcopy
 from autoarchaeologist.vendor.regnecentralen import rc7000_comal
 from autoarchaeologist.vendor.regnecentralen import rc3600_ldfs
@@ -53,9 +60,19 @@ class TextFileOdd(textfiles.TextFile):
     TYPE_CASE = type_case.OddPar(DomusDS2089())
     MAX_TAIL=512*6
 
-class Rc3600(ddhf.DDHF_Excavation):
+class Rc3600(ddhf.DDHFExcavation):
 
     ''' All RC3600 artifacts '''
+
+    BITSTORE = (
+        "-30001762",		# Defective
+        "RC/RC3600/DOMUS",
+        "RC/RC3600/SW",
+        "RC/RC3600/HW",
+        "RC/RC3600/LOADER",
+        "RC/RC3600/MUSIL",
+        "RC/RC3600/PAPERTAPE",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -67,6 +84,7 @@ class Rc3600(ddhf.DDHF_Excavation):
         self.add_examiner(rc3600_fcopy.Domus_FCOPY)
         self.add_examiner(rc3600_ldfs.LdFs)
         self.add_examiner(rc3600_autoload.AutoLoad)
+        self.add_examiner(rc3600_bootable_fd.BootableFd)
         self.add_examiner(rc7000_comal.ComalSaveFile)
         self.add_examiner(absbin.AbsBin)
         self.add_examiner(relbin.RelBin)
@@ -78,15 +96,6 @@ class Rc3600(ddhf.DDHF_Excavation):
         self.add_examiner(TextFileOdd)
         self.add_examiner(samesame.SameSame)
 
-        self.from_bitstore(
-            "-30001762",		# Defective
-            "RC/RC3600/DOMUS",
-            "RC/RC3600/SW",
-            "RC/RC3600/HW",
-            "RC/RC3600/LOADER",
-            "RC/RC3600/MUSIL",
-            "RC/RC3600/PAPERTAPE",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

@@ -4,4 +4,4 @@
 #
 # See LICENSE file for full text of license
 
-from .decorated_context import DDHF_Excavation, main
+from .main import DDHFExcavation, main

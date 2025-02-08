@@ -1,6 +1,12 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
-GIER Artifacts from Datamuseum.dk's BitStore
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   GIER Artifacts from Datamuseum.dk's BitStore
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.vendor.regnecentralen import gier_text
@@ -35,9 +41,13 @@ class DaskTc(type_case.TypeCase):
         self.set_slug(0x10, "*", "*")
         self.set_slug(0x1e, " ", "«stop»")
 
-class DASK(ddhf.DDHF_Excavation):
+class DASK(ddhf.DDHFExcavation):
 
     ''' All DASK artifacts '''
+
+    BITSTORE = (
+        "DASK/SW",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -47,10 +57,6 @@ class DASK(ddhf.DDHF_Excavation):
         self.add_examiner(gier_text.GIER_Text)
         self.add_examiner(samesame.SameSame)
         self.add_examiner(DaskTegn)
-
-        self.from_bitstore(
-            "DASK/SW",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

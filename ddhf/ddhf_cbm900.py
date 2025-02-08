@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-Commodore CBM-900 Artifacts from Datamuseum.dk's BitStore
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Commodore CBM-900 Artifacts from Datamuseum.dk's BitStore
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.base import type_case
@@ -18,21 +18,17 @@ from autoarchaeologist.generic import samesame
 
 import ddhf
 
-class Cbm900FsParams(unix_fs.UnixFsParams):
-
-    BLOCK_SIZES = (512, )
-    POSSIBLE_BYTE_ORDERS = ((0, 2, 1),)
-    CLASSES = (unix_fs.UnixFsLittleEndianBogus,)
-
-
-class CBM900(ddhf.DDHF_Excavation):
+class CBM900(ddhf.DDHFExcavation):
 
     '''
     Two CBM900 hard-disk images, one also contains the four distribution
     floppy images.
     '''
 
-    #UNIX_FS_PARAMS = Cbm900FsParams()
+    BITSTORE = (
+        "30001199",
+        "30001972",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -44,11 +40,6 @@ class CBM900(ddhf.DDHF_Excavation):
         self.add_examiner(unix_fs.FindUnixFs)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
-
-        self.from_bitstore(
-            "30001199",
-            "30001972",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

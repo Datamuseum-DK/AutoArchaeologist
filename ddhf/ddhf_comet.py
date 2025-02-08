@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 '''
    ICL Comet Artifacts from Datamuseum.dk's BitStore
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,18 +8,17 @@
 import ddhf
 import ddhf.cpm_exc
 
-class Comet(ddhf.DDHF_Excavation):
+class Comet(ddhf.DDHFExcavation):
 
     ''' All Comet artifacts '''
 
+    BITSTORE = (
+        "COMPANY/ICL/COMET",
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
         ddhf.cpm_exc.std_cpm_excavation(self)
-
-        self.from_bitstore(
-            "COMPANY/ICL/COMET",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

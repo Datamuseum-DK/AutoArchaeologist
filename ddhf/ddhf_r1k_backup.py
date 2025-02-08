@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Rational R1000/400 Backup tape from Datamuseum.dk's BitStore
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -36,9 +42,13 @@ class TypeCase(type_case.Ascii):
         super().__init__()
         self.set_slug(0, ' ', '«nul»', self.EOF)
 
-class R1KBACKUP(ddhf.DDHF_Excavation):
+class R1KBACKUP(ddhf.DDHFExcavation):
 
     ''' Rational R1000/400 Backup tape '''
+
+    BITSTORE = (
+            "30000544",	# PAM arrival backup
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -56,10 +66,6 @@ class R1KBACKUP(ddhf.DDHF_Excavation):
 
         self.add_examiner(TextFile)
         self.add_examiner(SameSame)
-
-        self.from_bitstore(
-            "30000544",	# PAM arrival backup
-        )
 
 if __name__ == "__main__":
     ddhf.main(

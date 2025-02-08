@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-Regnecentralen RC900
-~~~~~~~~~~~~~~~~~~~~
+   Regnecentralen RC900
+   ~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.base import type_case
@@ -20,11 +20,13 @@ import ddhf
 
 class Rc900FsParams(unix_fs.UnixFsParams):
 
+    ''' Unix fs parameters '''
+
     BLOCK_SIZES = (1024, )
     POSSIBLE_BYTE_ORDERS = ((2, 1, 0),)
     CLASSES = (unix_fs.UnixFsLittleEndian,)
 
-class RC900(ddhf.DDHF_Excavation):
+class RC900(ddhf.DDHFExcavation):
 
     '''
     Two CBM900 hard-disk images, one also contains the four distribution
@@ -32,6 +34,10 @@ class RC900(ddhf.DDHF_Excavation):
     '''
 
     UNIX_FS_PARAMS = Rc900FsParams()
+
+    BITSTORE = (
+        "RC/RC900",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -42,10 +48,6 @@ class RC900(ddhf.DDHF_Excavation):
         self.add_examiner(compress.Compress)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
-
-        self.from_bitstore(
-            "RC/RC900",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

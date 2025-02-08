@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    DDE MIKADOS artifacts from DDHF's bitstore
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -10,8 +16,18 @@ from autoarchaeologist.vendor.dansk_data_elektronik import mikados
 
 import ddhf
 
-class Mikados(ddhf.DDHF_Excavation):
+class Mikados(ddhf.DDHFExcavation):
     ''' All MIKADOS artifacts '''
+
+    BITSTORE = (
+        "OS/MIKADOS",
+        "DDE/SPC-1",
+        #"-30003595", 	# Only one side preserved?
+        #"-30003618", 	# Only one side preserved?
+        #"-30003620", 	# Only one side preserved?
+        #"-30005676", 	# Only one side preserved?
+        #"-30004642", 	# missing sectors in IMD
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -21,15 +37,6 @@ class Mikados(ddhf.DDHF_Excavation):
         self.add_examiner(samesame.SameSame)
         self.add_examiner(textfiles.TextFile)
 
-        self.from_bitstore(
-            "OS/MIKADOS",
-            "DDE/SPC-1",
-            #"-30003595", 	# Only one side preserved?
-            #"-30003618", 	# Only one side preserved?
-            #"-30003620", 	# Only one side preserved?
-            #"-30005676", 	# Only one side preserved?
-            #"-30004642", 	# missing sectors in IMD
-        )
 
 if __name__ == "__main__":
     ddhf.main(

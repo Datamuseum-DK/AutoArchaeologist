@@ -1,6 +1,12 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
-DKUUG and EUUG Conference tapes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   DKUUG and EUUG Conference tapes
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.generic import textfiles
@@ -10,11 +16,21 @@ from autoarchaeologist.os.unix import compress
 
 import ddhf
 
-class DkuugEuug(ddhf.DDHF_Excavation):
+class DkuugEuug(ddhf.DDHFExcavation):
 
     '''
     DKUUG and EUUG Conference tapes
     '''
+
+    BITSTORE = (
+        "DKUUG",
+        "DKUUG/EUUG",
+    )
+
+    MEDIA_TYPES = (
+        '½" Magnetic Tape',
+        '¼" cartridge magtape',
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -24,10 +40,6 @@ class DkuugEuug(ddhf.DDHF_Excavation):
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
 
-        self.from_bitstore(
-            "30001252",
-            "30001253",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

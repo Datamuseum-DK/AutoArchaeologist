@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    CR80 Wang WCS floppy disks
    ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -9,7 +15,13 @@ from autoarchaeologist.Wang import wang_text
 
 import ddhf
 
-class Wang(ddhf.DDHF_Excavation):
+class Wang(ddhf.DDHFExcavation):
+
+    ''' CR80 Wang WCS floppy disks '''
+
+    BITSTORE = (
+        "CR/CR80/DOCS",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -17,10 +29,6 @@ class Wang(ddhf.DDHF_Excavation):
         self.add_examiner(wang_wps.WangWps)
         self.add_examiner(wang_text.WangText)
         self.add_examiner(samesame.SameSame)
-
-        self.from_bitstore(
-            "CR/CR80/DOCS",
-        )
 
 if __name__ == "__main__":
     ddhf.main(

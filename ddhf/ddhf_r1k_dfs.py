@@ -1,6 +1,12 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
-Rational R1000/400 DFS Tapes from Datamuseum.dk's BitStore
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Rational R1000/400 DFS Tapes from Datamuseum.dk's BitStore
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 from autoarchaeologist.generic import sccs_id
@@ -36,8 +42,16 @@ class TypeCase(type_case.Ascii):
         super().__init__()
         self.set_slug(0, ' ', '«nul»', self.EOF)
 
-class R1KDFS(ddhf.DDHF_Excavation):
+class R1KDFS(ddhf.DDHFExcavation):
     ''' Rational R1000/400 DFS tapes '''
+
+    BITSTORE = (
+        "30000744",   # precise file sizes
+        "30000407",   # precise file sizes
+        "30000528",   # file sizes rounded up
+        "30000743",   # file sizes rounded up
+        "30000750",   # file sizes rounded up
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -53,15 +67,6 @@ class R1KDFS(ddhf.DDHF_Excavation):
         self.add_examiner(samesame.SameSame)
 
         self.type_case = TypeCase()
-
-        self.from_bitstore(
-            "30000744",   # precise file sizes
-            "30000407",   # precise file sizes
-
-            "30000528",   # file sizes rounded up
-            "30000743",   # file sizes rounded up
-            "30000750",   # file sizes rounded up
-        )
 
 if __name__ == "__main__":
     ddhf.main(
