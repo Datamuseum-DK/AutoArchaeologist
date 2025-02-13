@@ -66,6 +66,7 @@ class Rc3600(ddhf.DDHFExcavation):
 
     BITSTORE = (
         "-30001762",		# Defective
+        "RC/RC3600/COMAL",
         "RC/RC3600/DOMUS",
         "RC/RC3600/SW",
         "RC/RC3600/HW",
