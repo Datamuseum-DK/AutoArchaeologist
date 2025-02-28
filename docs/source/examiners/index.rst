@@ -7,3 +7,5 @@ Examiners
    :caption: Contents
 
    generic/index.rst
+   ibm/index.rst
+   intergraph/index.rst

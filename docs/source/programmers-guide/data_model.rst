@@ -35,7 +35,7 @@ An artifact is a collection of one or more octets.
 
 * Has a single unique sequential ordering of its octets
 * Has a unique identifier (SHA256 of the unique sequential ordering)
-* May be composed of records with may have keys (for instance cylinder/head/sector triplets)
+* May be a concatenation of records
 * May be a top-level artifact (= The files provided as input)
 
 Relationships:
@@ -46,6 +46,20 @@ Relationships:
 * May have interpretations
 * May have child artifacts
 * May have a typecase (otherwise it will inherit one)
+
+Record
+------
+
+A record is a fragment of an artifact.
+
+* Has a key which is either None or a tuple
+* Contains at least one octet
+
+Relationships:
+
+* Keys do not control the order of records in the artifact
+* By convention disk-like artifacts use (cyl, head, sect) keys.
+* By convention tape-like artifacts use (file, block) keys.
 
 Examiner
 --------

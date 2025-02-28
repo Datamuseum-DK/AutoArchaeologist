@@ -1,0 +1,15 @@
+IBM GA21-9182 Floppy labels
+===========================
+
+These labels are named after the IBM document-number where they are documented,
+several versions of the document are available on Bitsavers under /pdf/ibm/floppy.
+
+I dont know how regious IBM was about using these labels on floppy disks,
+but so far I have seen them on floppies from IBM/3X and DisplayWriter.
+
+This examiner gathers single or multi-floppy filesets, and creates artifacts
+for the files thereon.
+
+Beware that only very basic file/record relationships are implemented yet.
+
+Bad-sector handling is not implemented either.
