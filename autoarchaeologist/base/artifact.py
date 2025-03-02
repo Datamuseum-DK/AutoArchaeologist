@@ -222,6 +222,7 @@ class ArtifactBase(result_page.ResultPage):
 
     def add_name(self, name):
         ''' Add a name '''
+        assert len(name) > 0
         self.names.add(name)
 
     def has_name(self, name):
@@ -236,6 +237,7 @@ class ArtifactBase(result_page.ResultPage):
 
     def add_type(self, typ):
         ''' Add type designation (also as note) '''
+        assert len(typ) > 0
         self.types.add(typ)
 
     def has_type(self, note):
@@ -244,15 +246,18 @@ class ArtifactBase(result_page.ResultPage):
 
     def add_description(self, desc):
         ''' Add a description '''
+        assert len(desc) > 0
         self.descriptions.append(desc)
 
-    def add_comment(self, desc):
+    def add_comment(self, comment):
         ''' Add a comment '''
-        self.comments.append(desc)
+        assert len(comment) > 0
+        self.comments.append(comment)
         self.notes.add("Has Comment")
 
     def add_note(self, note):
         ''' Add a note '''
+        assert len(note) > 0
         self.notes.add(note)
 
     def has_note(self, note):
