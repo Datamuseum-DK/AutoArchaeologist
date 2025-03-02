@@ -204,9 +204,12 @@ class Index():
     def __len__(self):
         return sum(len(x) for x in self.entries.values())
 
-    def add_entry(self, key, this):
+    def add_entry(self, key, this, what=""):
         ''' Add an entry to the index '''
 
+        if len(key) == 0:
+            print(this, "empty index key (%s)" % what)
+            return
         i = self.entries.get(key)
         if i is None:
             i = Entry(key)
@@ -217,11 +220,11 @@ class Index():
         ''' Collect what goes in the index '''
 
         for i in this.names:
-            self.add_entry(i, this)
+            self.add_entry(i, this, "name")
         for i in this.iter_types():
-            self.add_entry(i, this)
+            self.add_entry(i, this, "type")
         for _that, note in this.iter_notes():
-            self.add_entry(note, this)
+            self.add_entry(note, this, "note")
         for i in this.children:
             if i not in self.seen:
                 self.collect(i)
