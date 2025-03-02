@@ -7,7 +7,6 @@
 '''
 
 from ..base import artifact
-from ..base import type_case
 from ..base import octetview as ov
 from . import plain_file
 
@@ -68,3 +67,4 @@ class SimhTapContainer(artifact.ArtifactFragmented):
                 break
             ptr = j.hi
         self.completed()
+        self.add_type('SimhTapContainer')
