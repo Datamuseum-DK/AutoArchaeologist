@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 # pylint: disable=E1101
 '''
    'a2' type 'This is a Link Pack.' segments

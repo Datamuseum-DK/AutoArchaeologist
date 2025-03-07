@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
 '''
    This is based on reverse-engineering a single
@@ -217,7 +221,7 @@ class EHL1(ov.Struct):
 
         if True:
             for n, fb in enumerate(self.iter_free()):
-                print(n, hex(n<<8), fb)
+                # print(n, hex(n<<8), fb)
                 if fb:
                     Unallocated(self.tree, n<<8, width=0x100).insert()
 

@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    A "TypeCase" is a deliberately different word for what is often
    called a "Code Page" to be able to handle character sets which

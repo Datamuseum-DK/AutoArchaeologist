@@ -1,6 +1,10 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
 from ...generic import hexdump
-
 
 class R1K_Ucode_File():
 

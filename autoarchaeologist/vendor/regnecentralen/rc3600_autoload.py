@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
 '''
    RC7000/RC3600 AUTOLOADER file
