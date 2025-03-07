@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Precursor to Veritas LVM/FS from Tolerant Systems Inc
    as implemented on Regnecentralen RC9000
