@@ -84,11 +84,18 @@ class NameSpace(namespace.NameSpace):
 
     def ns_render(self):
         file = self.ns_priv
-        return [
-            file.hdrs["HDR2"].rec_fmt.txt,
-            file.hdrs["HDR2"].block_len.txt,
-            file.tails["EOF1"].block_count.txt,
-        ] + super().ns_render()
+        l = []
+        if "HDR2" in file.hdrs:
+            l.append(file.hdrs["HDR2"].rec_fmt.txt)
+            l.append(file.hdrs["HDR2"].block_len.txt)
+        else:
+            l.append("-")
+            l.append("-")
+        if "EOF1" in file.tails:
+            l.append(file.tails["EOF1"].block_count.txt)
+        else:
+            l.append("-")
+        return l + super().ns_render()
 
 class TapeFile():
     ''' One ANSI labeled tape file '''
@@ -119,19 +126,22 @@ class TapeFile():
 
     def segment(self):
         ''' Segment this file '''
-        if self.hdrs["HDR2"].rec_fmt.txt == "S":
+        if "HDR2" not in self.hdrs:
+            that = self.undefined()
+        elif self.hdrs["HDR2"].rec_fmt.txt == "S":
             that = self.segmented()
         elif self.hdrs["HDR2"].rec_fmt.txt == "U":
             that = self.undefined()
         else:
             print(self.tree.this, "Unknown ANSI record format", self.hdrs["HDR2"].rec_fmt.txt)
             return
-        self.namespace = NameSpace(
-            name = self.hdrs["HDR1"].file_id.txt.rstrip(),
-            this = that,
-            parent = self.tree.namespace,
-            priv = self,
-        )
+        if "HDR1" in self.hdrs:
+            self.namespace = NameSpace(
+                name = self.hdrs["HDR1"].file_id.txt.rstrip(),
+                this = that,
+                parent = self.tree.namespace,
+                priv = self,
+            )
 
     def undefined(self):
         ''' A tape with undefined blocking '''
@@ -230,4 +240,4 @@ class AnsiTapeLabels(ov.OctetView):
         with open(tfn.filename, "w", encoding="utf-8") as file:
             for tapefile in self.files:
                 tapefile.interpretation(file)
-        # self.add_interpretation()
+        self.add_interpretation()
