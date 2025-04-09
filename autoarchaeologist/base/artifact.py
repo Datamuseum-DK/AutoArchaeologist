@@ -471,13 +471,18 @@ class ArtifactBase(result_page.ResultPage):
                     link = "\u27e6this\u27e7"
                 else:
                     link = self.top.html_link_to(self)
+
+                had_ns = False
                 nsps = self.namespaces.get(parent)
-                if nsps:
+                for key, nsps in self.namespaces.items():
+                    if key.ns_root != parent:
+                        continue
                     # Not quite: See CBM900 ⟦e681055fa⟧
                     for nsp in sorted(nsps):
-                        file.write(txt + "└─ " + link)
+                        file.write(txt + "└─" + link)
                         file.write(" »" + html.escape(nsp.ns_path()) + "« " + desc + '\n')
-                else:
+                        had_ns = True
+                if not had_ns:
                     file.write(txt + "└─" + link + " " + desc + '\n')
         return prefix + "    "
 
