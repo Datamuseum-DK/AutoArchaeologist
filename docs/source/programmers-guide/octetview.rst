@@ -77,15 +77,6 @@ The name of the next five arguments end in an underscore, so
 they each define a field in the structure, by specifying which
 class to instantiate for that field.
 
-These classes should be subclassed from ``ov.Octets`` which
-``ov.Struct`` also is, so yes:  Fields can be structs too.
-
-OctetView comes with a lot of handy subclasses already,
-such as ``ov.Le16`` which is a little-endian 16 bit number.
-
-``ov.Array`` is a factory which will return a class which
-implements an array of 9 little-endian 32 bit numbers.
-
 If we run the snippet above we get an interpretation which looks
 like this:
 
@@ -111,11 +102,11 @@ like this:
     0x030…0ee   ab f1 2f […] 00 a9 fb   ┆  /[…]   ┆
     […]
 
-The rest of the artifact is hexdumped, because we have not
-created any objects to cover that part of it.
-
 The ``pad__=2`` field is missing because field arguments
 which end in two underscores are not rendered.
+
+The rest of the artifact is default-hexdumped, because we have not
+created any objects which cover that part of it.
 
 If we had not specified ``vertical=True`` to ``ov.Array``
 the members of the array would all be on a single line,
@@ -127,7 +118,26 @@ reverse engineered makes it possible to ``grep -r`` all instances
 of a struct in the entire excavation, to try to glean what this or
 that field can contain and might mean.
 
-We can also handle variable structures:
+Naked Structs
+-------------
+
+In normal structs the field attributes (ie: ``foo.field``)
+are the field objects.
+
+In practice most fields are plain numbers, and it is a bit of bother
+to write ``foo.field.val`` to get their numerical value.
+
+In "Naked structs", made so with the optional argument ``naked=True``,
+the field attribute will be ``field.val`` if the added field has
+that attribute, so that the numeric value is available with ``foo.field``.
+
+Note that this snapshots ``struct.field.val`` so later modifications to it will
+not be reflected in ``struct.field``.
+
+Variable Structs
+----------------
+
+Variable structures are created like this:
 
 .. code-block:: none
 
@@ -152,10 +162,38 @@ We can also handle variable structures:
                 exit(2)
             self.done()
 
+Field classes
+-------------
+
+Field classes should be subclassed from ``ov.Octets`` which
+``ov.Struct`` also is, so yes:  Structs can be nested.
+
+OctetView comes with a lot of handy subclasses already,
+and most of them do what you expect:
+
+*   Octets - some number of octets
+*   Hidden - rendered as "Hidden", no matter how small or big
+*   Opaque - rendered as "class-name[0x%x]"
+*   HexOctets - rendered as hex string without spaces
+*   Dump - octets but rendered with hex+text
+*   This - an artifact
+*   Text - strings
+*   Array - Arrays of some field class
+*   Octet - a single octet value
+*   Le16, Le24, Le32, Le64 - Little endian integers
+*   Be16, Be24, Be32, Be64 - Big endian integers
+*   L2301, L1032 - Confused endian double word integers
+
+``ov.Array`` is a factory which will return a class which
+in the example above is used for an array of 9 little-endian 32 bit
+numbers.
+All the elements of an array has the same class, but they need not
+have the same size.
+
 ``ov.Text`` is a factory which returns a class for a string of
 a given length.
 
-These classes have a ``render()`` method which is responsible for
+Field classes must have a ``render()`` method which is responsible for
 how they will appear in the interpretation, so for instance a RC4000
 timestamp can be defined like this:
 
@@ -174,10 +212,70 @@ timestamp can be defined like this:
                     time.gmtime(ut - t0)
                 )
 
-And finally:
+Syntactic Sugar
+---------------
 
-If bytes are too big the the job, ``OctetView`` has a sibling called
+There are two levels of syntactic sugar available on top of ``ov.Struct``.
+
+The first level of syntactic sugar this:
+
+.. code-block:: none
+
+    class CDef():
+        pointer = ov.Le32
+        char = ov.Octet
+        short = ov.Le16
+        int = ov.Le32
+        long = ov.Le64
+        uid_t = ov.Le16
+        gid_t = ov.Le16
+        daddr_t = ov.Le32
+    
+    class Inode(ov.Struct):
+        TYPES = CDef()
+        FIELDS = [
+            ( "di_mode", "short"),
+            ( "di_nlink", "short"),
+            ( "di_uid", "uid_t"),
+            ( "di_gid", "gid_t"),
+            […]
+            ( "di_dbx", "daddr_t", 12),
+            […]
+        ]
+
+As the example indicates, this allows common UNIX structures
+to be "fleshed out" with platform specific variable types.
+
+The type classes should be able to impose any alignment or
+padding they require, but this has not been tested in practice
+yet.
+
+The advantage of using this form, is that subclasses can easily
+edit the field list, for instance to insert or delete fields.
+
+The second level of synctactic sugar makes that harder, but
+it is really convenient:
+
+.. code-block:: none
+
+    class Inode(ov.Struct):
+        TYPES = CDef()
+        FIELDS = ov.cstruct_to_fields('''
+            short di_mode;
+            short di_nlink;
+            uid_t di_uid;
+            gid_t di_gid;
+            […]
+            daddr_t di_dbx[12]
+            […]
+        '''
+
+(Pointer syntax and multidimensional arrays are not yet supported.)
+
+When octets are too big
+-----------------------
+
+If octets are too big the the job, ``OctetView`` has a sibling called
 ``BitView``, which can do the exact same things, but with 8 times
-higher resolution.  Unfortunately, it is much more than 8 times
-slower - but when you need bits, you need bits.
+higher resolution, and much more than 8 times slower.
 
