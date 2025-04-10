@@ -9,8 +9,9 @@
    ---------------------------------------
 '''
 
-from ..base import bintree
-from ..base import octetview as ov
+from . import bintree
+from . import datastruct
+from . import octetview as ov
 
 class_cache = {}
 
@@ -119,7 +120,7 @@ class Number(Bits):
             fmt = "0x%%0%dx" % ((len(self) + 3) // 4)
             yield fmt % self.val
 
-class Struct(bintree.Struct, Bits):
+class Struct(datastruct.Struct, Bits):
 
     def __init__(self, *args, **kwargs):
         bintree.Struct.__init__(self, *args, **kwargs)
@@ -133,7 +134,7 @@ class Struct(bintree.Struct, Bits):
         return Bits(self.tree, offset, width=width)
 
 def Array(count, what, **kwargs):
-    return bintree.Array(Struct, count, what, **kwargs)
+    return datastruct.Array(Struct, count, what, **kwargs)
 
 def Text(width, glyph_width=8, rstrip = False):
 

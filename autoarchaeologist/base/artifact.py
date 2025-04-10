@@ -81,7 +81,7 @@ class ArtifactBase(result_page.ResultPage):
         self.parents = set()
         self.children = []
 
-        self.notes = set()
+        self.notes = {}
         self.types = set()
         self.descriptions = []
         self.comments = []
@@ -257,16 +257,16 @@ class ArtifactBase(result_page.ResultPage):
         ''' Add a comment '''
         assert len(comment) > 0
         self.comments.append(comment)
-        self.notes.add("Has Comment")
+        self.add_note("Has Comment")
 
-    def add_note(self, note):
+    def add_note(self, note, info=True):
         ''' Add a note '''
         assert len(note) > 0
-        self.notes.add(note)
+        self.notes[note] = info
 
     def has_note(self, note):
         ''' Check if not already exists '''
-        return note in self.notes
+        return self.notes.get(note, None)
 
     def iter_all_children(self):
         ''' Recursively iterate all children once '''
@@ -292,7 +292,7 @@ class ArtifactBase(result_page.ResultPage):
 
     def iter_notes(self, recursive=False):
         ''' Return all notes that apply to this artifact '''
-        yield from [(self, i) for i in self.notes]
+        yield from [(self, i, j) for i,j in self.notes.items()]
         if recursive:
             for child in self.children:
                 assert child != self, (child, self)
@@ -390,7 +390,7 @@ class ArtifactBase(result_page.ResultPage):
                     txt.append(i)
                     j.add(i)
         if notes:
-            txt += self.top.dotdotdot(sorted({y for _x, y in self.iter_notes(True)}))
+            txt += self.top.dotdotdot(sorted({y for _x, y, _z in self.iter_notes(True)}))
         if not link or not ident or not types or not descriptions:
             return nam + ", ".join(txt)
         return nam + ", ".join(txt)
@@ -407,7 +407,7 @@ class ArtifactBase(result_page.ResultPage):
             file.write(", ".join(sorted(self.types)) + "\n")
         if self.notes:
             file.write("    Notes: ")
-            file.write(", ".join(sorted({y for x, y in self.iter_notes(True)}))+ "\n")
+            file.write(", ".join(sorted({y for _x, y, _z in self.iter_notes(True)}))+ "\n")
         if self.names:
             file.write("    Names: ")
             file.write(", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
@@ -484,7 +484,6 @@ class ArtifactBase(result_page.ResultPage):
                     for path in sorted(paths):
                         file.write(txt + "└─" + link)
                         file.write(" »" + html.escape(path) + "« " + desc + '\n')
-
         return prefix + "    "
 
     def html_description(self):

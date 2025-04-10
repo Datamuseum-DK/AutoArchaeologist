@@ -84,7 +84,7 @@ class Decorator():
             fo.write("<td></td>")
             fo.write("<td></td>")
             fo.write('<td style="font-size: 70%;">')
-            fo.write(", ".join(self.dotdotdot(sorted({y for x, y in this.iter_notes(True)}))))
+            fo.write(", ".join(self.dotdotdot(sorted({y for _x, y, _z in this.iter_notes(True)}))))
             fo.write("</td>\n")
             fo.write("</tr>\n")
         fo.write("</table>\n")

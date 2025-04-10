@@ -134,14 +134,17 @@ class NameSpace():
         for child in sorted(self.ns_children):
             yield from child.ns_recurse(level+1)
 
-    def ns_html_plain(self, file, _this):
-        ''' Render recursively '''
+    def ns_html_plain(self, file, this):
+        ''' Render recursively with H3 header '''
         if not self.ns_children:
             return
 
         if self.KIND:
             file.write("<H3>" + self.KIND + "</H3>\n")
+        self.ns_html_plain_noheader(file, this)
 
+    def ns_html_plain_noheader(self, file, _this):
+        ''' Render recursively - just the substance '''
         file.write("<div>")
 
         tbl = [x.ns_render() for y, x in self.ns_recurse() if y > 0]

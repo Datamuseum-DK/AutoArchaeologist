@@ -227,7 +227,7 @@ class Index():
             self.add_entry(i, this, "name")
         for i in this.iter_types():
             self.add_entry(i, this, "type")
-        for _that, note in this.iter_notes():
+        for _that, note, val in this.iter_notes():
             self.add_entry(note, this, "note")
         for i in this.children:
             if i not in self.seen:

@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
 '''
    Toolkit for operating on artifacts on byte granularity
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-import html
 
 from itertools import zip_longest
 
-from ..base import artifact
 from . import bintree
+from . import datastruct
 
 class Octets(bintree.BinTreeLeaf):
     ''' Base class, just some random octets '''
@@ -23,7 +26,7 @@ class Octets(bintree.BinTreeLeaf):
         self.tree = tree
         self.this = tree.this
         self.maxlines = maxlines
-        super().__init__(lo, hi, name=name)
+        super().__init__(lo, hi)
         if width is None:
             width = len(self)
         self.width = width
@@ -71,10 +74,10 @@ class Octets(bintree.BinTreeLeaf):
     def render(self):
         ''' Render hexdumped + text-column '''
         hd = self.this.hexdump(lo=self.lo, hi=self.hi, width=self.width)
-        if self.maxlines is None:       
+        if self.maxlines is None:
             yield from hd
             return
-        for i,j in zip(range(self.maxlines), hd):
+        for _i,j in zip(range(self.maxlines), hd):
             yield j
 
 class Dump(Octets):
@@ -89,7 +92,7 @@ class Dump(Octets):
         for i in self.this.hexdump(self.lo, self.hi):
             yield "  " + i
         yield "}"
-         
+
 class This(Octets):
     ''' A new artifact '''
 
@@ -301,14 +304,58 @@ class L1032(Octets):
     def render(self):
         yield "0x%08x" % self.val
 
-class Struct(bintree.Struct, Octets):
+def cstruct_to_fields(text):
+    ''' Create FIELDS from C struct(-ish) text '''
+    retval = []
+    for line in text.split("\n"):
+        line = line.split('#', 1)[0]
+        line = line.replace(';', '')
+        fields = line.split(maxsplit=1)
+        if not fields:
+            continue
+        assert len(fields) == 2
+        ftyp, fname = fields
+        if '[' not in fname:
+            retval.append((fname, ftyp))
+            continue
+        assert ']' == fname[-1]
+        f2 = fname[:-1].split('[')
+        assert len(f2) == 2
+        fname, dim = f2
+        fname = fname.rstrip()
+        dim = int(dim)
+        retval.append((fname, ftyp, dim))
+    return retval
+
+class Struct(datastruct.Struct, Octets):
+
+    TYPES = None
+    FIELDS = None
 
     def __init__(self, *args, **kwargs):
-        bintree.Struct.__init__(self, *args, **kwargs)
+        if self.FIELDS is None:
+            datastruct.Struct.__init__(self, *args, **kwargs)
+        else:
+            datastruct.Struct.__init__(self, *args, more=True, **kwargs)
+            assert self.TYPES is not None
+            for i in self.FIELDS:
+                if len(i) == 3:
+                    name, cls, dim = i
+                    if isinstance(cls, str):
+                        cls = getattr(self.TYPES, cls)
+                    self.add_field(name, Array(dim, cls))
+                elif len(i) == 2:
+                    name, cls = i
+                    if isinstance(cls, str):
+                        cls = getattr(self.TYPES, cls)
+                    self.add_field(name, cls)
+                else:
+                    assert False
+            self.done()
 
     def base_init(self, **kwargs):
         Octets.__init__(self, self.tree, self.lo, hi=self.hi, **kwargs)
-            
+
     def number_field(self, offset, width):
         return HexOctets(self.tree, offset, width=width)
 
@@ -316,7 +363,7 @@ class Struct(bintree.Struct, Octets):
         return self.add_field(name, what)
 
 def Array(count, what, **kwargs):
-    return bintree.Array(Struct, count, what, **kwargs)
+    return datastruct.Array(Struct, count, what, **kwargs)
 
 class OctetView(bintree.BinTree):
     ''' ... '''
@@ -330,12 +377,13 @@ class OctetView(bintree.BinTree):
             lo = 0,
             hi = hi,
             leaf = Octets,
-            limit = 1<<16,
         )
 
     def render(self, **kwargs):
         ''' Rendering iterator with padding '''
-        self.separators = [(x.lo, " " + str(x.key)) for x in self.this.iter_rec() if x.key is not None]
+        self.separators = [
+            (x.lo, " " + str(x.key)) for x in self.this.iter_rec() if x.key is not None
+        ]
         if self.separators:
             self.separators_width = max(len(y) for x, y in self.separators)
         else:
