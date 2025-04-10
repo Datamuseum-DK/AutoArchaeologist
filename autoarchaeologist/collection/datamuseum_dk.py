@@ -22,6 +22,8 @@ from ..base import excavation
 from ..container import simh_tap_file
 from ..container import imd_file
 
+PRIVATE_ACCESS = False
+
 SERVERNAME = os.environ.get("AUTOARCHAEOLOGIST_BITSTORE_HOSTNAME")
 if SERVERNAME is None:
     SERVERNAME = "datamuseum.dk"
@@ -250,11 +252,20 @@ class FromBitStore():
         lines = metalist.split("\n")
         while lines:
             line1 = lines.pop(0)
-            if line1[:10] not in ('|[[Bits:30', '|([[Bits:3'):
+            if line1[:9] == '|[[Bits:3':
+                pass
+            elif PRIVATE_ACCESS and line1[:10] == '|([[Bits:3':
+                pass
+            else:
                 continue
+
             line2 = lines.pop(0)
-            line2 = line2[2:].split()[0]
-            ident = line2.split("/")[-1]
+            if '<s>' in line2:
+                continue
+            if not PRIVATE_ACCESS and '(' in line2:
+                continue
+
+            ident = line1.split("Bits:")[1][:8]
             if ident in self.blacklist:
                 continue
             _line3 = lines.pop(0)	# Excavation
