@@ -37,8 +37,7 @@ class Decorator():
             more = this.html_page(fot)
             if more:
                 fmt = self.top.filename_for(this, suf="_more.html")
-                fot.write("<H3>More…</H3>\n")
-                fot.write('<A href="%s">Full View</A>\n' % fmt.link)
+                fot.write('<H3><A href="%s">Full View</A></H3>\n' % fmt.link)
             self.html_suffix(fot, this)
         if not fmt:
             return
@@ -46,8 +45,7 @@ class Decorator():
             self.html_prefix(fot, this)
             self.html_artifact_head(fot, this)
             this.html_page(fot, domore=True)
-            fot.write("<H3>Less…</H3>\n")
-            fot.write('<A href="%s">Reduced view</A>\n' % fnt.link)
+            fot.write('<H3><A href="%s">Reduced view</A></H3>\n' % fnt.link)
             self.html_suffix(fot, this)
 
     def produce_front_page(self):
