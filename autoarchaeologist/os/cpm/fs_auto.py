@@ -104,7 +104,7 @@ class ProbeDirSec(ov.Struct):
             elif not de.looks_sane():
                 self.credible = -1
                 return
-            else:
+            elif max(de.al) > 0:
                 self.credible += 1
         if self.attribs == 0:
             return
@@ -136,9 +136,6 @@ class ProbeCpmFileSystem(ov.OctetView):
             # We can only do this if we have CHS geometry
             return
 
-        # self.dsk = Disk(this)
-        # print(this, self.dsk)
-
         super().__init__(this)
 
         self.cand_tracks = {}
@@ -154,8 +151,7 @@ class ProbeCpmFileSystem(ov.OctetView):
         tfn = this.tmpfile_for()
         with open(tfn.filename, "w", encoding="utf8") as self.log:
 
-            # self.log.write("Disk geometry " + str(self.dsk) + "\n")
-
+            self.log.write("Geometry: " + str([self.this._key_min, self.this._key_max]) + "\n")
             self.report_dir_tracks()
 
             self.bnw = self.block_no_width()
@@ -203,6 +199,8 @@ class ProbeCpmFileSystem(ov.OctetView):
 
         for fk, dl in files.items():
             el = list(sorted((x.xh << 5) | x.xl for x in dl))
+            while el and el[-1] == 0:
+               el.pop(-1)
             if is_cont(el):
                 continue
             self.extent_mask = 1
@@ -471,7 +469,7 @@ class ProbeCpmFileSystem(ov.OctetView):
         lo_sect = min(sec_nos)
         hi_sect = max(sec_nos)
 
-        for i in range(1, hi_sect // 2):  # Nyquist rulez.
+        for i in range(1, hi_sect // 2):  # Nyquist rulez ?
             ileave = list(self.interleave(i, lo_sect, hi_sect))
             yield ileave, "normal-%d" % i
 

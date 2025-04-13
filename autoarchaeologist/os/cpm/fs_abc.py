@@ -198,7 +198,7 @@ class CpmFile():
                 name = self.dirents[0].name,
                 parent = self.tree.name_space,
                 this = y,
-                priv = (self.dirents[0].status, self.dirents[0].name, sum(len(x) for x in self.frags))
+                priv = (self.dirents[0].status, self.dirents[-1].rc, sum(len(x) for x in self.frags))
             )
 
 class CpmFileSystem(ov.OctetView):
@@ -253,6 +253,7 @@ class CpmFileSystem(ov.OctetView):
             self.name = self.__class__.__name__
 
         self.build_signature()
+        # print(this, self.signature)
 
         # The directory starts with block#0 but may not be an
         # integral number of blocks long.
@@ -380,6 +381,9 @@ class CpmFileSystem(ov.OctetView):
         n = 0
         for bno in range(self.dir_blocks):
             for sect in self.getblock(bno):
+                if sect is None:
+                    self.debits += 1
+                    continue
                 for off in range(0, self.SECTOR_SIZE, 0x20):
                     yield sect.lo + off
                     n += 1
@@ -390,7 +394,9 @@ class CpmFileSystem(ov.OctetView):
         ''' Namespace + filesystem metrics '''
         file.write("<H3>" + self.name + "</H3>\n")
         file.write("<pre>\n")
-        file.write("Signature          " + self.signature + "\n")
+        file.write("Media:             ")
+        file.write(str([self.this._key_min, self.this._key_max]) + "\n")
+        file.write("Signature:         " + self.signature + "\n")
         file.write("Confidence score:  +" + str(self.credits) + "/-" + str(self.debits) + "\n")
         file.write("Sector size:       " + str(self.SECTOR_SIZE) + "\n")
         file.write("Block size:        " + str(self.BLOCK_SIZE) + "\n")
