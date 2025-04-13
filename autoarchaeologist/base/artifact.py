@@ -101,6 +101,9 @@ class ArtifactBase(result_page.ResultPage):
         self.by_class = {} # Experimental extension point
         self._keys = {}
         self._reclen = 0
+        self._key_min = []
+        self._key_max = []
+        self._key_len = 0
 
         self.metrics = None # Used only for toplevel artifacts
 
@@ -179,6 +182,15 @@ class ArtifactBase(result_page.ResultPage):
         ''' Define a record '''
         assert isinstance(rec, Record)
         assert rec.key not in self._keys
+        if len(self._keys) == 0:
+            self._key_len = len(rec.key)
+            self._key_min = list(rec.key)
+            self._key_max = list(rec.key)
+        else:
+            assert self._key_len == len(rec.key)
+            for i in range(self._key_len):
+                self._key_min[i] = min(self._key_min[i], rec.key[i])
+                self._key_max[i] = max(self._key_min[i], rec.key[i])
         self._keys[rec.key] = rec
         self._reclen += len(rec)
         rec.artifact = self
@@ -677,6 +689,7 @@ class ArtifactFragmented(ArtifactBase):
 
     def completed(self):
         ''' Build the tree and digest '''
+        assert self._len > 0
         self._tree = bintree.BinTree(0, self._len)
         i = hashlib.sha256()
         for leaf in self._frags:
