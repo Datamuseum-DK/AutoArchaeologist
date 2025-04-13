@@ -100,9 +100,9 @@ class ArtifactBase(result_page.ResultPage):
 
         self.by_class = {} # Experimental extension point
         self._keys = {}
-        self._reclen = 0
-        self._key_min = []
-        self._key_max = []
+        self._reclens = {}
+        self._key_min = list()
+        self._key_max = list()
         self._key_len = 0
 
         self.metrics = None # Used only for toplevel artifacts
@@ -192,7 +192,7 @@ class ArtifactBase(result_page.ResultPage):
                 self._key_min[i] = min(self._key_min[i], rec.key[i])
                 self._key_max[i] = max(self._key_min[i], rec.key[i])
         self._keys[rec.key] = rec
-        self._reclen += len(rec)
+        self._reclens[len(rec)] = self._reclens.get(len(rec), 0) + 1
         rec.artifact = self
         return rec
 
@@ -618,7 +618,6 @@ class ArtifactFragmented(ArtifactBase):
         self._keys = {}
         self._tree = None
         self._len = 0
-        self._reclen = 0
         if fragments:
             for i in fragments:
                 assert len(i) > 0
