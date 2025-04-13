@@ -162,20 +162,25 @@ class ProbeCpmFileSystem(ov.OctetView):
 
             top_credits = None
             top_debits = None
+            top = None
             for cand in sorted(self.candidates, reverse=True):
                 self.log.write("+%4d -%4d " % (cand.credits, cand.debits) + str(cand) + "\n")
+                score = cand.credits - cand.debits
+                if top is not None and top > score:
+                    break
                 if top_credits is not None and top_credits > cand.credits:
                     break
                 if top_debits is not None and top_debits < cand.debits:
                     break
                 cand.commit()
                 if top_credits is None:
+                    top = score
                     top_credits = cand.credits
                     top_debits = cand.debits
 
         with self.this.add_utf8_interpretation(
             "CP/M filesystem probe",
-            more=True,
+            more=False,
         ) as file:
             for i in open(tfn.filename):
                 file.write(i)
@@ -200,7 +205,7 @@ class ProbeCpmFileSystem(ov.OctetView):
         for fk, dl in files.items():
             el = list(sorted((x.xh << 5) | x.xl for x in dl))
             while el and el[-1] == 0:
-               el.pop(-1)
+                el.pop(-1)
             if is_cont(el):
                 continue
             self.extent_mask = 1

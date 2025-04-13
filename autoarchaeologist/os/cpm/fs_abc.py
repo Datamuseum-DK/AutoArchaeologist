@@ -99,14 +99,14 @@ class CpmNameSpace(namespace.NameSpace):
     ''' ... '''
 
     def ns_render(self):
-        status, name, frags = self.ns_priv
-        l = [status, name, frags]
+        status, bc, frags = self.ns_priv
+        l = [status, bc, frags]
         return l + super().ns_render()
 
     TABLE = [
         ["r", "user"],
-        ["r", "rc"],
         ["r", "bc"],
+        ["r", "length"],
         ["l", "name"],
         ["l", "artifact"],
     ]
@@ -120,6 +120,7 @@ class CpmFile():
         self.file_id = dirent.file_id
         self.frags = []
         self.sames = []
+        self.eofs = []
         self.unreads = 0
 
     def add_dirent(self, dirent):
@@ -134,6 +135,7 @@ class CpmFile():
         for de in self.dirents:
             ns = 0
             for bno in de.blocks(self.tree.BLOCK_NO_WIDTH):
+                eofs = 0
                 for sec in self.tree.getblock(bno):
                     ds = min(self.tree.SECTOR_SIZE, (de.segments - ns) << 7)
 
@@ -150,10 +152,14 @@ class CpmFile():
                             )
                             DataBlock(self.tree, sec.lo, ds, de).insert()
                             self.frags.append(sec.frag[:ds])
+                            for i in sec.frag[:ds]:
+                                if i == 0x1a:
+                                    eofs += 1
 
                     ns += ds >> 7
                     if ns == de.segments:
                         break
+                self.eofs.append(eofs)
                 if ns == de.segments:
                     break
         # 0xe5 filled sectors at EOF are OK  (Only A BLock -1 sector ?)
@@ -183,6 +189,9 @@ class CpmFile():
         if self.sames.count((0x0, 0x0)) == len(self.sames):
             self.tree.debits += 1
 
+        # Does EOF only appears in the last block,
+        if len(self.eofs) > 1 and self.eofs[-1] > 0 and max(self.eofs[:-1]) == 0:
+            self.tree.credits += 1
 
     def commit(self):
         ''' ... '''
@@ -198,7 +207,7 @@ class CpmFile():
                 name = self.dirents[0].name,
                 parent = self.tree.name_space,
                 this = y,
-                priv = (self.dirents[0].status, self.dirents[-1].rc, sum(len(x) for x in self.frags))
+                priv = (self.dirents[0].status, self.dirents[-1].bc, sum(len(x) for x in self.frags))
             )
 
 class CpmFileSystem(ov.OctetView):
@@ -395,7 +404,10 @@ class CpmFileSystem(ov.OctetView):
         file.write("<H3>" + self.name + "</H3>\n")
         file.write("<pre>\n")
         file.write("Media:             ")
-        file.write(str([self.this._key_min, self.this._key_max]) + "\n")
+        file.write(str(self.this._key_min))
+        file.write(" … " + str(self.this._key_max))
+        file.write(" " + str(self.this._reclens))
+        file.write("\n")
         file.write("Signature:         " + self.signature + "\n")
         file.write("Confidence score:  +" + str(self.credits) + "/-" + str(self.debits) + "\n")
         file.write("Sector size:       " + str(self.SECTOR_SIZE) + "\n")

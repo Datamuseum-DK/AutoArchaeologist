@@ -29,7 +29,7 @@ class CpmFSButler1a(fs_abc.CpmFileSystem):
     BLOCK_NO_WIDTH = 16
 
     def __init__(self, this, *args, **kwargs):
-        if this._key_max[0] < 100:
+        if this._key_max[0] < 140:
             raise fs_abc.Nonsense
         super().__init__(this, *args, **kwargs)
 
@@ -44,7 +44,7 @@ class CpmFSButler1b(fs_abc.CpmFileSystem):
     BLOCK_NO_WIDTH = 16
 
     def __init__(self, this, *args, **kwargs):
-        if this._key_max[0] < 100:
+        if this._key_max[0] < 140:
             raise fs_abc.Nonsense
         super().__init__(this, *args, **kwargs)
 
