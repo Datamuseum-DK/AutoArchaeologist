@@ -12,15 +12,23 @@
 from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
-from autoarchaeologist.vendor.digital_research import cpm
+from autoarchaeologist.os.cpm import fs_auto
 
-cpm.cpm_filename_typecase.set_slug(0x5f, '_', '_')
-cpm.cpm_filename_typecase.set_slug(0x3b, ';', ';')
+class TextFile(textfiles.TextFile):
+    VERBOSE = False
+
+class CpmDS2089(type_case.DS2089):
+    def __init__(self):
+        super().__init__()
+        self.set_slug(0x00, " ", "«nul»", self.IGNORE)
+        self.set_slug(0x0d, " ", "")
+        self.set_slug(0x1a, " ", "«eof»", self.EOF)
 
 def std_cpm_excavation(exc):
     ''' Standard CP/M excavation '''
 
-    exc.type_case = type_case.DS2089Cpm()
-    exc.add_examiner(cpm.CpmFileSystem)
-    exc.add_examiner(textfiles.TextFile)
+    #exc.type_case = type_case.DS2089()
+    exc.type_case = CpmDS2089()
+    exc.add_examiner(fs_auto.ProbeCpmFileSystem)
+    exc.add_examiner(TextFile)
     exc.add_examiner(samesame.SameSame)
