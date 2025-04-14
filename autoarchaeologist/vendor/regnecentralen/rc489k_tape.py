@@ -61,6 +61,6 @@ class Rc489kTape():
 
 examiners = (
     Rc489kTape,
-    #rc489k_tape_dump.Rc489kDumpTapeFile,
+    rc489k_tape_dump.Rc489kDumpTapeFile,
     rc489k_tape_save.Rc489kSaveTapeFile,
 )
