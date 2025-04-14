@@ -187,7 +187,9 @@ class ArtifactBase(result_page.ResultPage):
             self._key_min = list(rec.key)
             self._key_max = list(rec.key)
         else:
-            assert self._key_len == len(rec.key)
+            if self._key_len != len(rec.key):
+                print(self, "Records have different key lengths:", self._key_len, len(rec.key), rec.key)
+                assert self._key_len == len(rec.key)
             for i in range(self._key_len):
                 self._key_min[i] = min(self._key_min[i], rec.key[i])
                 self._key_max[i] = max(self._key_min[i], rec.key[i])
@@ -336,12 +338,12 @@ class ArtifactBase(result_page.ResultPage):
             temp=True
         )
 
-    def create(self, bits=None, start=None, stop=None, records=None):
+    def create(self, bits=None, start=None, stop=None, records=None, **kwargs):
         ''' Return a new or old artifact for some bits '''
         that = None
         if records:
             assert bits is None
-            that = ArtifactFragmented(records)
+            that = ArtifactFragmented(records, **kwargs)
             digest = that.digest
         elif isinstance(bits, memoryview):
             digest = hashlib.sha256(bits.tobytes()).hexdigest()
@@ -612,7 +614,7 @@ class ArtifactFragmented(ArtifactBase):
        Artifact consisting of fragments of other artifact(s)
     '''
 
-    def __init__(self, fragments=None):
+    def __init__(self, fragments=None, define_records=True):
         super().__init__()
         self._frags = []
         self._keys = {}
@@ -621,7 +623,7 @@ class ArtifactFragmented(ArtifactBase):
         if fragments:
             for i in fragments:
                 assert len(i) > 0
-                self.add_fragment(i)
+                self.add_fragment(i, define_record=define_records)
             assert len(self._frags) > 0
             self.completed()
 
@@ -673,7 +675,7 @@ class ArtifactFragmented(ArtifactBase):
             i.append(j)
         return i
 
-    def add_fragment(self, frag):
+    def add_fragment(self, frag, define_record=True):
         ''' Append a fragment '''
         if not isinstance(frag, Record):
             frag = Record(self._len, frag=frag, key=(len(self._frags),))
@@ -683,7 +685,7 @@ class ArtifactFragmented(ArtifactBase):
         self._frags.append(frag)
         frag.artifact = self
         self._len += len(frag)
-        if frag.key is not None:
+        if define_record:
             self.define_rec(frag)
 
     def completed(self):

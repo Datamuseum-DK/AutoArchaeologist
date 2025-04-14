@@ -177,11 +177,11 @@ class TapeFile():
                     assert scw[0] in "0123"
                 offset += len(frag)
                 pos += size
-        that = self.tree.this.create(records = frags)
+        that = self.tree.this.create(records = frags, define_records=False)
         for recno, offs, size, frag in segs:
             that.define_rec(
                 artifact.Record(
-                    key = recno,
+                    key = (recno,),
                     low=offs,
                     high=offs + size,
                     frag = frag,
