@@ -183,4 +183,9 @@ class Decorator():
         td.c { text-align: center; }
         td.s, th.s { font-size: .8em; }
         tr.stripe:nth-child(2n+1) { background-color: #ddffdd; }
+        img.diskimage {
+                image-rendering: pixelated;
+                min-width: 400px;
+        }
+
     '''

@@ -14,11 +14,9 @@
    original media.
 '''
 
-import os
-import subprocess
-
 from ..base import octetview as ov
 from ..base import category_colors
+from ..toolbox import png
 
 COLORS = category_colors.COLORS
 
@@ -176,53 +174,51 @@ class Disk(ov.OctetView):
             self.picture[chs] = what
             lo += self.width[chs]
 
-    def disk_picture_p6(self, file, this):
+    def disk_picture(self, file, this):
+        ''' Draw a UTF-8-art picture of the disk '''
+        for j in self.picture.values():
+            if j not in self.picture_legend:
+                self.picture_legend[j] = '?'
+        file.write("<H3>Disk picture</H3>\n")
 
         cmap = {}
         for i, j in zip(self.picture_legend.keys(), COLORS):
             cmap[i] = bytes(j)
-        p6f = this.filename_for(".png")
         ncyl = max(chsb[0] for chsb in self.iter_chsb()) + 1
         nhd = max(chsb[1] for chsb in self.iter_chsb()) + 1
         minsect = min(chsb[2] for chsb in self.iter_chsb())
         maxsect = max(chsb[2] for chsb in self.iter_chsb())
         nsect = 1 + maxsect - minsect
-        print(self.this, p6f.filename, ncyl, nhd, [minsect, maxsect])
-        used_legend = set()
-        with open(p6f.filename + "_", "wb") as pfile:
-            pfile.write(b'P6\n')
-            pfile.write(b'%d %d\n' % (ncyl, nhd * (nsect + 1)))
-            pfile.write(b'255\n')
-            for hd in range(nhd):
-                for sec in range(nsect):
-                    for cyl in range(ncyl):
-                        chs = (cyl, hd, sec + minsect)
-                        col = self.picture.get(chs, '?')
-                        used_legend.add(col)
-                        pfile.write(cmap[col])
-                for cyl in range(ncyl):
-                    pfile.write(bytes((255,255,255)))
 
-        if ncyl < 220 and nhd * nsect < 220:
-            zoom="400%"
-        elif ncyl < 440 and nhd * nsect < 440:
-            zoom="200%"
-        else:
-            zoom="100%"
-        subprocess.run(
-            [
-                "convert",
-                "-strip",		# Avoid timestamp
-                "-scale", zoom,
-                p6f.filename + "_",
-                p6f.filename,
-            ]
-        )
-        os.remove(p6f.filename + "_")
-        file.write('<img src="%s"/>\n' % p6f.link)
+        img = png.PalettePNG(ncyl, nhd * (nsect + 1) - 1)
+        img.set_color(0, (0, 0, 0))
+        img.set_color(255, (255, 255, 255))
+
+        y = 0
+        colmap = {}
+        ncol = 1
+        for hd in range(nhd):
+            if y:
+                for cyl in range(ncyl):
+                    Img.set_pixel(cyl, y, 255)
+                y += 1
+            for sec in range(nsect):
+                for cyl in range(ncyl):
+                    chs = (cyl, hd, sec + minsect)
+                    col = self.picture.get(chs, '?')
+                    if col not in colmap:
+                        img.set_color(ncol, cmap[col])
+                        colmap[col] = ncol
+                        ncol += 1
+                    img.set_pixel(cyl, y, colmap[col])
+                y += 1
+        pngf = this.filename_for(".png")
+        img.write(pngf.filename)
+
+        file.write('<img src="%s" class="diskimage"/>\n' % pngf.link)
         file.write('<table>\n')
         for i, j in sorted(self.picture_legend.items()):
-            if i not in used_legend:
+            if i not in colmap:
                 continue
             c = cmap[i]
             file.write('<tr>\n')
@@ -232,44 +228,3 @@ class Disk(ov.OctetView):
             file.write('<td>' + j + '</td>\n')
             file.write('</tr>\n')
         file.write('<table>\n')
-
-    def disk_picture(self, file, this):
-        ''' Draw a UTF-8-art picture of the disk '''
-        for j in self.picture.values():
-            if j not in self.picture_legend:
-                self.picture_legend[j] = '?'
-        file.write("<H3>Disk picture</H3>\n")
-        self.disk_picture_p6(file, this)
-        return
-        file.write("<pre>\n")
-        ncyl = max(chsb[0] for chsb in self.iter_chsb()) + 1
-        file.write("   c ")
-        for i in range(0, ncyl, 10):
-            file.write(("%d" % (i//10)).ljust(10))
-        file.write("\n     ")
-        for i in range(ncyl):
-            file.write("%d" % (i % 10))
-        file.write('\nh, s┌' + '─' * ncyl)
-        lhead = 0
-        lsec = None
-        for head, sec, cyl in sorted(
-            (chsb[1],chsb[2],chsb[0]) for chsb in self.iter_chsb()
-        ):
-            if head != lhead or sec != lsec:
-                if head != lhead:
-                    file.write("\n")
-                    lhead = head
-                    lsec = None
-                if sec != lsec:
-                    file.write("\n%d,%2d│" % (head, sec))
-                    lsec = sec
-
-            file.write(self.picture[(cyl, head, sec)])
-
-        got = set(self.picture.values())
-
-        file.write("\n\nLegend:\n")
-        for i, j in sorted(self.picture_legend.items()):
-            if i in got:
-                file.write('    ' + i + '  ' + j + '\n')
-        file.write("\n<pre>\n")
