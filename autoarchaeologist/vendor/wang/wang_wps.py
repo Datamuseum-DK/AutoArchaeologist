@@ -5,10 +5,10 @@
    =================
 '''
 
-from ..generic import disk
-from ..base import artifact
-from ..base import octetview as ov
-from ..base import namespace
+from ...generic import disk
+from ...base import artifact
+from ...base import octetview as ov
+from ...base import namespace
 
 from .wang_text import WangTypeCase
 

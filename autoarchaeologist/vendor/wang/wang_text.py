@@ -1,5 +1,5 @@
 
-from ..base import type_case 
+from ...base import type_case 
 
 class WangTypeCase(type_case.WellKnown):
 
