@@ -1,5 +1,14 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
-from ...base import type_case 
+'''
+   WANG WPS text-files
+'''
+
+from ...base import type_case
 
 class WangTypeCase(type_case.WellKnown):
 
@@ -98,4 +107,3 @@ class WangText():
                     yield from lines[1:-1]
                 b = lines[-1]
         yield b
-                

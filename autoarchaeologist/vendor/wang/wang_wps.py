@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
 '''
    Wang WPS floppies
@@ -376,7 +380,7 @@ class WangWps(disk.Disk):
                 if self.this[lo + 6] != 0x41:
                     continue
                 spsect = SpelunkSector(self, lo)
-                by_lo[lo] = spsect   
+                by_lo[lo] = spsect
         by_chs = {}
         for i in self.this.iter_rec():
             j = by_lo.get(i.lo)
