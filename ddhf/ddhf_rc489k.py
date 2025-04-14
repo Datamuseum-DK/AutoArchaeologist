@@ -52,6 +52,7 @@ class Rc489k(ddhf.DDHFExcavation):
         "RC/RC8000/PAPERTAPE",
         "RC/RC8000/TAPE",
         "RC/RC4000/SW",
+        "RC/RC4000/TAPE",
         "RC/RC4000/TEST",
         "RC/RC9000",
         "RC/RC9000/TAPE",
