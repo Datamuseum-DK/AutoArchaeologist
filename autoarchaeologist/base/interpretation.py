@@ -44,9 +44,6 @@ class HtmlInterpretation():
         self.file.close()
         self.file = None
 
-    def __del__(self):
-        os.remove(self.filename)
-
     def write(self, *args, **kwargs):
         ''' ... '''
         if self.file is None:
@@ -59,6 +56,7 @@ class HtmlInterpretation():
             fo.write("<H3>" + self.title + "</H3>\n")
             for i in file:
                 fo.write(i)
+        os.remove(self.filename)
 
 class Utf8Interpretation(HtmlInterpretation):
     '''
