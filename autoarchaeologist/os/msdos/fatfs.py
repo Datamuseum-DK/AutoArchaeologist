@@ -18,7 +18,7 @@ from ...base import octetview as ov
 
 Geometry = collections.namedtuple(
     "Geometry",
-    "cyl hd sect bps rsv nfat spcl rdir nfsc",
+    "cyl hd sect bps rsv nfat spcl rdir nfsc tsect",
 )
 
 # See for instance:
@@ -27,47 +27,47 @@ Geometry = collections.namedtuple(
 GEOMETRIES = {
     0xffffff: [
         #        cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(40, 2,  8,  512,  1,   2,   2,  112, 0),
+        Geometry(40, 2,  8,  512,  1,   2,   2,  112, 0, 0),
     ],
     0xfffffe: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(40, 1,  8,  512,  1,   2,   1,   64, 0),
-        Geometry(77, 1, 26,  128,  1,   2,   4,   68, 0),
-        Geometry(77, 1,  8, 1024,  1,   2,   4,  192, 0),
-        Geometry(77, 2,  8, 1024,  1,   2,   4,  192, 0),
+        Geometry(40, 1,  8,  512,  1,   2,   1,   64, 0, 0),
+        Geometry(77, 1, 26,  128,  1,   2,   4,   68, 0, 0),
+        Geometry(77, 1,  8, 1024,  1,   2,   4,  192, 0, 0),
+        Geometry(77, 2,  8, 1024,  1,   2,   4,  192, 0, 0),
     ],
     0xfffffd: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(40, 2,  9,  512,  1,   2,   2,  112, 0),
-        Geometry(77, 1, 26,  128,  4,   2,   4,   68, 0),
-        Geometry(77, 2, 26,  128,  4,   2,   4,   68, 0),
+        Geometry(40, 2,  9,  512,  1,   2,   2,  112, 0, 0),
+        Geometry(77, 1, 26,  128,  4,   2,   4,   68, 0, 0),
+        Geometry(77, 2, 26,  128,  4,   2,   4,   68, 0, 0),
     ],
     0xfffffc: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(40, 1,  9,  512,  1,   2,   1,   64, 0),
+        Geometry(40, 1,  9,  512,  1,   2,   1,   64, 0, 0),
     ],
     0xfffffb: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(80, 2,  8,  512,  1,   2,   2,  112, 0),
+        Geometry(80, 2,  8,  512,  1,   2,   2,  112, 0, 0),
     ],
     0xfffffa: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(80, 1,  8,  512,  1,   2,   1,  112, 0),
+        Geometry(80, 1,  8,  512,  1,   2,   1,  112, 0, 0),
     ],
     0xfffff9: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(80, 2, 15,  512,  1,   2,   1,  224, 0),
-        Geometry(80, 2,  9,  512,  1,   2,   1,  112, 0),
-        Geometry(80, 2, 18,  512,  1,   2,   1,  224, 0),
+        Geometry(80, 2, 15,  512,  1,   2,   1,  224, 0, 0),
+        Geometry(80, 2,  9,  512,  1,   2,   1,  112, 0, 0),
+        Geometry(80, 2, 18,  512,  1,   2,   1,  224, 0, 0),
     ],
     0xfffff8: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(80, 1,  9,  512,  1,   2,   2,  112, 0),
+        Geometry(80, 1,  9,  512,  1,   2,   2,  112, 0, 0),
     ],
     0xfffff0: [
         # cyl hd sec   bps rsv nfat spcl rdir
-        Geometry(80, 2, 18,  512,  1,   2,   1,  224, 0),
-        Geometry(80, 2, 36,  512,  1,   2,   2,  224, 0),
+        Geometry(80, 2, 18,  512,  1,   2,   1,  224, 0, 0),
+        Geometry(80, 2, 36,  512,  1,   2,   2,  224, 0, 0),
     ],
 }
 
@@ -104,11 +104,14 @@ msdostypecase = MsDosTypeCase()
 class BiosParamBlock(ov.Struct):
     ''' ... '''
 
+    # Field names mirro FreeBSD's msdosfs
     def __init__(self, tree, lo):
         super().__init__(
             tree,
             lo,
-            vertical=False,
+            vertical=True,
+            bsJmp_=3,
+            bsOem_=ov.Text(8),
             # From DOS2.0
             bsBytesPerSec_=ov.Le16,
             bsSectPerClust_=ov.Octet,
@@ -121,20 +124,43 @@ class BiosParamBlock(ov.Struct):
             # From DOS3.0
             bsSectPerTrack_=ov.Le16,
             bsHeads_=ov.Le16,
-            bsHiddenSecs_=ov.Le16,
+            bsHiddenSecs_=ov.Le32,
             # From DOS3.2
-            bsTotalSecs_=ov.Le32, # DOS3.2: Le16, DOS3.31: Le32
-            # From OS/2 1.0, DOS 4.0
-            bsPhysDrive_=ov.Octet,
-            bsReserved_=ov.Octet,
-            bsExtBootSig_=ov.Octet,
-            bsVolId_=ov.Le32,
-            bsVolName_=ov.Text(11),
-            bsFsType_=ov.Text(8),
+            bpbHugeSectors_=ov.Le32, # DOS3.2: Le16, DOS3.31: Le32
+            more=True,
         )
+        if tree.this[lo + 0x26] in (0x28, 0x29):
+            # From OS/2 1.0, DOS 4.0
+            self.add_field("bsPhysDrive", ov.Octet)
+            self.add_field("bsReserved", ov.Octet)
+            self.add_field("bsExtBootSig", ov.Octet)
+            self.add_field("bsVolId", ov.Le32)
+            self.add_field("bsVolName", ov.Text(11))
+            self.add_field("bsFsType", ov.Text(8))
+        elif ov.Le32(tree, 0x24).val > 0x200000:
+            # Seen om Concurrent DOS hard disk
+            self.add_field("bsPhysDrive", ov.Octet)
+            self.add_field("bsReserved", ov.Octet)
+            self.add_field("bsExtBootSig", ov.Octet)
+            self.add_field("bsUnknown", 11)
+            self.add_field("bsVolName", ov.Text(12))
+        else:
+            self.add_field("bsBigFATsecs", ov.Le32)
+            self.add_field("bsExtFlags", ov.Le16)
+            self.add_field("bsFsInfo", ov.Le16)
+            self.add_field("bsRootClust", ov.Le32)
+            self.add_field("bsFSVers", ov.Le16)
+            self.add_field("bsBackup", ov.Le16)
+            self.add_field("bsReserved", ov.Text(12))
+
+        self.done()
         if self.is_sane():
+            if self.bsSectors.val:
+                tsect = self.bsSectors.val
+            else:
+                tsect = self.bpbHugeSectors.val
             self.geom = Geometry(
-                self.bsSectors.val // (self.bsHeads.val * self.bsSectPerTrack.val),
+                tsect // (self.bsHeads.val * self.bsSectPerTrack.val),
                 self.bsHeads.val,
                 self.bsSectPerTrack.val,
                 self.bsBytesPerSec.val,
@@ -143,6 +169,7 @@ class BiosParamBlock(ov.Struct):
                 self.bsSectPerClust.val,
                 self.bsRootDirEnts.val,
                 self.bsFATsecs.val,
+                tsect,
             )
         else:
             self.geom = None
@@ -259,6 +286,28 @@ class FAT12(ov.Octets):
         for i in range(0, len(self.clusters), 16):
             yield ",".join("%03x" % x for x in self.clusters[i:i+16]) + " // [0x%x]" % i
 
+class FAT16(ov.Struct):
+    ''' ... '''
+
+    def __init__(self, tree, lo, width):
+        super().__init__(
+            tree,
+            lo,
+            vertical=True,
+            fat_=ov.Array(width // 2, ov.Le16, vertical=True)
+        )
+        self.owner = [None] * (width//2)
+
+    def chain(self, owner,  first):
+        ''' yield cluster numbers in chain '''
+
+        while first < len(self.owner) and self.owner[first] is None:
+            yield first
+            self.owner[first] = owner
+            first = self.fat[first].val
+            if first >= 0xff0:
+                return
+
 class NameSpace(namespace.NameSpace):
     ''' ... '''
 
@@ -355,31 +404,30 @@ class FatFs(ov.OctetView):
 
     def __init__(self, this):
 
-        if this.top not in this.parents:
-            return
         if len(this) < 40 * 1 * 9 * 512:
             return
         super().__init__(this)
 
         fat0 = ov.Le24(self, 0x200)
-        bpb = BiosParamBlock(self, 11)
+        bpb = BiosParamBlock(self, 0)
 
         if bpb.geom:
             bpb.insert()
             geometry = bpb.geom
-            #print("FatFs BPB", this, geometry, bpb)
+            print(this, "FatFs BPB")
+            print("\n".join(bpb.render()))
         else:
             geometry = match_geometry(this, fat0.val)
-            #print("FatFs TBL", this, geometry, self)
+            print("FatFs TBL", this, geometry, self)
 
         if geometry is None or geometry.cyl == 0:
             this.add_note("NotFat")
             this.add_note("BadFatGeom")
             return
 
+        print(this, "FatFS", geometry)
         this.type_case = msdostypecase
         this.add_note("FatFS")
-
 
         self.clustersize = geometry.bps * geometry.spcl
         nsectors = geometry.cyl * geometry.hd * geometry.sect
@@ -391,11 +439,16 @@ class FatFs(ov.OctetView):
         else:
             fatsect = (fatsize + geometry.bps - 1) // geometry.bps
         dirstart = geometry.rsv * geometry.bps
-        self.fat1 = FAT12(self, dirstart, fatsect * geometry.bps).insert()
+        if geometry.tsect < 65536:
+            fatcl = FAT12
+        else:
+            fatcl = FAT16
+
+        self.fat1 = fatcl(self, dirstart, fatsect * geometry.bps).insert()
         if geometry.nfat == 1:
             self.fat2 = self.fat1
         elif geometry.nfat == 2:
-            self.fat2 = FAT12(self, self.fat1.hi, fatsect * geometry.bps).insert()
+            self.fat2 = fatcl(self, self.fat1.hi, fatsect * geometry.bps).insert()
         else:
             print(this, "NFAT", geometry.nfat)
             return
