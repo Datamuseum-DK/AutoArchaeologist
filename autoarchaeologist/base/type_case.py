@@ -175,12 +175,4 @@ class DS2089(WellKnown):
         ):
             self.set_slug(i, j, j)
 
-class DS2089Cpm(DS2089):
-    ''' With CP/M control chars '''
-    def __init__(self):
-        super().__init__()
-        self.set_slug(0x00, ' ', '«nul»', self.IGNORE)
-        self.set_slug(0x0d, ' ', '')
-        self.set_slug(0x1a, ' ', '«eof»', self.EOF)
-
 ascii = Ascii()
