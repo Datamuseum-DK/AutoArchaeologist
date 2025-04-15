@@ -34,6 +34,21 @@
         di_uid          Owner user id
         di_gid          Owner group id
         di_mtime        Modification time (POSIX time_t)
+
+   FindUnixFs()
+   ============
+
+   This class attempts to find any UNIX filesystems
+
+   The strategy is:
+
+   1) Locate potential root inodes
+
+   2) Eliminate non-sensical block-no byte orders
+
+   3) Eliminate block-sizes which do not lead to
+      credible root directory content.
+   
 '''
 
 import struct
@@ -111,8 +126,14 @@ class Inode(ov.Struct):
         self.di_uid = 0
         self.di_gid = 0
         self.di_mtime = 0
+        self.that = None
+        self.badblocks = 0
 
         super().__init__(*args, **kwargs)
+
+        self.bogus = self.octets() == b'_UNREAD_' * (len(self) // 8)
+        if self.bogus:
+            print(self.tree.this, "INO @0x%x unread" % self.lo)
 
         self.di_type = self.di_mode & self.S_ISFMT
         self.fix_di_addr()
@@ -123,6 +144,7 @@ class Inode(ov.Struct):
         block_no = 0
         yet = self.di_size
         while yet:
+            #print("Ino", self.di_inum, "bno", block_no)
             b = self.get_block(block_no)
             if b is None or len(b) == 0:
                 return
@@ -140,6 +162,7 @@ class Inode(ov.Struct):
 
     def ls(self):
         ''' Return list of columns in "ls -li" like output '''
+
         retval = []
         retval.append("%6d" % self.di_inum)
 
@@ -153,7 +176,9 @@ class Inode(ov.Struct):
 
         mode = self.di_mode
 
-        if typ is None:
+        if self.bogus:
+            txt = "bogus"
+        elif typ is None:
             txt = "%10o" % mode
         elif not mode & self.S_IXUSR and mode & self.S_ISUID:
             txt = "%10o" % mode
@@ -199,6 +224,12 @@ class Inode(ov.Struct):
 
     def indir_get(self, blk, idx):
         ''' Pick a block number out of an indirect block '''
+        if blk.octets()[4*idx:4*idx+4] in (b'_UNR', b'EAD_'):
+            if not self.badblocks:
+                print(self.tree.this, self, "Badblock file (indir)")
+                print(type(blk))
+                self.badblocks += 1
+            return None
         y = self.long(self.tree, blk.lo + 4 * idx)
         return self.ufs.get_block(y.val)
 
@@ -207,7 +238,7 @@ class Inode(ov.Struct):
            Get a datablock from this inode
 
            We use FFS's di_db/di_ib variables to make this
-           implementation if indirect, 2indir and 3indir
+           implementation of indirect, 2indir and 3indir
            portable.
         '''
 
@@ -217,19 +248,23 @@ class Inode(ov.Struct):
         block_no -= len(self.di_db)
 
         nindir = self.ufs.sblock.fs_nindir
+        #nindir = 512 // 4
 
         if block_no < nindir:
             iblk = self.ufs.get_block(self.di_ib[0])
+            #print(iblk.octets()[:64].hex())
             return self.indir_get(iblk, block_no)
 
         block_no -= nindir
         if block_no < nindir * nindir:
+            # print("Really big 1", "0x%05x" % block_no, hex(nindir), hex(nindir*nindir), self.bogus, self)
             iiblk = self.ufs.get_block(self.di_ib[1])
             iblk = self.indir_get(iiblk, block_no // nindir)
             if not iblk:
                 return iblk
             return self.indir_get(iblk, block_no % nindir)
 
+        # print("Really big 2", hex(block_no), hex(nindir), hex(nindir*nindir), self)
         block_no -= nindir * nindir
 
         iiiblk = self.ufs.get_block(self.di_ib[2])
@@ -240,6 +275,40 @@ class Inode(ov.Struct):
         if not iblk:
             return iblk
         return self.indir_get(iblk, block_no % nindir)
+
+    def commit(self):
+        ''' Create artifact, if possible '''
+
+        if self.that:
+            return self.that
+
+        if self.di_type != self.S_IFREG:
+            return None
+
+        if not self.di_size:
+            return None
+
+        l = list()
+        for y in self:
+            l.append(y)
+        if len(l) == 0:
+            # Diagnostic ?
+            return None
+        ll = []
+        for x in l:
+            ll.append(x.octets())
+            if len(ll[-1]) == 0:
+                print(self.tree.this, self, "Sparse file?", ",".join("%04x" % len(x.octets()) for x in l))
+                return None
+            elif ll[-1][:32] == b'_UNREAD_' * 4:
+                if not self.badblocks:
+                    print(self.tree.this, self, "Badblock file", hex(x.lo))
+                self.badblocks += 1
+        self.that = self.ufs.this.create(records=ll)
+        self.that.add_note("UNIX file")
+        if self.badblocks:
+            self.that.add_note("Bad_blocks")
+        return self.that
 
 class DirEnt():
     ''' Directory Entry in a UNIX filesystem '''
@@ -275,15 +344,7 @@ class DirEnt():
             self.directory.commit_files()
         elif self.inode.di_type == self.inode.S_IFREG:
             self.ufs.inode_is[self.inode.di_inum] = self
-            if not self.inode.di_size:
-                return
-            l = list()
-            for y in self.inode:
-                l.append(y)
-            if len(l) == 0:
-                return
-            self.artifact = self.ufs.this.create(records=[x.octets() for x in l])
-            self.artifact.add_note("UNIX file")
+            self.artifact = self.inode.commit()
             self.namespace.ns_set_this(self.artifact)
 
 class Directory():
@@ -356,22 +417,28 @@ class UnixFileSystem(ov.OctetView):
 
     DIRECTORY = Directory
 
-    VERBOSE = False
+    VERBOSE = True
 
     def __init__(self, this):
         if len(this) < 20480:
             return
         super().__init__(this)
         self.sblock = None
+        self.rootdir = None
         self.inode_is = {}
         self.suspect_inodes = {}
         self.good = False
         try:
+            if self.VERBOSE:
+                print(self.this, "Start analyse")
             self.analyse()
+            if self.VERBOSE:
+                print(self.this, "End analyse", self.rootdir)
         except NotCredible as err:
             if self.VERBOSE:
                 print("\tNot Credible", err)
             return
+        print(self.this, "GOOD", self.rootdir)
         self.good = True
         if 0 and self.sblock:
             print("Speculate", self.this)
@@ -383,12 +450,23 @@ class UnixFileSystem(ov.OctetView):
         self.get_superblock()
         if not self.sblock:
             return
+        if self.VERBOSE:
+            print("\tGot SB", self.sblock)
+        rootino = self.get_inode(2)
+        if self.VERBOSE:
+            print("\tGot root-inode", rootino)
+            #print("\t", ",".join(str(x) for x in rootino.di_db))
+            #print("\t", ",".join(str(x) for x in rootino.di_ib))
+            #for i in rootino:
+                #print("\t", i.octets().hex())
         self.rootdir = self.DIRECTORY(
             self,
             [],
             NameSpace(None, name="", separator="", root=self.this),
-            self.get_inode(2),
+            rootino,
         )
+        if self.VERBOSE:
+            print("\tGot RootDir", self.rootdir)
 
     def commit(self):
         self.this.add_interpretation(self, self.rootdir.namespace.ns_html_plain)
@@ -648,7 +726,7 @@ class UnusedBlock(ov.Opaque):
 class UnixFs(UnixFileSystem):
     ''' Parameterized UNIX filesystem '''
 
-    VERBOSE = False
+    VERBOSE = True
 
     def __init__(
         self,
@@ -665,11 +743,13 @@ class UnixFs(UnixFileSystem):
         self.inode2_offset = up.root_inode.lo
         self.short = up.SHORT
         self.long = up.LONG
+        self.inode_class = up.inode_class
         self.params = up.params
         if self.VERBOSE:
             print(this, str(self), "?")
         super().__init__(this)
         if not self.good:
+            print(this, "no good")
             return
         self.rootdir.namespace.KIND = str(self)
         if self.VERBOSE:
@@ -698,9 +778,9 @@ class UnixFs(UnixFileSystem):
 
     def get_inode(self, inum):
         ''' Get inode number inum '''
-        lo = self.inode2_offset + (inum - 2) * self.params.INODE_CLASS.SIZE
-        if lo + self.params.INODE_CLASS.SIZE > len(self.this):
-            raise NotCredible("Inode past this ")
+        lo = self.inode2_offset + (inum - 2) * self.inode_class.SIZE
+        if lo + self.inode_class.SIZE > len(self.this):
+            raise NotCredible("Inode past this ", hex(inum))
         ino = Inode64(
             self,
             lo,
@@ -738,11 +818,11 @@ class UnixFs(UnixFileSystem):
                 i = list(ino.di_db)
                 while i and i[-1] == 0:
                     i.pop(-1)
-                if nblk < len(i) and max(ino.di_db[nblk:]) > 0:
+                if 0 and nblk < len(i) and max(ino.di_db[nblk:]) > 0:
                     raise NotCredible(
                         "Inode has too many direct blocks " + str(inum) + " " + str(ino)
                     )
-            elif hasblocks:
+            elif 0 and hasblocks:
                 raise NotCredible(
                     "Inode has no size but has blocks " + str(inum) + " " + str(ino)
                 )
@@ -754,6 +834,7 @@ class UnixFs(UnixFileSystem):
         # Interface with unix_fs until that is redone
         self.sblock = UnixFsSblock()
         self.sblock.fs_nindir = self.block_size // 4
+        #self.sblock.fs_nindir = 512 // 4
 
     def get_block(self, blockno):
         ''' Get a logical disk block '''
@@ -761,19 +842,24 @@ class UnixFs(UnixFileSystem):
         lo = self.block_offset + blockno * self.block_size
         hi = lo + self.block_size
         if hi > len(self.this):
-            raise NotCredible("Block_no past this " + hex(blockno))
+            raise NotCredible("Block_no past this " + str(self) + " " +hex(blockno))
         return ov.Opaque(self, lo=lo, hi=hi)
 
     def parse_directory(self, inode):
         ''' Parse classical unix directory: 16bit inode + 14 char name '''
         n = 0
         for b in inode:
+            if b.octets()[:8] == b'_UNREAD_':
+                n += len(b) // 16
+                continue
             db = self.params.DIR_CLASS(self, b.lo, b.hi, self.short).insert()
             for inum, fnam in db:
                 if n == 0 and fnam != ".":
+                    print(db)
                     raise NotCredible("First dirent not '.' " + str(inode))
                 if n == 1 and fnam != "..":
-                    raise NotCredible("First dirent not '.' " + str(inode))
+                    print(db)
+                    raise NotCredible("Second dirent not '..' " + str(inode))
                 n += 1
                 yield inum, fnam
 
@@ -789,10 +875,12 @@ class UnixFsLittleEndian(ov.OctetView):
     DOT = b'.'.ljust(14, b'\x00')
     DOTDOT = b'..'.ljust(14, b'\x00')
 
-    def __init__(self, up, this, root_inode_offset):
-        self.params = up.params
+    def __init__(self, up, this, params, inode_class, root_inode):
+        self.params = params
+        self.inode_class = inode_class
+        self.root_inode = root_inode
         super().__init__(this)
-        self.root_inode = self.params.INODE_CLASS(self, root_inode_offset, self.SHORT, self.LONG)
+
         for byte_order in up.params.POSSIBLE_BYTE_ORDERS:
             bnos = list(self.root_inode.bnos(byte_order))
             if max(bnos) * min(self.params.BLOCK_SIZES) >= len(self.this):
@@ -802,7 +890,9 @@ class UnixFsLittleEndian(ov.OctetView):
             if 0 in bnos:
                 # Directories cannot be sparse
                 continue
+            # print("\tByte order could be", byte_order, bnos)
             for bsize, offset in self.find_rootdir(bnos):
+                print("\tBootblocks could be", hex(offset), "with block size", hex(bsize))
                 UnixFs(
                     self,
                     byte_order,
@@ -816,11 +906,12 @@ class UnixFsLittleEndian(ov.OctetView):
         for bsize in sorted(self.params.BLOCK_SIZES):
             adr0 = self.root_inode.lo & ~(bsize - 1)
             off0 = self.root_inode.lo & (bsize - 1)
-            if off0 > max(self.params.ROOTINO_INDEX) * self.params.INODE_CLASS.SIZE:
+            if off0 > max(self.params.ROOTINO_INDEX) * self.inode_class.SIZE:
                 # Root inode is too far into this block (= wrong block size)
                 continue
             for boot_off in range(0, self.params.MAX_BOOTBLOCKS):
-                adrr = adr0 + bnos[0] * bsize - boot_off * bsize
+                adrr = adr0 + (bnos[0] - boot_off) * bsize
+                # print("\tbsize", hex(bsize), "boot_off", hex(boot_off), hex(adr0), hex(adrr))
                 if not 0 <= adrr < len(self.this):
                     continue
 
@@ -853,53 +944,62 @@ class UnixFsBigEndianBogus(UnixFsBigEndian):
 class UnixFsParams():
     ''' Parameters constraining the search for UNIX filesystems '''
 
-    MAX_BOOTBLOCKS = 4			# Number of blocks counted before first inode block
+    MAX_BOOTBLOCKS = 16			# Number of blocks counted before first inode block
     BLOCK_SIZES = (512, 1024, 2048, 4096)
     ROOTINO_INDEX = (0, 1, 2)		# Where in first inode block is the root-inode
     POSSIBLE_BYTE_ORDERS = (		# How the on-disk inode stores block numbers
             (0, 1, 2),			# Can be 3, 4 or 6 (= 2*3) long
+            (0, 1, 2, 3),
+            (3, 2, 1, 0),
             (0, 2, 1),
             (1, 2, 0),
             (2, 1, 0),
-            #(1, 0, 2),
-            #(2, 0, 1),
+            (2, 3, 1, 0),
+            (1, 0, 2, 3),
+            (1, 0, 2),
+            (2, 0, 1),
     )
     MIN_ROOT_DIR_LEN = 32
-    INODE_CLASS = Inode64		# Inode class
+    INODE_CLASSES = (Inode64,)		# Inode classes
     DIR_CLASS = DirBlock		# Directory class
 
     FS_CLASSES = (
         UnixFsLittleEndian,
-        UnixFsLittleEndianBogus,
         UnixFsBigEndian,
+        UnixFsLittleEndianBogus,
         UnixFsBigEndianBogus,
     )
 
 class FindUnixFs(ov.OctetView):
     '''
        Find UNIX filesystems
+       ---------------------
     '''
 
     def __init__(self, this):
 
+        if this.top in this.parents and this.children:
+            # we only look at top level artifacts if they are not partitioned
+            return
+
+        # The parameters of our search can be set per excavation and artifact
         self.params = getattr(this.top, "UNIX_FS_PARAMS", None)
+        self.params = getattr(this, "UNIX_FS_PARAMS", self.params)
         if self.params is None:
             self.params = UnixFsParams()
 
-        if this.top in this.parents:
-            limit = len(this)
-        else:
-            limit = self.params.MAX_BOOTBLOCKS * max(self.params.BLOCK_SIZES)
         super().__init__(this)
 
+        for off in self.possible_root_inode_offsets():
+            for fcls in self.params.FS_CLASSES:
+                for icls in self.params.INODE_CLASSES:
+                    # Inodes must be aligned
+                    if off % icls.SIZE != 0:
+                        continue
 
-        # Hunt for a root-inode in all probable locations and byte-sexes
-        for boff in range(0, limit, min(self.params.BLOCK_SIZES)):
-            for index in self.params.ROOTINO_INDEX:
-                for cls in self.params.FS_CLASSES:
-                    ioff = index * self.params.INODE_CLASS.SIZE
+                    #print(this, "Try", hex(off), fcls.__name__, icls.__name__, )
                     try:
-                        root_inode = self.params.INODE_CLASS(self, ioff + boff, cls.SHORT, cls.LONG)
+                        root_inode = icls(self, off, fcls.SHORT, fcls.LONG)
                     except NotCredible:
                         continue
                     if root_inode.ifmt != root_inode.S_IFDIR:
@@ -911,4 +1011,31 @@ class FindUnixFs(ov.OctetView):
                     if not root_inode.is_dir():
                         continue
 
-                    cls(self, self.this, root_inode.lo)
+                    # print(this, "MAYBE", hex(off), fcls.__name__, icls.__name__, )
+                    # print("\t", root_inode.vdi_addr)
+                    fcls(self, self.this, self.params, icls, root_inode)
+
+    def possible_root_inode_offsets(self):
+        ''' Offsets where a root inode might be found '''
+
+        if self.this.top in self.this.parents:
+            # Unpartitioned top level artifacts might use unknown partitioning
+            # so we search all of them.
+            upper_limit = len(self.this)
+        else:
+            # Filesystems in partitions start after a small number of
+            # reserved bootblocks.
+            upper_limit = self.params.MAX_BOOTBLOCKS * max(self.params.BLOCK_SIZES)
+
+        # We only need to check the ROOTINO_INDEX positions in each block
+        # but we know neither the size of inodes nor blocks yet, so we test
+        # to their extreme values.
+
+        smallest_blocksize = min(self.params.BLOCK_SIZES)
+        smallest_inode = min(x.SIZE for x in self.params.INODE_CLASSES)
+        largest_inode = max(x.SIZE for x in self.params.INODE_CLASSES)
+        largest_offset_in_block = largest_inode * max(self.params.ROOTINO_INDEX)
+
+        for block in range(0, upper_limit, smallest_blocksize):
+            for ioff in range(block, block + largest_offset_in_block, smallest_inode):
+                yield ioff
