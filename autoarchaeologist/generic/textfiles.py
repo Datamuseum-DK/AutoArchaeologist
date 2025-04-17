@@ -12,7 +12,7 @@ class TextFile():
     ''' General Text-File-Excavator '''
 
     # print() why artifacts get rejected
-    VERBOSE = True
+    VERBOSE = False
 
     # No longer than this
     MAX_LENGTH = 4 << 20
