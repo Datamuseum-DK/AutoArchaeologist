@@ -322,6 +322,7 @@ class Excavation(result_page.ResultPage):
         return "The entire excavation"
 
     def calculate_metrics(self):
+        ''' Calculate metrics for top-level artifacts '''
         for that in self.children:
             that.metrics = metrics.Metrics(that)
         for that in self.children:

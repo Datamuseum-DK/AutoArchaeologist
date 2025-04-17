@@ -106,6 +106,7 @@ class ArtifactBase(result_page.ResultPage):
         self._key_len = 0
 
         self.metrics = None # Used only for toplevel artifacts
+        self.metrics_refs = set()
 
     def __str__(self):
         if not self.digest:

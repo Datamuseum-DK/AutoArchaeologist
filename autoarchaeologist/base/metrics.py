@@ -17,32 +17,27 @@ class Metrics():
     def __init__(self, this):
         self.this = this
         self.children = set(this.iter_all_children())
-        self.dups = {}
         self.overlaps = {}
-        self.unique = None
         if len(self.children) > 1:
             self.children.remove(this)
+        self.unique = set(self.children)
+        self.relpath = self.this.basename_for(suf="_metrics.html")
 
     def reduce(self, peers):
         for that in peers:
-            if that == self.this:
-                continue
-            xsect = that.metrics.children & self.children
-            self.overlaps[that] = xsect
-            for i in xsect:
-                j = self.dups.get(i, 0)
-                self.dups[i] = j + 1
-        self.unique = self.children - set(self.dups)
+            if that != self.this:
+                xsect = that.metrics.children & self.children
+                self.overlaps[that] = xsect
+                self.unique -= xsect
 
     def terse(self):
         n_overlaps_shown = 5
         l_children = len(self.children)
         l_unique = len(self.unique)
         if l_children == l_unique:
-            return "%d" % l_unique
-        relpath = self.this.basename_for(suf="_metrics.html")
+            return (None, "%d" % l_unique)
         title = str(self.this) + " Metrics"
-        with self.this.top.decorator.html_file(relpath, title) as file:
+        with self.this.top.decorator.html_file(self.relpath, title) as file:
             file.write("<pre>")
             file.link_to(self.this.top.basename_for(self.this.top), "top")
             file.write("</pre>")
@@ -78,18 +73,5 @@ class Metrics():
                 for that in sorted(self.unique):
                     file.write("<tr><td>" + that.summary(names=True, notes=True) + "</td></tr>")
                 file.write("</table>\n")
-            if l_unique != l_children:
-                file.write("<H2>Overlaps</H2>\n")
-                file.write("<table>\n")
-                for that, count in sorted(self.dups.items(),key= lambda x: x[1]):
-                    file.write("<tr>")
-                    file.write("<td>%d</td>" % count)
-                    file.write("<td>" + that.summary(names=True, notes=True) + "</td>")
-                    file.write("</tr>")
-                file.write("</table>\n")
 
-        return self.this.top.html_link_to(
-            self.this,
-            "%d/%d" % (l_unique, l_children),
-            suf="_metrics.html",
-        )
+        return (self.relpath, "%d/%d" % (l_unique, l_children))

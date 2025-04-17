@@ -192,7 +192,13 @@ class Decorator():
                 else:
                     fo.write('<tr>\n')
                 fo.write('<td>' + self.top.html_link_to(this) + '</td>\n')
-                fo.write('<td>' + this.metrics.terse() + '</td>\n')
+                fo.write('<td>')
+                where, desc = this.metrics.terse()
+                if where:
+                    fo.link_to(where, desc)
+                else:
+                    fo.write(desc)
+                fo.write('</td>')
                 fo.write('<td>' + this.html_description() + "</td>\n")
                 fo.write("</tr>\n")
                 fo.write("<tr>\n")
