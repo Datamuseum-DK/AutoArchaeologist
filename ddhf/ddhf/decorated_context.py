@@ -17,9 +17,55 @@ from autoarchaeologist.html import decorator
 from autoarchaeologist.container import argv
 from autoarchaeologist.collection.datamuseum_dk import FromBitStore
 
+class HtmlFile(decorator.HtmlFile):
+
+    def html_banner(self):
+        ''' Emit the banner for this excavation '''
+        self.write('<table>\n')
+        self.write('<tr>\n')
+
+        self.write('<td style="vertical-align: middle;">\n')
+        self.write('<img src="/logo/ddhf_logo.svg"/>\n')
+        self.write('</td>\n')
+
+        self.write('<td style="vertical-align: top;')
+        self.write(' padding-left: 40px; padding-right: 40px;">\n')
+        self.write('<h1><a href="https://datamuseum.dk/wiki">DataMuseum.dk</a></h1>\n')
+        self.write('<p>Presents historical artifacts from the history of:</p>\n')
+        if self.top.ddhf_topic:
+            self.write('<h2>\n')
+            if self.top.ddhf_topic_link:
+                self.write('<a href="' + self.top.ddhf_topic_link + '">')
+            self.write(self.top.ddhf_topic + '\n')
+            if self.top.ddhf_topic_link:
+                self.write('</a>')
+            self.write('</h2>\n')
+        self.write('</td>\n')
+        self.write('<td style="vertical-align: top; padding: 10px;">\n')
+        self.write('<P>\n')
+        self.write('This is an automatic "excavation" of a thematic subset of\n')
+        self.write('<br>\n')
+        self.write('artifacts from\n')
+        self.write('<A href="https://datamuseum.dk/wiki">Datamuseum.dk</A>\'s')
+        self.write(' <A href="https://datamuseum.dk/wiki/Bits:Keyword">BitArchive</A>.\n')
+        if self.top.ddhf_topic_link:
+            self.write('<p>\n')
+            self.write('See our Wiki for more about ')
+            self.write('<a href="' + self.top.ddhf_topic_link + '">')
+            self.write(self.top.ddhf_topic + '</a>\n')
+            self.write('</p>\n')
+        self.write('<p>\n')
+        super().html_banner()
+        self.write('</td>\n')
+        self.write('</tr>\n')
+        self.write('</table>\n')
+        self.write('<hr/>\n')
+
 class Decorator(decorator.Decorator):
 
-    def html_prefix_banner(self, file, _this):
+    HTML_FILE = HtmlFile
+
+    def xhtml_prefix_banner(self, file, _this):
         ''' Emit the banner for this excavation '''
         file.write('<table>\n')
         file.write('<tr>\n')
