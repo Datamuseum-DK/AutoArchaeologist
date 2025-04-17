@@ -22,7 +22,7 @@ from . import index
 from . import type_case
 from . import result_page
 from . import metrics
-from . import decorator
+from ..html import decorator
 
 class DuplicateArtifact(Exception):
     ''' Top level artifacts should not be identical '''

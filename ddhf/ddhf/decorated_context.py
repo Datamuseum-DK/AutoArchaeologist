@@ -12,7 +12,8 @@
 import sys
 import os
 
-from autoarchaeologist.base import excavation, decorator
+from autoarchaeologist.base import excavation
+from autoarchaeologist.html import decorator
 from autoarchaeologist.container import argv
 from autoarchaeologist.collection.datamuseum_dk import FromBitStore
 
