@@ -326,6 +326,10 @@ class ArtifactBase(result_page.ResultPage):
         if a0 < len(self):
             self.create(start=a0, stop=len(self))
 
+    def basename_for(self, *args, **kwargs):
+        ''' ask excavation '''
+        return self.top.basename_for(self, *args, **kwargs)
+
     def filename_for(self, *args, **kwargs):
         ''' ask excavation '''
         return self.top.filename_for(self, *args, **kwargs)

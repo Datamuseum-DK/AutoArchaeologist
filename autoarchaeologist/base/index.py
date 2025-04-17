@@ -37,7 +37,7 @@ class Entry():
         self.key = key
         self.entries = set()
         self.spill = 0
-        self.file = None
+        self.relpath = None
 
     def __len__(self):
         if self.spill:
@@ -69,8 +69,12 @@ class Entry():
         else:
             key = html.escape(self.key)
             fot.write('<tr><td>' + key + '</td>')
-            fot.write('<td><a href="%s">' % self.file.link)
-            fot.write('%d entries</td></tr>\n' % len(self.entries))
+            #fot.write('<td><a href="%s">' % self.file.link)
+            fot.write('<td>')
+            fot.link_to(self.relpath, "%d entries" % len(self.entries))
+            # fot.write('%d entries</td></tr>\n' % len(self.entries))
+            #fot.write('%d entries' % len(self.entries))
+            fot.write('</td></tr>')
 
 class Tab():
     '''
@@ -144,7 +148,7 @@ class Page():
     def __init__(self, this):
         self.this = this
         self.tabs = []
-        self.file = None
+        self.relpath = None
         self.cached_len = None
 
     def __len__(self):
@@ -174,13 +178,13 @@ class Page():
         i = safe_filename(self.tabs[0].hdr)
         if len(self.tabs) > 1:
             i += "__" + safe_filename(self.tabs[-1].hdr)
-        self.file = this.filename_for("_index_" + i + ".html")
+        self.relpath = self.this.basename_for("_index_" + i + ".html")
 
     def range(self):
         ''' What's in this page '''
         i = self.tabs[0].hdr
         if len(self.tabs) > 1:
-            i += "…" + self.tabs[-1].hdr
+            i += " … " + self.tabs[-1].hdr
         return i
 
     def produce(self, file):
@@ -338,10 +342,9 @@ class Index():
             if not entry.spill:
                 continue
             i = safe_filename(entry.key)
-            entry.file = self.this.filename_for("_index__" + i + ".html")
-            with open(entry.file.filename, "w", encoding="utf-8") as file:
-                title = self.title + ": " + html.escape(entry.key)
-                self.this.top.html_prefix(file, title)
+            entry.relpath = self.this.basename_for("_index__" + i + ".html")
+            title = self.title + ": " + html.escape(entry.key)
+            with self.this.top.decorator.html_file(entry.relpath, title) as file:
                 file.write("<pre>\n")
                 file.write(self.this.top.html_link_to(self.this.top, "top"))
                 file.write("</pre>\n")
@@ -349,22 +352,24 @@ class Index():
                 file.write('<table>\n')
                 entry.produce_lines(file)
                 file.write('</table>\n')
-                self.this.top.html_suffix(file, self.this)
 
     def produce_index_header(self, fot, pgno=None):
         ''' Produce the index header line '''
 
-        fot.write("Index: ┃ ")
+        fot.write("Index: ")
         if pgno is not None and len(self.pages) > 1:
             if pgno > 0:
-                fot.write('<A href="%s">◀</A> ' % (self.pages[pgno-1].file.link))
-            fot.write('%s ' % html.escape(self.pages[pgno].range()))
+                fot.link_to(self.pages[pgno-1].relpath, "◀")
+            fot.write(' {%s}' % html.escape(self.pages[pgno].range()))
             if pgno < len(self.pages) - 1:
-                fot.write('<A href="%s">▶</A> ' % (self.pages[pgno+1].file.link))
-            fot.write("┃ ")
+                fot.write(" ")
+                fot.link_to(self.pages[pgno+1].relpath, "▶")
+            fot.write("   ")
         for ptr, page in self.ptrs:
-            fot.write('<A href="%s#IDX_%s">%s</A> ' % (page.file.link, ptr, ptr))
-        fot.write("┃<br/>\n")
+            #fot.write('<A href="%s#IDX_%s">%s</A> ' % (page.file.link, ptr, ptr))
+            fot.write(" ")
+            fot.link_to(page.relpath + "#IDX_" + ptr, ptr)
+        fot.write("\n")
 
     def produce(self, fot):
         ''' Produce the index '''
@@ -384,16 +389,14 @@ class Index():
 
         self.produce_index_header(fot)
         for pgno, page in enumerate(self.pages):
-            with open(page.file.filename, "w", encoding="utf-8") as file:
-                if len(self.pages) == 1:
-                    title = self.title
-                else:
-                    title = self.title + ": " + html.escape(page.range())
-                self.this.top.html_prefix(file, title)
+            if len(self.pages) == 1:
+                title = self.title
+            else:
+                title = self.title + ": " + html.escape(page.range())
+            with self.this.top.decorator.html_file(page.relpath, title) as file:
                 file.write('<pre>')
-                file.write(self.this.top.html_link_to(self.this.top, "top"))
+                file.link_to(self.this.top.basename_for(self.this.top), "top")
                 file.write('</pre>\n')
                 self.produce_index_header(file, pgno=pgno)
                 file.write('<H2>' + title + '</H2>\n')
                 page.produce(file)
-                self.this.top.html_suffix(file, self.this)

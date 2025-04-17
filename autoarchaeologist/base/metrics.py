@@ -40,12 +40,17 @@ class Metrics():
         l_unique = len(self.unique)
         if l_children == l_unique:
             return "%d" % l_unique
-        ff = self.this.filename_for(suf="_metric.html")
-        with open(ff.filename, "w") as file:
-            self.this.top.html_prefix(file, self.this)
-            self.this.top.html_artifact_head(file, self.this)
-            self.this.html_page_head(file)
-            file.write("<H2>Metrics</H2>\n")
+        relpath = self.this.basename_for(suf="_metrics.html")
+        title = str(self.this) + " Metrics"
+        with self.this.top.decorator.html_file(relpath, title) as file:
+            file.write("<pre>")
+            file.link_to(self.this.top.basename_for(self.this.top), "top")
+            file.write("</pre>")
+
+            file.write("<H2>")
+            self.this.summary()
+            file.link_to(self.this.basename_for(suf=".html"), str(self.this))
+            file.write(" Metrics</H2>\n")
             file.write("<table>\n")
             file.write("<thead>\n")
             file.write("<tr>\n")
@@ -82,9 +87,9 @@ class Metrics():
                     file.write("<td>" + that.summary(names=True, notes=True) + "</td>")
                     file.write("</tr>")
                 file.write("</table>\n")
-            self.this.top.html_suffix(file, self.this)
+
         return self.this.top.html_link_to(
             self.this,
             "%d/%d" % (l_unique, l_children),
-            suf="_metric.html",
+            suf="_metrics.html",
         )
