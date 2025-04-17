@@ -1,10 +1,92 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    Berkeley Fast File System
 '''
 
 import struct
 
+from ...base import octetview as ov
 from . import unix_fs as ufs
+
+class IntergraphCdef():
+
+    pointer = ov.Le32
+    char = ov.Octet
+    int = ov.Le32
+    short = ov.Le16
+    long = ov.Le32
+    uint8_t = ov.Octet
+    uint16_t = ov.Le16
+    uint32_t = ov.Le32
+    daddr_t = ov.Le32
+    time_t = ov.Le32
+    uid_t = ov.Le16
+    gid_t = ov.Le16
+    quad = ov.Le64
+
+class FfsSuperBlock(ov.Struct):
+
+    TYPES = IntergraphCdef()
+
+    FIELDS = ov.cstruct_to_fields('''
+	pointer	fs_link
+	pointer	fs_rlink
+	daddr_t	fs_sblkno
+	daddr_t	fs_cblkno
+	daddr_t	fs_iblkno
+	daddr_t	fs_dblkno
+	long	fs_old_cgoffset
+	long	fs_old_cgmask
+	long	fs_old_time
+	long	fs_old_size
+	long	fs_old_dsize
+	long	fs_ncg
+	long	fs_bsize
+	long	fs_fsize
+	long	fs_frag
+	long	fs_minfree
+	long	fs_rotdelay
+	long	fs_rps
+	long	fs_bmask
+	long	fs_fmask
+	long	fs_bshift
+	long	fs_fshift
+	long	fs_maxcontig
+	long	fs_maxbpg
+	long	fs_fragshift
+	long	fs_fsbtodb
+	long	fs_sbsize
+	long	fs_csmask
+	long	fs_csshift
+	long	fs_nindir
+	long	fs_inopb
+	long	fs_nspf
+	long	fs_optim
+	long	fs_sparecon[5]
+	daddr_t	fs_csaddr
+	long	fs_cssize
+	long	fs_cgsize
+	long	fs_ntrak
+	long	fs_nsect
+	long	fs_spc
+	long	fs_ncyl
+	long	fs_cpg
+	long	fs_ipg
+	long	fs_fpg
+	long	cstotal[4]
+	long	fs_clean
+	char	fs_fmod
+	char	fs_clean2
+	char	fs_ronly
+	char	fs_flags
+	char	fs_fsmnt[8]
+	long	fs_grotor
+    ''')
 
 FFS_SUPERBLOCK = (
     ("fs_firstfield", "1L"),        # historic filesystem linked list,
@@ -84,6 +166,21 @@ FFS_SUPERBLOCK = (
         int64_t  fs_providersize;       /* size of underlying GEOM provider */
 '''
 
+class FfsCylinderGroup(ov.Struct):
+
+    TYPES = IntergraphCdef()
+
+    FIELDS = ov.cstruct_to_fields('''
+	long	cg_firstfield
+	long	cg_magic
+	long	cg_old_time
+	long	cg_cgx
+	long	cg_old_ncyl
+	long	cg_old_niblk
+	long	cg_ndblk
+	long	cg_cs
+    ''')
+
 FFS_CYLINDERGROUP = (
     ("cg_firstfield", "1L"),        # historic cyl groups linked list
     ("cg_magic", "1L"),             # magic number
@@ -117,6 +214,39 @@ FFS_CYLINDERGROUP = (
         u_int8_t cg_space[1];           /* space for cylinder group maps */
 '''
 
+class FfsUfs1Inode(ufs.Inode):
+
+    TYPES = IntergraphCdef()
+
+    FIELDS = ov.cstruct_to_fields('''
+	short	di_mode
+	short	di_nlink
+	uid_t	di_uid
+	gid_t	di_gid
+	quad	di_size
+	time_t	di_atime
+	long	di_atimespare
+	time_t	di_mtime
+	long	di_mtimespare
+	time_t	di_ctime
+	long	di_ctimespare
+	daddr_t	di_dbx[12]
+	daddr_t	di_idbx [3]
+	long	di_flags
+	long	di_blocks
+	long	di_gen
+	long	di_spare[4]
+    ''')
+
+    def long(self, tree, off):
+        return ov.Le32(tree, off)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ifmt = self.di_mode & self.S_ISFMT
+        self.di_db = [x.val for x in self.di_dbx]
+        self.di_ib = [x.val for x in self.di_idbx]
+
 UFS1_INODE = (
     ("di_mode", "1H",),             #   0: IFMT, permissions; see below.
     ("di_nlink", "1H",),            #   2: File link count.
@@ -138,6 +268,15 @@ UFS1_INODE = (
     ("di_modrev", "1Q",),           #  120: i_modrev for NFSv4
 )
 
+class OldLeDirEnt(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            inum_=ov.Le16,
+            fnam_=ov.Text(14),
+        )
+
 class Directory(ufs.Directory):
     ''' Variable length dirent records '''
 
@@ -157,14 +296,29 @@ class FFS(ufs.UnixFileSystem):
     FS_TYPE = "BSD FFS/UFS1 Filesystem"
     CHARSET = "iso8859-1"
 
-    DIRECTORY = Directory
+    #DIRECTORY = Directory
 
     INODE_SIZE = 0x80
+
+    MAGIC_OFFSET = 0x55c
+
+    VERBOSE = True
 
     MAGICS = (
         0x11954,	# Kirks birthday
         0x95014,	# Seen on HP-UX (30002742)
     )
+
+    def __init__(self, this, *args, **kvargs):
+        if len(this) not in (1979596800, 17920000, 2129619968, 961226752):
+            return
+        self.phk = False
+        super().__init__(this, *args, **kvargs)
+        print("RD", self.rootdir)
+        self.commit()
+        if 0 and self.phk:
+            print(self.this, "Making debug Interpretation")
+            self.add_interpretation(more=True)
 
     def get_superblock(self):
         ''' Get SuperBlock '''
@@ -178,25 +332,31 @@ class FFS(ufs.UnixFileSystem):
 
     def try_sblock(self, offset):
         ''' Try to read SuperBlock at this offset '''
-        if offset + 0x560 > len(self.this):
+        if offset + self.MAGIC_OFFSET + 4 > len(self.this):
             return False
-        i = self.this[offset + 0x55c:offset + 0x560]
+        i = self.this[offset + self.MAGIC_OFFSET:offset + self.MAGIC_OFFSET+4]
         magic_be = struct.unpack(">1L", i)[0]
         magic_le = struct.unpack("<1L", i)[0]
         if magic_be in self.MAGICS:
+            print(self.this, hex(offset), ">", hex(magic_be), hex(magic_le))
             self.ENDIAN = ">"
-        elif magic_le == self.MAGICS:
+        elif magic_le in self.MAGICS:
+            print(self.this, hex(offset), "<", hex(magic_be), hex(magic_le))
             self.ENDIAN = "<"
         else:
             if 0x19540119 in (magic_be, magic_le):
                 print("XXX: UFS2 unhandled")
             return False
 
-        self.sblock = self.this.record(
-            FFS_SUPERBLOCK,
-            offset=offset,
-            endian=self.ENDIAN,
-        )
+        if False:
+            self.sblock = self.this.record(
+                FFS_SUPERBLOCK,
+                offset=offset,
+                endian=self.ENDIAN,
+            )
+        self.sblock = FfsSuperBlock(self, offset, naked=True).insert()
+        print("SBK", "\n".join(self.sblock.render()))
+        self.phk = True
         return True
 
     def cgget(self, cgnum):
@@ -205,11 +365,7 @@ class FFS(ufs.UnixFileSystem):
         offset += cgnum * self.sblock.fs_fpg
         offset += self.sblock.fs_old_cgoffset * (cgnum & ~self.sblock.fs_old_cgmask)
         offset <<= self.sblock.fs_fshift
-        return self.this.record(
-            FFS_CYLINDERGROUP,
-            offset=offset,
-            endian=self.ENDIAN,
-        )
+        return FfsCylinderGroup(self, offset, naked=True)
 
     def get_inode(self, inum):
         ''' Get Inode '''
@@ -218,20 +374,26 @@ class FFS(ufs.UnixFileSystem):
         if cgn >= len(self.cylgroup):
             print("NO CG", inum, cgn, self.sblock)
             return None
-        offset = self.cylgroup[cgn]._offset
+        offset = self.cylgroup[cgn].lo
         offset += ((self.sblock.fs_iblkno - self.sblock.fs_cblkno) << self.sblock.fs_fshift)
         offset += self.INODE_SIZE * irem
-        return self.this.record(
-            UFS1_INODE,
-            offset=offset,
-            endian=self.ENDIAN,
-            use_type=ufs.Inode,
-            ufs=self,
-            name="ufs1",
-            di_inum=inum,
-       )
+        y = FfsUfs1Inode(self, offset, naked=True);
+        y.di_inum = inum
+        y.ufs = self
+        # print("IN", "\n".join(y.render()))
+        return y.insert()
+
+    def parse_directory(self, inode):
+        # print("PD{}", type(inode), inode)
+        n = 0
+        for b in inode:
+            for a in range(b.lo, b.hi, 16):
+                y = OldLeDirEnt(self, a)
+                # print("PD", y, [y.fnam.full_text()])
+                yield y.inum.val, y.fnam.full_text()
 
     def get_block(self, bno):
         ''' Get Block (Fragment) '''
+        #bno = bno.val	# XXX arrays in naked structs should also be naked
         offset = bno << self.sblock.fs_fshift
-        return self.this[offset:offset+self.sblock.fs_bsize]
+        return ov.Octets(self, lo=offset, width=self.sblock.fs_bsize).insert()
