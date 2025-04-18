@@ -149,7 +149,6 @@ class DDHF_Excavation(excavation.Excavation):
 
 OK_ENVS = {
     "AUTOARCHAEOLOGIST_HTML_DIR": "html_dir",
-    "AUTOARCHAEOLOGIST_LINK_PREFIX": "link_prefix",
     "AUTOARCHAEOLOGIST_BITSTORE_CACHE": "ddhf_bitstore_cache",
 }
 

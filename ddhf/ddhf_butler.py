@@ -10,19 +10,14 @@
 '''
 
 import ddhf
-import ddhf.cpm_exc
+from ddhf import cpm_exc
 
-class Butler(ddhf.DDHFExcavation):
+class Butler(cpm_exc.DdhfExcavationCpm):
     ''' All Butler artifacts '''
 
     BITSTORE = (
         "COMPANY/BOGIKA",
     )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        ddhf.cpm_exc.std_cpm_excavation(self)
 
 if __name__ == "__main__":
     ddhf.main(

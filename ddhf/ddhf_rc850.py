@@ -10,19 +10,15 @@
 '''
 
 import ddhf
-import ddhf.cpm_exc
+from ddhf import cpm_exc
 
-class Rc850(ddhf.DDHFExcavation):
+class Rc850(cpm_exc.DdhfExcavationCpm):
 
     ''' All RC850 artifacts '''
 
     BITSTORE = (
         "RC/RC850/CPM",
     )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        ddhf.cpm_exc.std_cpm_excavation(self)
 
 if __name__ == "__main__":
     ddhf.main(

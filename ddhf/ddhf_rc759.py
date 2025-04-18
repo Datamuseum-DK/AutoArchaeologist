@@ -10,9 +10,9 @@
 '''
 
 import ddhf
-import ddhf.cpm_exc
+from ddhf import cpm_exc
 
-class Rc759(ddhf.DDHFExcavation):
+class Rc759(cpm_exc.DdhfExcavationCpm):
 
     ''' All RC759 artifacts '''
 
@@ -20,10 +20,6 @@ class Rc759(ddhf.DDHFExcavation):
         "-30002875",
         "RC/RC759",
     )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        ddhf.cpm_exc.std_cpm_excavation(self)
 
 if __name__ == "__main__":
     ddhf.main(

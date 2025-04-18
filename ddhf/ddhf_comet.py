@@ -10,19 +10,15 @@
 '''
 
 import ddhf
-import ddhf.cpm_exc
+from ddhf import cpm_exc
 
-class Comet(ddhf.DDHFExcavation):
+class Comet(cpm_exc.DdhfExcavationCpm):
 
     ''' All Comet artifacts '''
 
     BITSTORE = (
         "COMPANY/ICL/COMET",
     )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        ddhf.cpm_exc.std_cpm_excavation(self)
 
 if __name__ == "__main__":
     ddhf.main(

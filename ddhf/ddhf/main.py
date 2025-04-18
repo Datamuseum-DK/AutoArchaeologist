@@ -56,7 +56,12 @@ class DDHFExcavation(excavation.Excavation):
             else:
                 argv.argv_file(self, fn)
         if do_bitstore:
-            FromBitStore(self, self.ddhf_bitstore_cache, *self.BITSTORE, media_types=self.MEDIA_TYPES)
+            FromBitStore(
+                self,
+                self.ddhf_bitstore_cache,
+                *self.BITSTORE,
+                media_types=self.MEDIA_TYPES
+            )
 
     def usage(self):
         ''' ... '''
@@ -76,12 +81,6 @@ class DDHFExcavation(excavation.Excavation):
         print("   AUTOARCHAEOLOGIST_HTML_DIR")
         print("      Where to write the output files")
         print("      Now:", self.html_dir)
-        print()
-        print("   AUTOARCHAEOLOGIST_LINK_PREFIX")
-        print("      Prefix to use for html links")
-        print("      Set this if the output files are moved")
-        print("      to a different location/webserver")
-        print("      Now:", self.link_prefix)
         print()
         print("   AUTOARCHAEOLOGIST_BITSTORE_CACHE")
         print("      Cache directory for downloaded bitstore artifacts")
@@ -103,7 +102,6 @@ class DDHFExcavation(excavation.Excavation):
 
 OK_ENVS = {
     "AUTOARCHAEOLOGIST_HTML_DIR": "html_dir",
-    "AUTOARCHAEOLOGIST_LINK_PREFIX": "link_prefix",
     "AUTOARCHAEOLOGIST_BITSTORE_CACHE": "ddhf_bitstore_cache",
 }
 
@@ -125,5 +123,5 @@ def main(job, html_subdir="tmp", **kwargs):
     baseurl = ctx.produce_html()
 
     print("Now point your browser at:")
-    print("\t", baseurl)
+    print("\tfile://" + baseurl)
     return ctx

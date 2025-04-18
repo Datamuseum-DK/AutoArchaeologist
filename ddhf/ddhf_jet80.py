@@ -10,19 +10,15 @@
 '''
 
 import ddhf
-import ddhf.cpm_exc
+from ddhf import cpm_exc
 
-class Jet80(ddhf.DDHFExcavation):
+class Jet80(cpm_exc.DdhfExcavationCpm):
 
     ''' All Jet80 artifacts '''
 
     BITSTORE = (
         "JET80",
     )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        ddhf.cpm_exc.std_cpm_excavation(self)
 
 if __name__ == "__main__":
     ddhf.main(

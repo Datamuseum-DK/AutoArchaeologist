@@ -10,9 +10,9 @@
 '''
 
 import ddhf
-import ddhf.cpm_exc
+from ddhf import cpm_exc
 
-class CrCpm(ddhf.DDHFExcavation):
+class CrCpm(cpm_exc.DdhfExcavationCpm):
 
     ''' All CR CP/M artifacts '''
 
@@ -21,10 +21,6 @@ class CrCpm(ddhf.DDHFExcavation):
         "CR/CR8",
         "CR/CR16",
     )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        ddhf.cpm_exc.std_cpm_excavation(self)
 
 if __name__ == "__main__":
     ddhf.main(

@@ -10,9 +10,9 @@
 '''
 
 import ddhf
-import ddhf.cpm_exc
+from ddhf import cpm_exc
 
-class Cpm(ddhf.DDHFExcavation):
+class Cpm(cpm_exc.DdhfExcavationCpm):
 
     ''' All Cpm artifacts '''
 
@@ -32,15 +32,6 @@ class Cpm(ddhf.DDHFExcavation):
         "COMPANY/ICL/COMET",
         "COMPANY/BOGIKA",
     )
-
-    MEDIA_TYPES = (
-        '5¼" Floppy Disk',
-        '8" Floppy Disk',
-    )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        ddhf.cpm_exc.std_cpm_excavation(self)
 
 if __name__ == "__main__":
     ddhf.main(
