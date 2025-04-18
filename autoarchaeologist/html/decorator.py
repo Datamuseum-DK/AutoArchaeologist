@@ -66,6 +66,18 @@ class HtmlFile():
         self.path_to("href", other)
         self.write('>' + text + '</A>')
 
+    def str_link_to_that(self, that):
+        ''' Return link to other artifact as string '''
+        return '<A href="' + \
+	    os.path.relpath(that.relpath, self.reldir) + \
+            '">' + str(that) + '</A>'
+
+    def link_to_that(self, that):
+        ''' <A> Link to another artifact '''
+        self.write('<A ')
+        self.path_to("href", that.relpath)
+        self.write('>' + str(that) + '</A>')
+
     def write(self, what):
         ''' ... '''
         self.fd.write(what)
@@ -127,7 +139,7 @@ class Decorator():
         for this in self.top.hashes.values():
             self.produce_artifact_page(this)
 
-        return self.top.filename_for(self.top).link
+        return self.html_dir
 
     def html_file(self, relpath, title):
         ''' file-like HTML file object '''
@@ -191,7 +203,9 @@ class Decorator():
                     fo.write('<tr class="stripe">\n')
                 else:
                     fo.write('<tr>\n')
-                fo.write('<td>' + self.top.html_link_to(this) + '</td>\n')
+                fo.write('<td>')
+                fo.link_to_that(this)
+                fo.write('</td>')
                 fo.write('<td>')
                 where, desc = this.metrics.terse()
                 if where:

@@ -30,16 +30,17 @@ class DuplicateArtifact(Exception):
     def __init__(self, that, description):
         t = "Artifact:\n\t" + description
         t += "\nis identical to\n\t"
-        t += that.summary(False)
+        t += str(that)
         super().__init__("\n" + t + "\n")
         self.that = that
 
 class OutputFile():
     ''' Output files have a physical filename and a html reference '''
 
-    def __init__(self, filename, link):
+    def __init__(self, relpath, filename, link):
+        self.relpath = relpath
         self.filename = filename
-        self.link = link
+        self.xlink = link
 
     def __repr__(self):
         return "<OutputFile '" + self.filename + "'>"
@@ -141,6 +142,7 @@ class Excavation(result_page.ResultPage):
         self.by_class = {} # Experimental extension point
 
         self.type_case = type_case.Ascii()
+        self.relpath = "index.html"
 
     def __lt__(self, other):
         # Duck-type as Artifact
@@ -148,6 +150,7 @@ class Excavation(result_page.ResultPage):
 
     def adopt(self, this):
         ''' Adopt an artifact '''
+        this.relpath = self.basename_for(this)
         if len(this) == 0:
             print("Proposed artifact is empty", this)
             return
@@ -265,6 +268,7 @@ class Excavation(result_page.ResultPage):
         if temp:
             return TempFile(os.path.join(self.html_dir, base))
         return OutputFile(
+            base,
             os.path.join(self.html_dir, base),
             os.path.join(self.link_prefix, base),
         )
@@ -281,7 +285,7 @@ class Excavation(result_page.ResultPage):
 
         self.decorator.produce_html()
 
-        return self.filename_for(self).link
+        return self.html_dir
 
     def html_link_to(self, this, link_text=None, anchor=None, **kwargs):
         ''' Return a HTML link to an artifact '''

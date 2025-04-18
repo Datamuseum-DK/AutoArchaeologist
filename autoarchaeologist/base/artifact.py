@@ -77,6 +77,7 @@ class ArtifactBase(result_page.ResultPage):
         super().__init__()
 
         self.digest = None
+        self.relpath = None
 
         self.parents = set()
         self.children = []
@@ -106,7 +107,6 @@ class ArtifactBase(result_page.ResultPage):
         self._key_len = 0
 
         self.metrics = None # Used only for toplevel artifacts
-        self.metrics_refs = set()
 
     def __str__(self):
         if not self.digest:
@@ -382,8 +382,6 @@ class ArtifactBase(result_page.ResultPage):
 
     def summary(
         self,
-        link=True,
-        ident=True,
         notes=False,
         types=True,
         descriptions=True,
@@ -392,11 +390,6 @@ class ArtifactBase(result_page.ResultPage):
         ''' Produce a one-line summary '''
         txt = []
         nam = ""
-        if ident:
-            if link:
-                nam = self.top.html_link_to(self) + " "
-            else:
-                nam = str(self) + " "
         j = set()
         if descriptions:
             if self.descriptions:
@@ -410,13 +403,11 @@ class ArtifactBase(result_page.ResultPage):
                     j.add(i)
         if notes:
             txt += self.top.dotdotdot(sorted({y for _x, y, _z in self.iter_notes(True)}))
-        if not link or not ident or not types or not descriptions:
-            return nam + ", ".join(txt)
         return nam + ", ".join(txt)
 
     def html_page_head(self, file):
         ''' Produce HTML page header '''
-        file.write("<H2>" + self.summary(link=False) + "</H2>\n")
+        file.write("<H2>" + str(self) + " " + self.summary() + "</H2>\n")
         file.write("<pre>\n")
         file.write("    Length: %d (0x%x)\n" % (len(self), len(self)))
         for i in self.descriptions:
@@ -489,7 +480,7 @@ class ArtifactBase(result_page.ResultPage):
                 if target:
                     link = "\u27e6this\u27e7"
                 else:
-                    link = self.top.html_link_to(self)
+                    link = file.str_link_to_that(self)
 
                 paths = []
                 for key, nsps in self.namespaces.items():

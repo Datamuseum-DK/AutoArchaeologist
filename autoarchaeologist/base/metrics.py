@@ -43,8 +43,7 @@ class Metrics():
             file.write("</pre>")
 
             file.write("<H2>")
-            self.this.summary()
-            file.link_to(self.this.basename_for(suf=".html"), str(self.this))
+            file.link_to_that(self.this)
             file.write(" Metrics</H2>\n")
             file.write("<table>\n")
             file.write("<thead>\n")
@@ -64,14 +63,19 @@ class Metrics():
                     break
                 file.write("<tr>")
                 file.write("<td>%6d</td>" % len(overlap))
-                file.write("<td>" + that.summary(names=True, notes=True) + "</td>")
+                file.write("<td>")
+                file.link_to_that(that)
+                file.write(" ")
+                file.write(that.summary(names=True, notes=True) + "</td>")
                 file.write("</tr>\n")
             file.write("</table>\n")
             if l_unique:
                 file.write("<H2>Unique</H2>\n")
                 file.write("<table>\n")
                 for that in sorted(self.unique):
-                    file.write("<tr><td>" + that.summary(names=True, notes=True) + "</td></tr>")
+                    file.write("<tr><td>")
+                    file.link_to_that(that)
+                    file.write(that.summary(names=True, notes=True) + "</td></tr>")
                 file.write("</table>\n")
 
         return (self.relpath, "%d/%d" % (l_unique, l_children))

@@ -170,7 +170,8 @@ class DotPlot():
     def render_dot(self, fo, _this):
         ''' inline image '''
         fo.write("<H3>Dot plot</H3>\n")
-        fo.write('<A href="%s">Dot(1) source file</a>\n' % self.dotfn.link)
+        fo.link_to(self.dotfn.relpath, 'Dot(1) source file')
+        fo.write("\n")
         if not self.enabled:
             return
         fo.write('<img src="%s" width="100%%"/>\n' % self.svgfn.link)

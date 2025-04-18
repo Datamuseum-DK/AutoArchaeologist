@@ -200,7 +200,7 @@ class Disk(ov.OctetView):
         for hd in range(nhd):
             if y:
                 for cyl in range(ncyl):
-                    Img.set_pixel(cyl, y, 255)
+                    img.set_pixel(cyl, y, 255)
                 y += 1
             for sec in range(nsect):
                 for cyl in range(ncyl):
@@ -215,7 +215,9 @@ class Disk(ov.OctetView):
         pngf = this.filename_for(".png")
         img.write(pngf.filename)
 
-        file.write('<img src="%s" class="diskimage"/>\n' % pngf.link)
+        file.write('<img ')
+        file.path_to("src", pngf.relpath)
+        file.write(' class="diskimage"/>\n')
         file.write('<table>\n')
         for i, j in sorted(self.picture_legend.items()):
             if i not in colmap:

@@ -54,11 +54,13 @@ class Entry():
     def produce_lines(self, fot):
         ''' Produce in the lines '''
         key = html.escape(self.key)
-        i = [(this.summary(ident=False, names=True), this) for this in self.entries]
+        i = [(this.summary(names=True), this) for this in self.entries]
 
         for summ, this in sorted(i):
             fot.write('<tr><td>' + key + '</td>')
-            fot.write('<td class="s">' + this.top.html_link_to(this) + " " + summ + '</td>\n')
+            fot.write('<td class="s">')
+            fot.link_to_that(this)
+            fot.write(" " + summ + '</td>\n')
             fot.write('</tr>\n')
             key = ""
 
@@ -69,11 +71,8 @@ class Entry():
         else:
             key = html.escape(self.key)
             fot.write('<tr><td>' + key + '</td>')
-            #fot.write('<td><a href="%s">' % self.file.link)
             fot.write('<td>')
             fot.link_to(self.relpath, "%d entries" % len(self.entries))
-            # fot.write('%d entries</td></tr>\n' % len(self.entries))
-            #fot.write('%d entries' % len(self.entries))
             fot.write('</td></tr>')
 
 class Tab():
@@ -207,7 +206,7 @@ class Index():
         if this.top == this:
             self.title = "Master Index"
         else:
-            self.title = "Index for " + this.top.html_link_to(this)
+            self.title = "Index for " + str(this)
 
     def __len__(self):
         return sum(len(x) for x in self.entries.values())
@@ -335,6 +334,16 @@ class Index():
 
         return plist
 
+    def h2_line(self, file, extra=""):
+        file.write('<H2>')
+        if self.this.top == self.this:
+            file.write('Master Index')
+        else:
+            file.write('Index for ')
+            file.link_to_that(self.this)
+        file.write(extra)
+        file.write('</H2>\n')
+
     def produce_spills(self):
         ''' Produce the spill pages '''
 
@@ -346,9 +355,9 @@ class Index():
             title = self.title + ": " + html.escape(entry.key)
             with self.this.top.decorator.html_file(entry.relpath, title) as file:
                 file.write("<pre>\n")
-                file.write(self.this.top.html_link_to(self.this.top, "top"))
+                file.link_to(self.this.top.relpath, "top")
                 file.write("</pre>\n")
-                file.write('<H2>' + title + '</H2>\n')
+                self.h2_line(file, ": " + html.escape(entry.key))
                 file.write('<table>\n')
                 entry.produce_lines(file)
                 file.write('</table>\n')
@@ -398,5 +407,5 @@ class Index():
                 file.link_to(self.this.top.basename_for(self.this.top), "top")
                 file.write('</pre>\n')
                 self.produce_index_header(file, pgno=pgno)
-                file.write('<H2>' + title + '</H2>\n')
+                self.h2_line(file)
                 page.produce(file)

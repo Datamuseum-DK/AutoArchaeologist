@@ -116,7 +116,10 @@ class NameSpace():
         ''' Return path and summary for interpretation table '''
         path = self.ns_path()
         if self.ns_this:
-            return [ html.escape(path), self.ns_this.summary(notes=True, descriptions=False, types=True) ]
+            return [
+                html.escape(path),
+                self.ns_this,
+                ]
         return [ path, None ]
 
     def ns_add_child(self, child):
@@ -148,6 +151,13 @@ class NameSpace():
         file.write("<div>")
 
         tbl = [x.ns_render() for y, x in self.ns_recurse() if y > 0]
+        for i in tbl:
+            this = i[-1]
+            if this is not None:
+                i[-1] = file.str_link_to_that(this)
+                i[-1] += " " + this.summary(notes=True, descriptions=False, types=True)
+            else:
+                i[-1] = "«none»"
         cols = max(len(x) for x in tbl)
         i = min(len(x) for x in tbl)
         if i != cols:

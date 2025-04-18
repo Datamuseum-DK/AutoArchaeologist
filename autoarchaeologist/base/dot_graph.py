@@ -68,7 +68,5 @@ def add_interpretation(this, bintree):
         dot.tail()
 
         with this.add_html_interpretation('Dot Graph') as out:
-            out.write('<A href="' + fn.link + '">')
-            out.write('Graphviz dot(1) file (%d edges)' % len(dot.edges))
-            out.write('</A>\n')
+            out.link_to(fn.relpath, 'Graphviz dot(1) file (%d edges)' % len(dot.edges))
         print(this, "DOT: %d edges" % len(dot.edges))
