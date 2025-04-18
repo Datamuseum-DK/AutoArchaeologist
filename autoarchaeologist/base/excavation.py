@@ -37,10 +37,9 @@ class DuplicateArtifact(Exception):
 class OutputFile():
     ''' Output files have a physical filename and a html reference '''
 
-    def __init__(self, relpath, filename, link):
+    def __init__(self, relpath, filename):
         self.relpath = relpath
         self.filename = filename
-        self.xlink = link
 
     def __repr__(self):
         return "<OutputFile '" + self.filename + "'>"
@@ -86,7 +85,6 @@ class Excavation(result_page.ResultPage):
         download_links=False,      # Include links to .bin files
         download_limit=15 << 20,   # Only produce downloads if smaller than
         html_dir="/tmp/aa",	   # Where to put HTML output
-        link_prefix=None,	   # Default is file://[…]
         spill_index=10,		   # Spill limit for index lines
         cache_dir=None,		   # Cache directory for collections
     ):
@@ -104,15 +102,6 @@ class Excavation(result_page.ResultPage):
 
         self.index = index
 
-        if link_prefix is None:
-            # use "file://{abs path to html_dir}/"
-            dir_fd = os.open(".", os.O_RDONLY)
-            os.chdir(html_dir)
-            abspath = os.getcwd()
-            os.chdir(dir_fd)
-            os.close(dir_fd)
-            link_prefix = "file://" + abspath
-
         if download_links:
             downloads = True
 
@@ -122,7 +111,6 @@ class Excavation(result_page.ResultPage):
         self.download_links = download_links
         self.download_limit = download_limit
         self.html_dir = html_dir
-        self.link_prefix = link_prefix
         self.spill_index = spill_index
 
         self.decorator = None
@@ -270,7 +258,6 @@ class Excavation(result_page.ResultPage):
         return OutputFile(
             base,
             os.path.join(self.html_dir, base),
-            os.path.join(self.link_prefix, base),
         )
 
     def produce_html(self):
