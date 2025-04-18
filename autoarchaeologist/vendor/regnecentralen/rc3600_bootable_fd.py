@@ -10,8 +10,6 @@
 
 '''
 
-import struct
-
 BOOTLOADER = bytes.fromhex('''
 c2 ff 10 21 91 d4 00 95  00 52 00 2a 0c b5 fc 01
 12 09 09 49 00 b6 00 d3  0e 09 00 4a 04 11 fc 01
@@ -108,11 +106,10 @@ class BootableFd():
         y = this.create(start=0, stop=len(BOOTLOADER))
         y.add_type("Floppy Bootloader")
         y = this.create(records = sects)
-         
+
 
     def reader(self):
         for trk in range(1, 77):
             for sect in INTERLEAVE:
                 ptr = trk * 26 * 128 + (sect - 1) * 128
                 yield self.this[ptr:ptr+128]
-            

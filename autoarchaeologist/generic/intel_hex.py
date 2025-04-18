@@ -60,7 +60,7 @@ class IntelHex(ov.OctetView):
             if sum(rec) & 0xff:
                 print("BAD checksum", rec.hex(), sum(rec))
                 continue
-            
+
             while ptr < len(this) and this[ptr] & 0x7f in (10, 13):
                 ptr += 1
             self.recs.append(Record(self, at, ptr, rec).insert())

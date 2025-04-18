@@ -19,6 +19,8 @@ from autoarchaeologist.vendor.regnecentralen import rc489k_binout
 from autoarchaeologist.vendor.regnecentralen import rcsl
 from autoarchaeologist.generic import ansi_tape_labels
 
+import ddhf
+
 class Rc3500TypeCase(type_case.Ascii):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,7 +45,6 @@ class TextFileEvenParity(TextFile):
     TYPE_CASE = Rc489kEvenPar()
     VERBOSE = True
 
-import ddhf
 
 class Rc489k(ddhf.DDHFExcavation):
 

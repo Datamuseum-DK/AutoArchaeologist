@@ -18,7 +18,7 @@
 
 
 '''
-    
+
 from ....base import bitview as bv
 from . import common as cm
 

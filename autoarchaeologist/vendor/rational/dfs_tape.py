@@ -115,5 +115,5 @@ class R1K_DFS_Tape(ov.OctetView):
                 offset += len(r)
         this.taken = True
 
-        # Comment in for debugging 
+        # Comment in for debugging
         # self.add_interpretation()

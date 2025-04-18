@@ -6,7 +6,7 @@
 
 '''
 '''
-    
+
 from ....base import bitview as bv
 
 from . import common as cm
@@ -139,7 +139,7 @@ class ArrayBoundsComponent(bv.Struct):
             self.add_field("element", DiscreteComponent)
         elif y.txt == "HEAP_ACCESS_COMPONENT":
             self.add_field("element", HeapAccessComponent)
-            heap = True 
+            heap = True
         else:
             print(bvtree.this, "ARRAY", y)
             self.add_field("element", PureTxt)
@@ -150,7 +150,7 @@ class ArrayBoundsComponent(bv.Struct):
         #self.add_field("x", -64)
         #self.add_field("y", -64)
         #self.add_field("z", -64)
- 
+
         self.done()
 
 class HeapAccessComponent(bv.Struct):
@@ -237,7 +237,7 @@ class RecordComponent(bv.Struct):
             for i in heaps:
                 self.add_field("q%03d" % i, -64)
             # self.add_field("z" % i, -64)
-            
+
 
         self.done()
 
@@ -506,7 +506,7 @@ class DirectoryObject(bv.Struct):
                 bv.Array(self.dir_nchild.val, DirectoryChild, vertical=True),
             )
 
-        self.add_field("def_ver", DirNo) 
+        self.add_field("def_ver", DirNo)
         self.add_field("parent", DirNo)
         self.add_field("cls", -64)
         self.add_field("subcls", -64)
@@ -522,7 +522,7 @@ class DirectoryObject(bv.Struct):
         if self.cls.val == 1 and self.subcls.val in (2, 4, 6):
             self.add_field("ada", AdaExtra)
         self.done()
-       
+
 
 class NullObject(bv.Struct):
     def __init__(self, bvtree, lo):

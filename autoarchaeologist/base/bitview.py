@@ -164,11 +164,11 @@ def Text(width, glyph_width=8, rstrip = False):
     return Text_Class
 
 class Pointer_Class(Bits):
-            
+
     TARGET = None
     WIDTH = None
     ELIDE = None
-            
+
     def __init__(self, bvtree, lo, width=None):
         if width is None:
             width = self.WIDTH
@@ -189,7 +189,7 @@ class Pointer_Class(Bits):
                 dst = set()
                 for j in i:
                     t = j.__class__.__name__
-                    if j.lo < self.val: 
+                    if j.lo < self.val:
                         t += "+0x%x" % (self.val - j.lo)
                     dst.add(t)
                 print(
@@ -221,7 +221,7 @@ class Pointer_Class(Bits):
                 return None
             self.cached_dst = dst
         return self.cached_dst
-            
+
     def render(self):
         if self.ELIDE and self.val in self.ELIDE:
             return
@@ -242,12 +242,12 @@ class Pointer_Class(Bits):
         dot.add_edge(src, self.val)
 
 def make_pointer(cls=None, width=None, elide=None):
-        
+
     class ClsPointer(Pointer_Class):
         TARGET = cls
         WIDTH = width
         ELIDE = elide
-            
+
     return ClsPointer
 
 def Pointer(cls=None, width=None, elide=None):
@@ -255,8 +255,8 @@ def Pointer(cls=None, width=None, elide=None):
     key = str(("Pointer", cls, width, elide))
     ptr = class_cache.get(key)
     if not ptr:
-         ptr = make_pointer(cls, width, elide)
-         class_cache[key] = ptr
+        ptr = make_pointer(cls, width, elide)
+        class_cache[key] = ptr
     return ptr
 
 def make_constant(width=32, value=0):
@@ -270,7 +270,7 @@ def make_constant(width=32, value=0):
                         self.lo, self.val, value
                     )
                 )
-            
+
         def render(self):
             yield "CONST(0x%x)" % self.val
 
@@ -280,7 +280,6 @@ def Constant(width=32, value=0):
     key = str(("Constant", width, value))
     ptr = class_cache.get(key)
     if not ptr:
-         ptr = make_constant(width, value)
-         class_cache[key] = ptr
+        ptr = make_constant(width, value)
+        class_cache[key] = ptr
     return ptr
-

@@ -12,7 +12,7 @@
 from ....base import bitview as bv
 
 from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT, LSECSIZE, NameSpace
-from .object import ObjSector, BadObject
+from .object import ObjSector
 
 UNREAD = memoryview(b'_UNREAD_' * (LSECSIZE // 8))
 
@@ -191,11 +191,11 @@ class SegmentDesc(bv.Struct):
         segidx = ovtree.this.top.by_class["r1k_segs"]
         n2 = "%03x:%06x" % (self.vpid.val, self.segno.val)
         if n2 not in segidx:
-             segidx[n2] = {}
+            segidx[n2] = {}
         if self.version.val in segidx[n2]:
-             print("Collision", name)
-             for i, j in segidx[n2].items():
-                 print("  ", i, j)
+            print("Collision", name)
+            for i, j in segidx[n2].items():
+                print("  ", i, j)
         assert self.version.val not in segidx[n2]
         segidx[n2][self.version.val] = that
 

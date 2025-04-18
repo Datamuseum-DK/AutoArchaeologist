@@ -18,9 +18,8 @@
 
 
 '''
-    
-from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray, StringArray
+
+from .common import ManagerSegment
 
 class V1016T88(ManagerSegment):
 

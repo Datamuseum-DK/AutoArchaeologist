@@ -9,7 +9,6 @@
    ===============================
 '''
 
-from ...base import artifact
 from ...base import octetview as ov
 from ...base import namespace
 from ...generic import disk

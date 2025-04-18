@@ -141,9 +141,9 @@ class Struct():
             z = y
         self.hi = y.hi
         if self.naked and hasattr(z, "val"):
-             setattr(self, name, z.val)
+            setattr(self, name, z.val)
         else:
-             setattr(self, name, z)
+            setattr(self, name, z)
         self.fields.append((name, y))
         return y
 

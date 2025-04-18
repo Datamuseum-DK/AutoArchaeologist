@@ -14,7 +14,6 @@
 '''
 
 import unicodedata
-import html
 
 class Slug():
     ''' One position in the type case '''

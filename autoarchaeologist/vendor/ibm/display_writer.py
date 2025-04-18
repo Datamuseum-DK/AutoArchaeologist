@@ -115,10 +115,10 @@ class AllocEntry(ov.Struct):
 
     def start(self):
         return self.a.val << 8
-        
+
     def span(self):
         return sum(1+x.c.val for x in self.c)
-        
+
     def iter_sectors(self):
         ptr = self.a.val << 8
         for i in self.c:
@@ -169,7 +169,7 @@ class AllocList(ov.Struct):
                     y.traverse(prefix + "\t")
 
 class Unallocated(ov.Dump):
-     ''' ... '''
+    ''' ... '''
 
 class FreeMap(ov.Struct):
     def __init__(self, tree, lo):

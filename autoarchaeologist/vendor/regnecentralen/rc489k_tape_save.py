@@ -227,7 +227,7 @@ class Rc489kSaveTapeFile(ov.OctetView):
         self.label = Rc489kSaveLabel(self, self.recs.pop(0).lo).insert()
         print(this, self.label)
         if self.label.vers.txt.strip() == "empty":
-             return
+            return
         rec = self.recs.pop(0)
         self.cathead = Rc489kSaveCatalogHead(self, rec.lo).insert()
         ptr = self.cathead.hi
@@ -288,15 +288,15 @@ class Rc489kSaveTapeFile(ov.OctetView):
                     print(this, "GOT", len(catlist), "WANT", self.label.maxpartial.val)
             else:
                 while cur is None and catlist:
-                     cur = catlist.pop(0)
-                     if cur.need == 0:
-                         print("SKIP", cur)
-                         cur = None
-                         continue
-                     if cur.first_word.first_slice == 0:
-                         print("UNAVAIL", cur)
-                         cur = None
-                         continue
+                    cur = catlist.pop(0)
+                    if cur.need == 0:
+                        print("SKIP", cur)
+                        cur = None
+                        continue
+                    if cur.first_word.first_slice == 0:
+                        print("UNAVAIL", cur)
+                        cur = None
+                        continue
                 if not cur:
                     break
                 if cur.feed(rec):
@@ -308,7 +308,6 @@ class Rc489kSaveTapeFile(ov.OctetView):
         while self.recs:
             rec = self.recs.pop(0)
             Rc489kRec(self, lo=rec.lo, hi=rec.hi).insert()
-          
 
         print(this, "A")
         this.add_interpretation(self, self.namespace.ns_html_plain)

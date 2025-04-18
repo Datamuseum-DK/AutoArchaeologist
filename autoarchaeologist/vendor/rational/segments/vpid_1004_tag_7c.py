@@ -18,7 +18,7 @@
 
    20240304 accounts for all bits in 20b035c69 from disk08
 '''
-    
+
 from ....base import bitview as bv
 from . import common as cm
 

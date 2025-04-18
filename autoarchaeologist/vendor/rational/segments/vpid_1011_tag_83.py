@@ -17,9 +17,9 @@
         […]
 
 '''
-    
+
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray, StringArray, StdHead
+from .common import ManagerSegment, PointerArray
 
 class CS94(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -112,6 +112,3 @@ class V1011T83(ManagerSegment):
 
         # This looks like a huge bitmap...
         bv.Array(0x2fe, CS99A)(self, self.std_head.hd_008_n.val, vertical=True).insert()
-
-     
- 

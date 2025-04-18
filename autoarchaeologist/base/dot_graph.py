@@ -37,10 +37,10 @@ class DotGraph():
                 label = leaf.__class__.__name__
                 label += "\\n0x%x" % leaf.lo
                 if label_extra:
-                     label += "\\n" + label_extra 
+                    label += "\\n" + label_extra
                 l = [ 'label="' + label + '"']
                 if attr is not None:
-                     l += attr
+                    l += attr
                 self.out.write("A%x\t" % leaf.lo)
                 self.out.write('[' + ','.join(l) + ']\n')
 

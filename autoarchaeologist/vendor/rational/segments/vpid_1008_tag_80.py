@@ -17,7 +17,7 @@
         […]
 
 '''
-    
+
 from ....base import bitview as bv
 from .common import ManagerSegment, StdHead, PointerArray, StringArray
 
@@ -75,5 +75,3 @@ class V1008T80(ManagerSegment):
         ).insert()
 
         bv.Pointer(T99)(self, 0x34e).insert()
-
- 

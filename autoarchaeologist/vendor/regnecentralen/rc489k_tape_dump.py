@@ -11,7 +11,7 @@
 '''
 
 from ...base import octetview as ov
-from .rc489k_utils import ShortClock, Rc489kNameSpace, Rc489kEntryTail, DWord
+from .rc489k_utils import Rc489kNameSpace, Rc489kEntryTail, DWord
 
 #################################################
 #

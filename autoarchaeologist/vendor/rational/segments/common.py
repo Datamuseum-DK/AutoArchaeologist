@@ -359,18 +359,18 @@ class ObjRef(bv.Struct):
         ) + ">"
 
 def obj_name(cls, subclass=None):
-        i = OBJECTS.get(cls)
-        if i is None:
-            cln = "%d" % cls
-            scl = {}
-        else:
-            cln, scl = i
-        if subclass is None:
-            return cln
-        scn = scl.get(subclass)
-        if scn is None:
-            scn = "%d" % subclass
-        return cln + "." + scn
+    i = OBJECTS.get(cls)
+    if i is None:
+        cln = "%d" % cls
+        scl = {}
+    else:
+        cln, scl = i
+    if subclass is None:
+        return cln
+    scn = scl.get(subclass)
+    if scn is None:
+        scn = "%d" % subclass
+    return cln + "." + scn
 
 # See 5d3bfb73b, 00_class, 75_tag, seg_0ea8df
 OBJECTS = {

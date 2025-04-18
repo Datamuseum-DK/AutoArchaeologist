@@ -51,7 +51,6 @@
    
 '''
 
-import struct
 import time
 
 from ...base import namespace

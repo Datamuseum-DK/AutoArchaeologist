@@ -76,7 +76,7 @@
 
 
    Some of the Acls on our disk image contains group numbers which
-   do not have [GROUP,,] entries, yet on the R1000 
+   do not have [GROUP,,] entries, yet on the R1000
    show_directory_information() reports their name.
 
    For instance 18=OPERATOR.
@@ -127,7 +127,7 @@ class NameSpace(namespace.NameSpace):
     def ns_render(self):
         meta = self.ns_priv
         return meta + super().ns_render()
-            
+
 
 class DirNo(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -770,4 +770,3 @@ class V1009T81(cm.ManagerSegment):
         file.write("<P>")
         file.write(self.this.summary(link=True))
         file.write("</P>\n")
-

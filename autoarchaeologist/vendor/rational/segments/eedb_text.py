@@ -13,15 +13,14 @@
 '''
 
 from ....base import bitview as bv
-from ....base import namespace
-from .common import Segment, SegHeap, PointerArray, StringArray, StringPointer
+from .common import SegHeap
 
 class ETH(bv.Struct):
 
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
-            lo, 
+            lo,
             eth_0_=-33,
             eth_1_=-32,
         )
@@ -47,7 +46,7 @@ class EEDBText(bv.BitView):
             hi = 8 * len(self.this)
         hi -= (hi - lo) & 7
         if hi <= lo:
-             return
+            return
         l = []
         for adr in range(lo, hi, 8):
             g = int(self.bits[adr:adr+8], 2)
@@ -58,4 +57,4 @@ class EEDBText(bv.BitView):
         print(self.__class__.__name__, self.this, self, len(l))
         self.this.add_type("EEDBtext")
         with self.this.add_utf8_interpretation("EEDB Text") as file:
-             file.write("".join(l))
+            file.write("".join(l))

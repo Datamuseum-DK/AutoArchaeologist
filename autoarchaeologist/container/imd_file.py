@@ -38,9 +38,9 @@ class ImdContainer(artifact.ArtifactFragmented):
     def __init__(self, octets=None, filename=None, verbose=False):
         super().__init__()
         if octets is None:
-             fcont = plain_file.PlainFileArtifact(filename)
+            fcont = plain_file.PlainFileArtifact(filename)
         else:
-             fcont = artifact.ArtifactStream(octets)
+            fcont = artifact.ArtifactStream(octets)
 
         fcont.type_case = type_case.ascii
 
@@ -49,8 +49,8 @@ class ImdContainer(artifact.ArtifactFragmented):
 
         for ptr, i in enumerate(fcont):
             if i == 0x1a:
-                 ptr += 1
-                 break
+                ptr += 1
+                break
 
         ovt = ov.OctetView(fcont)
         y = ov.Text(ptr)(ovt, 0).insert()
@@ -91,7 +91,7 @@ class ImdContainer(artifact.ArtifactFragmented):
                     print("CM", cyl_map)
             else:
                 cyl_map = [track.cyl.val] * track.nsect.val
- 
+
             if track.head.val & 0x40:
                 head_map = ov.HexOctets(ovt, ptr, width = track.nsect.val).insert()
                 ptr = head_map.hi

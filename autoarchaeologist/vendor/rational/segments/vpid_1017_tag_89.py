@@ -11,9 +11,8 @@
    Not mentioned in FE_HANDBOOK.PDf 187p
 
 '''
-    
-from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray, StringArray
+
+from .common import ManagerSegment
 
 class V1017T89(ManagerSegment):
 

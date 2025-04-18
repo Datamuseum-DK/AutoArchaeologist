@@ -18,7 +18,7 @@
 
 
 '''
-    
+
 from ....base import bitview as bv
 from . import common as cm
 
@@ -107,7 +107,7 @@ class A05(bv.Struct):
             a05_051_n_=A15,
             a05_094_n_=-32,
         )
-        d = (self.lo + 0x3ae) - self.hi 
+        d = (self.lo + 0x3ae) - self.hi
         if d > 0:
             print("D", d)
             self.add_field("end", -d)
