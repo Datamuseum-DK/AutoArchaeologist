@@ -6,5 +6,10 @@ __pycache__/
 # Sphinx documentation
 docs/_build/
 
+# Build files
+venv/
+
 # Temporary files
 _.*
+/output/
+/tests/_scratch/
