@@ -102,7 +102,8 @@ class SegmentDesc(bv.Struct):
             lo,
             vertical=False,
             vpid_=-10,
-            segno_=-24,
+            segtyp_=-2,
+            segno_=-22,
             snapshot_=-31,
             other2a_=-8,
             col9_=-9,
@@ -187,9 +188,9 @@ class SegmentDesc(bv.Struct):
         that.add_note('R1k_Segment')
         that.add_note("tag_%02x" % self.col9.val)
         that.add_note("vpid_%04d" % self.vpid.val)
-        name = "%03x:%06x:%x" % (self.vpid.val, self.segno.val, self.version.val)
+        name = "%03x:%x:%06x:%x" % (self.vpid.val, self.segtyp.val, self.segno.val, self.version.val)
         segidx = ovtree.this.top.by_class["r1k_segs"]
-        n2 = "%03x:%06x" % (self.vpid.val, self.segno.val)
+        n2 = "%03x:%x:%06x" % (self.vpid.val, self.segtyp.val, self.segno.val)
         if n2 not in segidx:
             segidx[n2] = {}
         if self.version.val in segidx[n2]:

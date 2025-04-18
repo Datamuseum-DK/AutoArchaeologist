@@ -56,6 +56,16 @@ class F04(bv.Struct):
             f04_003_n_=-24,
         )
 
+class SegId(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            segno_n_=-22,
+            vpid_n_=-10,
+            f002_n_=-32,
+        )
+
 class F06(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -63,7 +73,7 @@ class F06(bv.Struct):
             lo,
             vertical=True,
             f06_000_n_=bv.Array(7, cm.AclEntry, vertical=True),
-            f06_002_n_=-64,
+            f06_002_n_=SegId,
             f06_updated_=cm.TimedProperty,
             f06_004_n_=cm.ObjRef,
             f06_version_=-32,
@@ -81,8 +91,8 @@ class F02(bv.Struct):
 
             f02_040_n_=-70,
 
-            f02_050_n_=-64,
-            f02_051_n_=-64,
+            f02_050_n_=SegId,
+            f02_051_n_=SegId,
 
             f02_068_n_=F06,
             f02_091_n_=F06,
