@@ -47,7 +47,7 @@ class Bits(bintree.BinTreeLeaf):
             hi = lo + width
         assert hi > lo
         self.tree = tree
-        super().__init__(lo, hi, name=name)
+        super().__init__(lo, hi)
 
     def __len__(self):
         return self.hi - self.lo
@@ -123,7 +123,7 @@ class Number(Bits):
 class Struct(datastruct.Struct, Bits):
 
     def __init__(self, *args, **kwargs):
-        bintree.Struct.__init__(self, *args, **kwargs)
+        datastruct.Struct.__init__(self, *args, **kwargs)
 
     def base_init(self, **kwargs):
         Bits.__init__(self, self.tree, self.lo, hi=self.hi, **kwargs)
@@ -232,7 +232,7 @@ class Pointer_Class(Bits):
         if i is None:
             yield "0x" + self.tree.adrfmt % self.val + "→NOTHING"
             return
-        yield "0x" + self.tree.adrfmt % self.val + "→" + i.bt_name
+        yield "0x" + self.tree.adrfmt % self.val + "→" + i.__class__.__name__
 
     def dot_edges(self, dot, src=None):
         if not self.val:
