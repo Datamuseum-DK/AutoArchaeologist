@@ -273,15 +273,6 @@ class Excavation(result_page.ResultPage):
         t += '</a>'
         return t
 
-    def html_prefix(self, fo, this):
-        self.decorator.html_prefix(fo, this)
-
-    def html_artifact_head(self, fo, this):
-        self.decorator.html_artifact_head(fo, this)
-
-    def html_suffix(self, fo, this):
-        self.decorator.html_suffix(fo, this)
-
     def html_derivation(self, _fo, target=False):
         ''' Duck-type as Artifact'''
         return ""
@@ -293,9 +284,6 @@ class Excavation(result_page.ResultPage):
     def iter_notes(self):
         ''' Duck-type as Artifact '''
         yield from []
-
-    def summary(self, *_args, **_kwargs):
-        return "The entire excavation"
 
     def calculate_metrics(self):
         ''' Calculate metrics for top-level artifacts '''
