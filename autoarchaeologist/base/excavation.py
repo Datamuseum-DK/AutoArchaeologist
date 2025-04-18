@@ -14,7 +14,6 @@
 '''
 
 import os
-import mmap
 import tempfile
 
 from . import artifact
@@ -185,20 +184,6 @@ class Excavation(result_page.ResultPage):
         self.adopt(this)
         this.add_parent(self)
         return this
-
-    def add_file_artifact(self, filename, description=None, **kwargs):
-        ''' Add a file as top-level artifact '''
-
-        if not description:
-            description = filename
-
-        fi = open(filename, "rb")
-        mapped = mmap.mmap(
-            fi.fileno(),
-            0,
-            access=mmap.ACCESS_READ,
-        )
-        return self.add_top_artifact(mapped, description=description, **kwargs)
 
     def start_examination(self):
         ''' As it says on the tin... '''
