@@ -74,7 +74,7 @@ class Indir(ObjSector):
 
     def render(self):
         if ELIDE_INDIR:
-            yield self.bt_name + "(Indir elided)"
+            yield self.__class__.__name__ + "(Indir elided)"
         else:
             yield from super().render()
 

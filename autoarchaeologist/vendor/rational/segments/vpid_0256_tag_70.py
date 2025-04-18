@@ -206,10 +206,8 @@ class V0256T70(Segment):
         with self.this.add_utf8_interpretation("What we have figured out") as file:
             file.write(__doc__)
 
-
-
     def html_interpretation(self, file, this):
         file.write("<H3>EEDB filesystem</H3>")
         file.write("<P>")
-        file.write(self.this.summary(link=True))
+        file.link_to_that(self.this)
         file.write("</P>\n")

@@ -735,7 +735,7 @@ class V1009T81(cm.ManagerSegment):
         self.this.add_interpretation(self, self.namespace.ns_html_plain)
 
         with self.this.add_html_interpretation("Show_directory_information simulated") as file:
-            file.write('<A href="' + fn.link + '">')
+            #XXX file.link_to(fn.relpath)
             file.write('Simulated output from show_directory_information.\n')
             file.write('</A>\n')
             file.write('''
@@ -768,5 +768,5 @@ class V1009T81(cm.ManagerSegment):
     def html_interpretation(self, file, this):
         file.write("<H3>Environment filesystem</H3>")
         file.write("<P>")
-        file.write(self.this.summary(link=True))
+        file.link_to_that(self.this)
         file.write("</P>\n")

@@ -108,7 +108,7 @@ class SpaceInfo(MetaTapeFile):
         for i, j in zip(
             widths, (
                 "?1",
-                "?2",
+                "vpid",
                 "?3",
                 "?4",
                 "?5",

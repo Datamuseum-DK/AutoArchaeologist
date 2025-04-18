@@ -46,7 +46,7 @@ class LogSect(ObjSector):
 
     def render(self):
         if ELIDE_SYSLOG:
-            yield self.bt_name + "(LogSect elided)"
+            yield self.__class__.__name__ + "(LogSect elided)"
         else:
             yield from super().render()
 
@@ -90,6 +90,6 @@ class Syslog(ObjSector):
 
     def render(self):
         if ELIDE_SYSLOG:
-            yield self.bt_name + "(Syslog elided)"
+            yield self.__class__.__name__ + "(Syslog elided)"
         else:
             yield from super().render()

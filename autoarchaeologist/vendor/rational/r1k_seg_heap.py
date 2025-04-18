@@ -174,7 +174,7 @@ class DotPlot():
         fo.write("\n")
         if not self.enabled:
             return
-        fo.write('<img src="%s" width="100%%"/>\n' % self.svgfn.link)
+        #XXX fo.write('<img src="%s" width="100%%"/>\n' % self.svgfn.link)
 
 class R1kSegHeap():
 

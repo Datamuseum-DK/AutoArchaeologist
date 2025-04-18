@@ -59,7 +59,7 @@ class BitMapSect(ObjSector):
 
     def render(self):
         if ELIDE_FREELIST:
-            yield self.bt_name + "(BitMapSect elided)"
+            yield self.__class__.__name__ + "(BitMapSect elided)"
         else:
             yield from super().render()
 
@@ -109,7 +109,7 @@ class FreeMapSect(ObjSector):
 
     def render(self):
         if ELIDE_FREELIST:
-            yield self.bt_name + "(FreeMapSect elided)"
+            yield self.__class__.__name__ + "(FreeMapSect elided)"
         else:
             yield from super().render()
 
