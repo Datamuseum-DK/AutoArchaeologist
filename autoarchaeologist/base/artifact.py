@@ -48,11 +48,11 @@ class Record(bintree.BinTreeLeaf):
     def __getitem__(self, idx):
         return self.frag[idx]
 
-class ArtifactBase(result_page.ResultPage):
+class Artifact(result_page.ResultPage):
 
     '''
-        ArtifactBase
-        ------------
+        Artifact
+        --------
 
         Artifacts are just bytearrays with a high-school diploma,
         but they come in different flavours, for which this is
@@ -367,7 +367,8 @@ class ArtifactBase(result_page.ResultPage):
             if that:
                 this = that
             else:
-                this = Artifact(digest, bits)
+                this = ArtifactStream(bits)
+                this.set_digest(digest)
             this.type_case = self.type_case
             self.top.adopt(this)
             this.add_parent(self)
@@ -536,7 +537,7 @@ class ArtifactBase(result_page.ResultPage):
             file.write(html.escape(line) + '\n')
         file.write("</pre>\n")
 
-class ArtifactStream(ArtifactBase):
+class ArtifactStream(Artifact):
 
     '''
        A simple artifact consisting of a sequence of octets
@@ -591,12 +592,6 @@ class ArtifactStream(ArtifactBase):
         f = e & ((1 << (hi - lo)) - 1)
         return f
 
-    def deprecated_getblock(self, idx):
-        ''' Deprecated '''
-
-    def deprecated_iterrecords(self):
-        ''' Deprecated '''
-
     def tobytes(self):
         ''' Return as bytes '''
         return self.bdx.tobytes()
@@ -605,7 +600,7 @@ class ArtifactStream(ArtifactBase):
         ''' Write to file as bytes '''
         file.write(self.bdx)
 
-class ArtifactFragmented(ArtifactBase):
+class ArtifactFragmented(Artifact):
     '''
        Artifact consisting of fragments of other artifact(s)
     '''
@@ -697,10 +692,3 @@ class ArtifactFragmented(ArtifactBase):
     def writetofile(self, file):
         for rec in self._frags:
             file.write(rec.frag)
-
-class Artifact(ArtifactStream):
-    ''' ... '''
-
-    def __init__(self, digest, payload):
-        super().__init__(payload)
-        self.set_digest(digest)

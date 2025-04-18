@@ -146,7 +146,7 @@ class Excavation(result_page.ResultPage):
 
     def add_artifact(self, this):
         ''' Add an artifact, and start examining it '''
-        assert isinstance(this, artifact.ArtifactBase)
+        assert isinstance(this, artifact.Artifact)
         assert this.digest not in self.hashes
         self.hashes[this.digest] = this
         self.queue.append(this)
@@ -166,7 +166,7 @@ class Excavation(result_page.ResultPage):
         if not description:
             description = "Top-level Artifact"
 
-        if isinstance(what, artifact.ArtifactBase):
+        if isinstance(what, artifact.Artifact):
             that = what
         else:
             that = artifact.ArtifactStream(what)
