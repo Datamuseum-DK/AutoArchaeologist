@@ -131,9 +131,16 @@ class Excavation(result_page.ResultPage):
         self.type_case = type_case.Ascii()
         self.relpath = "index.html"
 
+        self.unique_counter = 10000
+
     def __lt__(self, other):
         # Duck-type as Artifact
         return -1
+
+    def get_unique(self):
+        ''' Produce unique numbers '''
+        self.unique_counter += 1
+        return self.unique_counter
 
     def adopt(self, this):
         ''' Adopt an artifact '''
@@ -239,7 +246,7 @@ class Excavation(result_page.ResultPage):
         ''' Come up with a suitable file for an artifact '''
         base = self.basename_for(this, suf)
         if temp:
-            return TempFile(os.path.join(self.html_dir, base))
+            return TempFile(os.path.join(self.html_dir, base + ".%d" % self.get_unique()))
         return OutputFile(
             base,
             os.path.join(self.html_dir, base),

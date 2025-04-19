@@ -12,14 +12,14 @@
 
 import hashlib
 import html
+import mmap
 
 from itertools import zip_longest
 
-from . import bintree
 from . import octetview as ov
 from . import result_page
 
-class Record(bintree.BinTreeLeaf):
+class Record():
     '''
        A piece of an artifact
        ----------------------
@@ -33,11 +33,15 @@ class Record(bintree.BinTreeLeaf):
             high = low + len(frag)
         elif frag is not None:
             assert high == low + len(frag)
-        super().__init__(low, high)
+        self.lo = low
+        self.hi = high
         self.frag = frag
         self.key = key
         self.artifact = None
         self.undefined = False
+
+    def __lt__(self, other):
+        return self.lo < other.lo
 
     def __str__(self):
         return "<R 0x%x…0x%x=0x%x %s>" % (self.lo, self.hi, self.hi - self.lo, str(self.key))
@@ -609,8 +613,11 @@ class ArtifactFragmented(Artifact):
         super().__init__()
         self._frags = []
         self._keys = {}
-        self._tree = None
         self._len = 0
+        self._backing = top.filename_for(top, temp=True)
+        self._file = open(self._backing.filename, "wb")
+        self._map = None
+        self._binfile = False
         if fragments:
             for i in fragments:
                 assert len(i) > 0
@@ -622,38 +629,12 @@ class ArtifactFragmented(Artifact):
         return self._len
 
     def __getitem__(self, idx):
-        if isinstance(idx, int):
-            i = [*self._tree.find(lo = idx, hi = idx + 1)]
-            assert len(i) == 1
-            return i[0][idx - i[0].lo]
-        if not isinstance(idx, slice):
-            return self._keys[idx].frag
-        start = idx.start
-        if start is None:
-            start = 0
-        stop = idx.stop
-        if stop is None:
-            stop = self._len
-        i = [*self._tree.find(lo = start, hi = stop)]
-        #print("GI", self, idx.start, idx.stop, start, stop, i)
-        if len(i) == 1:
-            start = max(0, start - i[0].lo)
-            stop = min(len(i[0]), stop - i[0].lo)
-            return i[0][start:stop]
-        retval = bytearray()
-        for j in i:
-            #print("  ", start, stop, j.lo, j.hi, type(j))
-            if start < j.lo and stop >= j.hi:
-                retval += j.frag
-                continue
-            tstart = max(0, start - j.lo)
-            tstop = min(len(j), stop - j.lo)
-            retval += j[tstart:tstop]
-        return retval
+        if isinstance(idx, (int, slice)):
+            return self._map.__getitem__(idx)
+        return self._keys[idx].frag
 
     def __iter__(self):
-        for rec in self._frags:
-            yield from rec.frag
+        yield from self._map
 
     def iter_chunks(self):
         for rec in self._frags:
@@ -661,10 +642,7 @@ class ArtifactFragmented(Artifact):
 
     def tobytes(self):
         ''' Return as bytes '''
-        i = bytearray()
-        for j in self:
-            i.append(j)
-        return i
+        return bytes(self._map)
 
     def add_fragment(self, frag, define_record=True):
         ''' Append a fragment '''
@@ -676,19 +654,26 @@ class ArtifactFragmented(Artifact):
         self._frags.append(frag)
         frag.artifact = self
         self._len += len(frag)
+        self._file.write(frag.frag)
         if define_record:
             self.define_rec(frag)
 
     def completed(self):
         ''' Build the tree and digest '''
         assert self._len > 0
-        self._tree = bintree.BinTree(0, self._len)
+        self._file.flush()
+        self._file.close()
+        self._file = None
+        with open(self._backing.filename, 'rb') as file:
+             self._map = memoryview(mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)).toreadonly()
         i = hashlib.sha256()
-        for leaf in self._frags:
-            self._tree.insert(leaf)
-            i.update(leaf.frag)
+        off = 0
+        for frag in self._frags:
+            l = len(frag)
+            frag.frag = self._map[off:off+l]
+            off += l
+            i.update(frag.frag)
         self.set_digest(i.hexdigest())
 
     def writetofile(self, file):
-        for rec in self._frags:
-            file.write(rec.frag)
+        file.write(self._map)

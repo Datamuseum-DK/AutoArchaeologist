@@ -29,5 +29,5 @@ def argv_file(excavation, fn):
     #elif ext[1] in (".cache",):
     #    this = floppytools.FloppyToolsContainer(excavation, filename = fn)
     else:
-        this = plain_file.PlainFileArtifact(excavation, fn)
+        this = plain_file.PlainFileArtifact(fn)
     return excavation.add_top_artifact(this, description=fn, dup_ok=True)
