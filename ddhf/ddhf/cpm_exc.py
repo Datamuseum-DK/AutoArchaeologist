@@ -28,11 +28,6 @@ class CpmDS2089(type_case.DS2089):
 class DdhfExcavationCpm(DDHFExcavation):
     ''' ... '''
 
-    MEDIA_TYPES = (
-        '5¼" Floppy Disk',
-        '8" Floppy Disk',
-    )
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.type_case = CpmDS2089()

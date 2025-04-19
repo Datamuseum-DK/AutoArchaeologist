@@ -33,6 +33,11 @@ class Cpm(cpm_exc.DdhfExcavationCpm):
         "COMPANY/BOGIKA",
     )
 
+    MEDIA_TYPES = (
+        '5¼" Floppy Disk',
+        '8" Floppy Disk',
+    )
+
 if __name__ == "__main__":
     ddhf.main(
         Cpm,
