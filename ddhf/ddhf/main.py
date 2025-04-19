@@ -123,5 +123,5 @@ def main(job, html_subdir="tmp", **kwargs):
     baseurl = ctx.produce_html()
 
     print("Now point your browser at:")
-    print("\tfile://" + baseurl)
+    print("\tfile://" + baseurl + "/index.html")
     return ctx

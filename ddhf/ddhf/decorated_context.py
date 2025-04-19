@@ -152,7 +152,7 @@ OK_ENVS = {
     "AUTOARCHAEOLOGIST_BITSTORE_CACHE": "ddhf_bitstore_cache",
 }
 
-def main(job, html_subdir="tmp", **kwargs):
+def xxmain(job, html_subdir="tmp", **kwargs):
     ''' A standard main routine to reduce boiler-plate '''
     for key in os.environ:
         i = OK_ENVS.get(key)
@@ -170,5 +170,5 @@ def main(job, html_subdir="tmp", **kwargs):
     baseurl = ctx.produce_html()
 
     print("Now point your browser at:")
-    print("\t", baseurl)
+    print("\t", baseurl + "/index.html")
     return ctx
