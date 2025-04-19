@@ -218,7 +218,7 @@ class FromBitStore():
 
         if handler is not True:
             try:
-                b = handler(b)
+                b = handler(self.top, b)
             except AssertionError:
                 raise
             except Exception as err:

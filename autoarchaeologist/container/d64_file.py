@@ -28,8 +28,8 @@ class D64Container(artifact.ArtifactFragmented):
 
     SPT = [0] + [21] * 17 + [19] * 7 + [18] * 6 + [17] * 10
 
-    def __init__(self, octets=None, filename=None, _verbose=False):
-        super().__init__()
+    def __init__(self, top, octets=None, filename=None, _verbose=False):
+        super().__init__(top)
         if octets is None:
             fcont = plain_file.PlainFileArtifact(filename)
         else:

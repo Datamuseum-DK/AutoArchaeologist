@@ -348,7 +348,7 @@ class Artifact(result_page.ResultPage):
         that = None
         if records:
             assert bits is None
-            that = ArtifactFragmented(records, **kwargs)
+            that = ArtifactFragmented(self.top, records, **kwargs)
             digest = that.digest
         elif isinstance(bits, memoryview):
             digest = hashlib.sha256(bits.tobytes()).hexdigest()
@@ -605,7 +605,7 @@ class ArtifactFragmented(Artifact):
        Artifact consisting of fragments of other artifact(s)
     '''
 
-    def __init__(self, fragments=None, define_records=True):
+    def __init__(self, top, fragments=None, define_records=True):
         super().__init__()
         self._frags = []
         self._keys = {}

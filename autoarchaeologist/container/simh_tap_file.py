@@ -20,8 +20,8 @@ class BadTAPFile(Exception):
 class SimhTapContainer(artifact.ArtifactFragmented):
     ''' Create an artifact from a SIMH-TAP file '''
 
-    def __init__(self, octets=None, filename=None, verbose=False):
-        super().__init__()
+    def __init__(self, top, octets=None, filename=None, verbose=False):
+        super().__init__(top)
         if octets is None:
             octets = plain_file.PlainFileArtifact(filename).bdx
         octets = memoryview(octets).toreadonly()

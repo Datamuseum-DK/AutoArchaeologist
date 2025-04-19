@@ -20,8 +20,8 @@ class CHS():
 class FloppyToolsContainer(artifact.ArtifactFragmented):
     ''' ... '''
 
-    def __init__(self, filename):
-        super().__init__()
+    def __init__(self, top, filename):
+        super().__init__(top)
         sects = {}
         for line in open(filename):
             flds = line.split()

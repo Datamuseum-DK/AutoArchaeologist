@@ -21,13 +21,13 @@ def argv_file(excavation, fn):
     print("Loading", fn)
     ext = os.path.splitext(fn)
     if ext[1] in (".tap", ".TAP",):
-        this = simh_tap_file.SimhTapContainer(filename = fn)
+        this = simh_tap_file.SimhTapContainer(excavation, filename = fn)
     elif ext[1] in (".imd", ".IMD",):
-        this = imd_file.ImdContainer(filename = fn)
+        this = imd_file.ImdContainer(excavation, filename = fn)
     elif ext[1] in (".d64", ".D64",):
-        this = d64_file.D64Container(filename = fn)
+        this = d64_file.D64Container(excavation, filename = fn)
     #elif ext[1] in (".cache",):
-    #    this = floppytools.FloppyToolsContainer(filename = fn)
+    #    this = floppytools.FloppyToolsContainer(excavation, filename = fn)
     else:
-        this = plain_file.PlainFileArtifact(fn)
+        this = plain_file.PlainFileArtifact(excavation, fn)
     return excavation.add_top_artifact(this, description=fn, dup_ok=True)

@@ -35,8 +35,8 @@ class ImdTrack(ov.Struct):
 class ImdContainer(artifact.ArtifactFragmented):
     ''' Create an artifact from an IMD file '''
 
-    def __init__(self, octets=None, filename=None, verbose=False):
-        super().__init__()
+    def __init__(self, top, octets=None, filename=None, verbose=False):
+        super().__init__(top)
         if octets is None:
             fcont = plain_file.PlainFileArtifact(filename)
         else:

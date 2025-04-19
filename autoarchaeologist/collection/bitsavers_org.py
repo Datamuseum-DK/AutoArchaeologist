@@ -124,7 +124,7 @@ class FromBitsavers():
         for fn in self.resolve(arg):
             if fn[-4:].lower() in (".imd",):
                 # print("IMD ARTIFACT", arg)
-                artifact = imd_file.ImdContainer(filename = fn)
+                artifact = imd_file.ImdContainer(self.top, filename = fn)
                 try:
                     self.top.add_top_artifact(
                         artifact,
