@@ -25,27 +25,30 @@ from . import common as cm
 class Pointer31(bv.Pointer_Class):
     WIDTH = 31
 
-class A00(bv.Struct):
+class AdaHead(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            hd_001_n_=-31,
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(AdaSubHead),
+            hd_001_p_=bv.Pointer(A13),
             hd_002_n_=-32,
-            hd_003_n_=-32,
-            hd_004_n_=-32,
-            hd_005_n_=-32,
-            hd_006_n_=-32,
-            hd_007_p_=bv.Pointer(A13),
-            hd_008_n_=-32,
-            #hd_009_p_=bv.Pointer(A07),
-            hd_009_p_=bv.Pointer(cm.BTree),
-            hd_010_n_=-32,
-            hd_011_p_=bv.Pointer(),
-            hd_012_n_=-32,
-            hd_013_n_=-1,
-            hd_014_n_=bv.Pointer(A12),
+            hd_003_p_=bv.Pointer(cm.BTree),
+        )
+
+class AdaSubHead(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            sh_001_n_=-32,
+            sh_002_p_=bv.Pointer(),
+            sh_003_n_=-32,
+            sh_004_n_=-1,
+            sh_005_n_=bv.Pointer(A12),
         )
 
 class A02(bv.Struct):
@@ -108,10 +111,6 @@ class A05(bv.Struct):
             a05_051_n_=A15,
             a05_094_n_=-32,
         )
-        d = (self.lo + 0x3ae) - self.hi
-        if d > 0:
-            print("D", d)
-            self.add_field("end", -d)
         self.done()
 
 
@@ -124,19 +123,6 @@ class A06(bv.Struct):
             a06_046_n_=-32,
             a06_047_n_=-32,
         )
-
-class A07(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            a07_049_n_=-205,
-            a07_070_n_=bv.Pointer(A07),
-            a07_090_n_=bv.Pointer(A07),
-            a07_091_n_=bv.Pointer(A07),
-            a07_092_n_=bv.Pointer(A07),
-        )
-
 
 class A08(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -166,20 +152,16 @@ class A10(bv.Struct):
             a10_051_n_=-64,
             a10_084_n_=-24,
             a10_085_n_=-64,
-            a10_086_n_=-64,
-            a10_087_n_=-32,
-            a10_088_n_=-22,
-            a10_089_n_=-64,
-            a10_090_n_=-64,
-            a10_091_n_=-32,
-            a10_092_n_=-32,
-            a10_093_n_=-64,
-            a10_094_n_=-64,
-            a10_095_n_=-64,
-            a10_096_n_=-64,
-            a10_097_n_=-64,
-            a10_098_n_=-64,
-            a10_099_n_=-32,
+            a10_086_n_=cm.SegId,
+            a10_086_b_=-32,
+            a10_087_n_=cm.SegId,
+            a10_088_n_=-32,
+            a10_090_n_=-172,
+            a10_092_n_=-95,
+            a10_093_n_=-32,
+            a10_095_n_=-172,
+            a10_097_n_=-95,
+            a10_098_n_=-32,
         )
 
 class A11(bv.Struct):
@@ -228,8 +210,9 @@ class A15(bv.Struct):
             a15_001_n_=-35,
             a15_002_n_=-32,
             a15_003_n_=cm.SegId,
-            a15_004_n_=cm.TimedProperty,
-            a15_005_n_=cm.ObjRef,
+            a15_004_n_=-32,
+            a15_005_n_=cm.TimedProperty,
+            a15_006_n_=cm.ObjRef,
 	)
 
 class V1001T79(cm.ManagerSegment):
@@ -240,18 +223,18 @@ class V1001T79(cm.ManagerSegment):
 
     def spelunk_manager(self):
 
-        self.a00 = A00(self, self.seg_head.hi).insert()
+        self.a00 = AdaHead(self, self.seg_head.hi).insert()
 
         y = cm.PointerArray(
             self,
-            self.a00.hd_007_p.dst().a13_006_p.val,
+            self.a00.hd_001_p.dst().a13_006_p.val,
             dimension=1009,
             cls=A02,
         ).insert()
 
         cm.PointerArray(
             self,
-            self.a00.hd_011_p.val,
+            self.a00.hd_sh.dst().sh_002_p.val,
             dimension=1009,
             cls=A03,
         ).insert()

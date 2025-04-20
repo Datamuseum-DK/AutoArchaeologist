@@ -29,14 +29,10 @@ class TapeHead(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            thd_001_n_=-32,
-            thd_002_n_=-31,
-            thd_003_n_=-32,
-            thd_004_n_=-32,
-            thd_005_n_=-32,
-            thd_006_n_=bv.Pointer(TapeSubHead),
-            thd_007_n_=-32,
-            thd_008_n_=bv.Pointer(cm.BTree),
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(TapeSubHead),
+            hd_001_n_=-32,
+            hd_002_n_=bv.Pointer(cm.BTree),
         )
 
 class TapeSubHead(bv.Struct):
@@ -46,11 +42,11 @@ class TapeSubHead(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            tsh_000_c_=-32,
-            tsh_001_b_=bv.Pointer(T00),
-            tsh_002_b_=-32,
-            tsh_003_b_=-32,
-            tsh_004_b_=-1,
+            sh_000_c_=-32,
+            sh_001_b_=bv.Pointer(T00),
+            sh_002_b_=-32,
+            sh_003_b_=-32,
+            sh_004_b_=-1,
         )
 
 class TapeTerHead(bv.Struct):

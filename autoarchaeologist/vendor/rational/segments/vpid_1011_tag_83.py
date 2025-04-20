@@ -41,23 +41,33 @@ class CS55(bv.Struct):
             cs55_049_n_=-31,
         )
 
-class CS56(bv.Struct):
+class CodeSegHead(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            cs56_000_n_=-32,
-            cs56_001_n_=-32,
-            cs56_002_n_=-32,
-            cs56_003_n_=-32,
-            cs56_004_n_=-31,
-            cs56_005_n_=bv.Pointer(CS61),
-            cs56_006_n_=-32,
-            cs56_007_n_=bv.Pointer(CS62),
-            cs56_008_n_=-32,
-            cs56_009_n_=bv.Pointer(cm.BTree),
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(CodeSegSubHead),
+            hd_001_n_=-32,
+            hd_002_n_=bv.Pointer(CS62),
+            hd_003_n_=-32,
+            hd_004_n_=bv.Pointer(cm.BTree),
         )
+
+class CodeSegSubHead(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            sh_001_n_=-32,
+            sh_002_n_=bv.Pointer(CS58),
+            sh_003_n_=-1,
+            sh_004_n_=-32,
+            sh_005_n_=bv.Pointer(CS59),
+        )
+
 
 class CS58(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -107,19 +117,6 @@ class CS60(bv.Struct):
             cs60_099_n_=-32,
         )
 
-class CS61(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            vertical=True,
-            cs61_010_n_=-32,
-            cs61_011_n_=bv.Pointer(CS58),
-            cs61_020_n_=-1,
-            cs61_021_n_=-32,
-            cs61_022_n_=bv.Pointer(CS59),
-        )
-
 class CS62(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -139,7 +136,7 @@ class V1011T83(cm.ManagerSegment):
     def spelunk_manager(self):
        '''...'''
 
-       CS56(self, 0xa1).insert()
+       CodeSegHead(self, 0xa1).insert()
        
        if False:
            b = 0x0c07326

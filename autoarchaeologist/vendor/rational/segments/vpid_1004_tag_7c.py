@@ -22,28 +22,6 @@
 from ....base import bitview as bv
 from . import common as cm
 
-class UserHead(bv.Struct):
-
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            vertical=True,
-            hd_001_n_=-32,
-            hd_002_n_=-32,
-            hd_003_n_=-32,
-            hd_004_n_=-32,
-            hd_005_n_=-32,
-            hd_006_n_=-31,
-            hd_007_p_=bv.Pointer(),
-            hd_008_n_=-32,
-            hd_009_p_=bv.Pointer(cm.BTree),
-            hd_010_n_=-32,
-            hd_011_p_=bv.Pointer(),
-            hd_012_n_=-32,
-        )
-
-
 class U00(bv.Struct):
     def __init__(self, bvtree, lo, **kwargs):
         super().__init__(
@@ -192,6 +170,33 @@ class U26(bv.Struct):
             u26_020_n_=-32,
         )
 
+class UserHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(UserSubHead),
+            hd_001_p_=bv.Pointer(),
+            hd_002_n_=-32,
+            hd_003_p_=bv.Pointer(cm.BTree),
+        )
+
+class UserSubHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            sh_001_n_=-32,
+            sh_002_p_=bv.Pointer(),
+            sh_003_n_=-32,
+            sh_004_n_=-33,
+        )
+
 
 class V1004T7C(cm.ManagerSegment):
 
@@ -206,13 +211,13 @@ class V1004T7C(cm.ManagerSegment):
 
         self.head = UserHead(self, self.seg_head.hi).insert()
 
-        if True:
+        #if True:
             # Possibly the array limits of hd_009_p
-            U26(self, self.head.hd_007_p.val).insert()
+        #    U26(self, self.head.hd_007_p.val).insert()
 
         y = cm.PointerArray(
             self,
-            self.head.hd_011_p.val,
+            self.head.hd_sh.dst().sh_002_p.val,
             dimension=101,
             cls=U00,
         ).insert()

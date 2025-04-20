@@ -50,26 +50,18 @@ class SegHead(bv.Struct):
             sh_vpid_=-10,
         )
 
-class StdHead(bv.Struct):
+class MgrHead(bv.Struct):
 
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            vertical=True,
-            hd_001_n_=-32,
-            hd_002_n_=-32,
-            hd_003_n_=-32,
-            hd_004_n_=-32,
-            hd_005_n_=-32,
-            hd_006_n_=-31,
-            hd_007_p_=bv.Pointer(),
-            hd_008_n_=-32,
-            hd_009_p_=bv.Pointer(),
-            hd_010_n_=-32,
-            hd_011_p_=bv.Pointer(),
-            hd_012_n_=-32,
-        )
+            mgr_001_n_=-31,
+            mgr_002_n_=-32,
+            mgr_003_n_=-32,
+            mgr_004_n_=-32,
+            mgr_005_n_=-32,
+       )
 
 class TimeStamp(bv.Struct):
     def __init__(self, bvtree, lo):

@@ -98,19 +98,24 @@ class FileHead(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            hd_001_n_=-32,
-            hd_002_n_=-32,
-            hd_003_n_=-32,
-            hd_004_n_=-32,
-            hd_005_n_=-32,
-            hd_006_n_=-31,
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(FileSubHead),
             hd_007_p_=bv.Pointer(),
             hd_008_n_=-32,
             hd_009_p_=bv.Pointer(cm.BTree),
-            hd_010_n_=-32,
-            hd_011_p_=bv.Pointer(),
-            hd_012_n_=-32,
-            hd_013_n_=-32,
+        )
+
+class FileSubHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            shd_010_n_=-32,
+            shd_011_p_=bv.Pointer(),
+            shd_012_n_=-32,
+            shd_013_n_=-32,
         )
 
 class V1003T7B(cm.ManagerSegment):
@@ -125,7 +130,7 @@ class V1003T7B(cm.ManagerSegment):
 
         cm.PointerArray(
             self,
-            self.std_head.hd_011_p.val,
+            self.std_head.hd_sh.dst().shd_011_p.val,
             dimension=1009,
             cls = F00,
         ).insert()

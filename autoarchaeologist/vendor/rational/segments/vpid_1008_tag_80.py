@@ -19,7 +19,7 @@
 '''
 
 from ....base import bitview as bv
-from .common import ManagerSegment, StdHead, PointerArray, StringArray
+from . import common as cm
 
 
 class T97(bv.Struct):
@@ -28,9 +28,9 @@ class T97(bv.Struct):
             bvtree,
             lo,
             t97_000_z_=-177,
-            t97_006_z_=StringArray,
+            t97_006_z_=cm.StringArray,
             t97_007_z_=-357,
-            t97_008_z_=StringArray,
+            t97_008_z_=cm.StringArray,
             t97_099_z_=-443,
         )
 
@@ -57,7 +57,35 @@ class T99(bv.Struct):
             t99_099_z_=bv.Pointer(T99),
         )
 
-class V1008T80(ManagerSegment):
+class TerminalHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(TerminalSubHead),
+            hd_001_n_=-32,
+            hd_002_n_=bv.Pointer(cm.BTree),
+        )
+
+class TerminalSubHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            sh_000_c_=-32,
+            sh_001_p_=bv.Pointer(),
+            sh_002_b_=-32,
+            sh_003_b_=-32,
+            sh_004_b_=-1,
+        )
+
+
+class V1008T80(cm.ManagerSegment):
 
     VPID = 1008
     TAG = 0x80
@@ -65,11 +93,11 @@ class V1008T80(ManagerSegment):
 
     def spelunk_manager(self):
 
-        self.std_head = StdHead(self, self.seg_head.hi).insert()
+        self.head = TerminalHead(self, self.seg_head.hi).insert()
 
-        y = PointerArray(
+        y = cm.PointerArray(
             self,
-            self.std_head.hd_010_n.val,
+            self.head.hd_sh.dst().sh_001_p.val,
             dimension=257,
             cls=T98,
         ).insert()

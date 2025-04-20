@@ -101,19 +101,24 @@ class GroupHead(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            hd_001_n_=-32,
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(GroupSubHead),
+            hd_001_p_=bv.Pointer(bv.Array(1024, -1)),
             hd_002_n_=-32,
-            hd_003_n_=-32,
-            hd_004_n_=-32,
-            hd_005_n_=-32,
-            hd_006_n_=-31,
-            hd_007_p_=bv.Pointer(bv.Array(1024, -1)),
-            hd_008_n_=-32,
-            hd_009_p_=bv.Pointer(cm.BTree),
-            hd_010_n_=-32,
-            hd_011_p_=bv.Pointer(),
-            hd_012_n_=-32,
-            hd_013_n_=-33,
+            hd_003_p_=bv.Pointer(cm.BTree),
+        )
+
+class GroupSubHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            sh_001_n_=-32,
+            sh_002_p_=bv.Pointer(),
+            sh_003_n_=-32,
+            sh_004_n_=-33,
         )
 
 class V1005T7D(cm.ManagerSegment):
@@ -128,7 +133,7 @@ class V1005T7D(cm.ManagerSegment):
 
         y = cm.PointerArray(
             self,
-            self.head.hd_011_p.val,
+            self.head.hd_sh.dst().sh_002_p.val,
             dimension=101,
             cls=G00,
         ).insert()

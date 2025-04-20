@@ -71,10 +71,6 @@
    Open ends
    ---------
 
-   There is complex non-directed graph of DM12 nodes, some kind of
-   world-interdependency graph maybe ?
-
-
    Some of the Acls on our disk image contains group numbers which
    do not have [GROUP,,] entries, yet on the R1000
    show_directory_information() reports their name.
@@ -185,28 +181,32 @@ class StringPointer(bv.Pointer(cm.StringArray)):
             retval = list(super().render())
             yield retval[0] + "(»" + dst.txt + "«)"
 
-class DM00(bv.Struct):
+class DirHead(bv.Struct):
 
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            #hd_000_n_=-32,
-            hd_001_n_=-31,
+            mgr_=cm.MgrHead,
+            hd_sh_=bv.Pointer(DirSubHead),
+            hd_001_p_=bv.Pointer(DM01),
             hd_002_n_=-32,
-            hd_003_n_=-32,
-            hd_004_n_=-32,
-            hd_005_n_=-32,
-            hd_006_n_=-32,
-            d01_=bv.Pointer(DM01),
-            hd_008_n_=-32,
-            dm12_=bv.Pointer(DM12),
-            hd_010_n_=-32,
-            dm04_=bv.Pointer(DM04),
-            hd_012_n_=-32,
-            hd_013_n_=-32,
-            hd_014_n_=-1,
+            hd_003_p_=bv.Pointer(cm.BTree),
+        )
+
+class DirSubHead(bv.Struct):
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            sh_001_n_=-32,
+            sh_002_=bv.Pointer(DM04),
+            sh_012_n_=-32,
+            sh_013_n_=-32,
+            sh_014_n_=-1,
         )
 
 class DM01(bv.Struct):
@@ -463,26 +463,6 @@ class DM06(bv.Struct):
             )
             out.write('\n')
 
-
-class DM12(bv.Struct):
-
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            bc_000_n_=-13,
-            bc_050_n_=-32,
-            bc_051_n_=-32,
-            bc_052_n_=-32,
-            bc_053_n_=-32,
-            bc_054_n_=-32,
-            bc_055_n_=-32,
-            bc_100_=bv.Pointer(DM12),
-            bc_101_=bv.Pointer(DM12),
-            bc_102_=bv.Pointer(DM12),
-            bc_103_=bv.Pointer(DM12),
-        )
-
 class DMTree(bv.Struct):
 
     ''' DirTree node '''
@@ -718,8 +698,8 @@ class V1009T81(cm.ManagerSegment):
         self.groups = {}
         self.users = {}
 
-        self.d00 = DM00(self, self.seg_head.hi).insert()
-        self.dm04 = self.d00.dm04.dst()
+        self.head = DirHead(self, self.seg_head.hi).insert()
+        self.dm04 = self.head.hd_sh.dst().sh_002.dst()
 
         for leaf in self:
             if isinstance(leaf, DM05):
