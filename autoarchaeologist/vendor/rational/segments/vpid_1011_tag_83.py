@@ -56,19 +56,7 @@ class CS56(bv.Struct):
             cs56_006_n_=-32,
             cs56_007_n_=bv.Pointer(CS62),
             cs56_008_n_=-32,
-            cs56_009_n_=bv.Pointer(CS57),
-        )
-
-class CS57(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            cs57_040_n_=-205,
-            cs57_096_n_=bv.Pointer(CS57),
-            cs57_097_n_=bv.Pointer(CS57),
-            cs57_098_n_=bv.Pointer(CS57),
-            cs57_099_n_=bv.Pointer(CS57),
+            cs56_009_n_=bv.Pointer(cm.BTree),
         )
 
 class CS58(bv.Struct):
