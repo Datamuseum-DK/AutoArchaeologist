@@ -205,9 +205,9 @@ class DirEnt(ov.Struct):
         if i == len(self.chain.octets):
             return
         if i:
-            that = self.tree.this.create(bits=self.chain.octets[:-i])
+            that = self.tree.this.create(octets=self.chain.octets[:-i])
         else:
-            that = self.tree.this.create(bits=self.chain.octets)
+            that = self.tree.this.create(octets=self.chain.octets)
         self.namespace.ns_set_this(that)
 
 class Directory(Chain):

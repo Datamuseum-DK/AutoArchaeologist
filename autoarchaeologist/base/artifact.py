@@ -347,31 +347,31 @@ class Artifact(result_page.ResultPage):
             temp=True
         )
 
-    def create(self, bits=None, start=None, stop=None, records=None, **kwargs):
-        ''' Return a new or old artifact for some bits '''
+    def create(self, octets=None, start=None, stop=None, records=None, **kwargs):
+        ''' Return a new or old artifact for some octets '''
         that = None
         if records:
-            assert bits is None
+            assert octets is None
             that = ArtifactFragmented(self.top, records, **kwargs)
             digest = that.digest
-        elif isinstance(bits, memoryview):
-            digest = hashlib.sha256(bits.tobytes()).hexdigest()
-        elif bits:
-            digest = hashlib.sha256(bits).hexdigest()
+        elif isinstance(octets, memoryview):
+            digest = hashlib.sha256(octets.tobytes()).hexdigest()
+        elif octets:
+            digest = hashlib.sha256(octets).hexdigest()
         else:
             assert stop > start
             assert stop <= len(self)
             if not start and stop == len(self):
                 return self
-            bits = self[start:stop]
-            digest = hashlib.sha256(bits).hexdigest()
+            octets = self[start:stop]
+            digest = hashlib.sha256(octets).hexdigest()
         assert digest[:9] != "1db831043"
         this = self.top.hashes.get(digest)
         if not this:
             if that:
                 this = that
             else:
-                this = ArtifactStream(bits)
+                this = ArtifactStream(octets)
                 this.set_digest(digest)
             this.type_case = self.type_case
             self.top.adopt(this)

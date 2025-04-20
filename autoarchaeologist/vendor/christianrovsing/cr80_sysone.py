@@ -240,7 +240,7 @@ class DirEnt(ov.Struct):
                     return
             b = b''.join(b)
             if len(b) > 0:
-                y = self.tree.this.create(bits = b)
+                y = self.tree.this.create(octets = b)
                 self.namespace.ns_set_this(y)
                 if is_unread:
                     y.add_note("UNREAD_DATA_SECTOR")

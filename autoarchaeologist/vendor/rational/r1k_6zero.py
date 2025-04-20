@@ -58,7 +58,7 @@ class R1k6ZeroSegment():
                     return
         if len(text) > 0:
             this.add_note("R1k6ZERO")
-            self.that = this.create(bits=b''.join(text))
+            self.that = this.create(octets=b''.join(text))
             self.that.add_note("R1k Text-file segment")
             this.add_interpretation(self, self.render_bits)
             if self.incomplete:

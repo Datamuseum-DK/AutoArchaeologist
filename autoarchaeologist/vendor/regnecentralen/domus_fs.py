@@ -219,7 +219,7 @@ class CatEnt(ov.Struct):
             if len(l) < self.length.val:
                 l.append(self.tree.this[off:off + SEC_SIZE])
         if l:
-            that = self.tree.this.create(bits = b''.join(l))
+            that = self.tree.this.create(octets = b''.join(l))
             self.namespace.ns_set_this(that)
         else:
             print(self.tree.this, "no that", self.namespace, self, l)

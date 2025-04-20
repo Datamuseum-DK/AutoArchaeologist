@@ -74,7 +74,7 @@ class ZipFile():
             try:
                 b = z.open(zi).read()
                 if len(b) > 0:
-                    that = this.create(bits=b)
+                    that = this.create(octets=b)
                     ns.ns_set_this(that)
                     print("THAT", that)
             except NotImplementedError as err:

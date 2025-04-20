@@ -30,7 +30,7 @@ class Compress():
             stdin=open(tmpfilename, "rb"),
             capture_output=True
         )
-        self.that = this.create(bits=s.stdout)
+        self.that = this.create(octets=s.stdout)
         os.remove(tmpfilename)
         this.add_type("Compressed file")
         self.that.add_note("Uncompressed file")

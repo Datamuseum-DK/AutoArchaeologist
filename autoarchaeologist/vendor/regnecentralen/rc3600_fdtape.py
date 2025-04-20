@@ -71,7 +71,7 @@ class RC3600_FD_Tape():
 
                 if not tour:
                     continue
-                label = this.create(bits=self[i])
+                label = this.create(octets=self[i])
                 label.add_type("Namelabel")
                 name = None
                 b = label.tobytes().rstrip(b'\x00')
@@ -85,7 +85,7 @@ class RC3600_FD_Tape():
                 body = bytes()
                 for j in range(i + 1, words[word_idx + 1]):
                     body = body + self[j]
-                body = this.create(bits=body)
+                body = this.create(octets=body)
                 body.add_type("VirtualTapeFile")
                 if name:
                     body.add_note(name)

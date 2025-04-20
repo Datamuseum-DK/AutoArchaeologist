@@ -156,7 +156,7 @@ class CR80_FS2Interleave(ov.OctetView):
                         y = octets[n + 1] ^ 0xff
                         img[lba + n] = y
                         img[lba + n + 1] = x
-        that = this.create(bits=img)
+        that = this.create(octets=img)
         that.add_type("ileave2")
         this.add_interpretation(self, this.html_interpretation_children)
 
@@ -391,7 +391,7 @@ class BasicFileDesc(ov.Struct):
         if i & 1:
             # make sure the padding byte is legal ASCII
             bits = bits[:-2] + b' ' + bits[-1:]
-        that = self.tree.this.create(bits = bits)
+        that = self.tree.this.create(octets = bits)
         if is_unread:
             that.add_note("UNREAD_DATA_SECTOR")
         return that
