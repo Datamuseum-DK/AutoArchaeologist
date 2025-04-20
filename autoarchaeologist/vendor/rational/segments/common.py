@@ -442,3 +442,13 @@ OBJECTS = {
     16: ("PROGRAM_LIBRARY", {}),
     17: ("NATIVE_SEGMENT_MAP", {}),
 }
+
+class SegId(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            segno_n_=-22,
+            vpid_n_=-10,
+        )
+

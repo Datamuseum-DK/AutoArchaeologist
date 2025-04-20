@@ -19,96 +19,146 @@
 '''
 
 from ....base import bitview as bv
-from .common import ManagerSegment, PointerArray
+from . import common as cm
 
-class CS94(bv.Struct):
+class CS54(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            cs94_000_z_=-32,
-            cs94_001_z_=-32,
-            cs94_002_z_=bv.Pointer(),
+            cs54_000_n_=-31,
+            cs54_001_n_=bv.Pointer(CS54),
         )
 
-class CS95(bv.Struct):
+class CS55(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            cs95_099_z_=-128,
+            cs55_bitmap_n__=-16384,
+            cs55_040_n_=-20,
+            cs55_045_n_=-8,
+            cs55_049_n_=-31,
         )
 
-class CS96(bv.Struct):
+class CS56(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            cs96_049_z_=-205,
-            cs96_096_z_=bv.Pointer(CS96),
-            cs96_097_z_=bv.Pointer(CS96),
-            cs96_098_z_=bv.Pointer(CS96),
-            cs96_099_z_=bv.Pointer(CS96),
+            vertical=True,
+            cs56_000_n_=-32,
+            cs56_001_n_=-32,
+            cs56_002_n_=-32,
+            cs56_003_n_=-32,
+            cs56_004_n_=-31,
+            cs56_005_n_=bv.Pointer(CS61),
+            cs56_006_n_=-32,
+            cs56_007_n_=bv.Pointer(CS62),
+            cs56_008_n_=-32,
+            cs56_009_n_=bv.Pointer(CS57),
         )
 
-class CS97(bv.Struct):
+class CS57(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            cs97_099_z_=-728,
+            cs57_040_n_=-205,
+            cs57_096_n_=bv.Pointer(CS57),
+            cs57_097_n_=bv.Pointer(CS57),
+            cs57_098_n_=bv.Pointer(CS57),
+            cs57_099_n_=bv.Pointer(CS57),
         )
 
-class CS98(bv.Struct):
+class CS58(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            cs98_000_z_=-32,
-            cs98_001_z_=-32,
-            cs98_002_z_=bv.Pointer(CS97),
-            cs98_003_z_=bv.Pointer(CS98),
-            cs98_004_z_=bv.Pointer(CS98),
-            cs98_099_z_=-1,
-            #cs98_099_z_=-364,
+            vertical=True,
+            cs58_000_n_=bv.Array(1009, bv.Pointer(CS59), vertical=True),
         )
 
-class CS99(bv.Struct):
+class CS59(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            cs99_099_z_=-16443,
+            cs59_000_n_=-32,
+            cs59_001_n_=-32,
+            cs59_002_n_=bv.Pointer(CS60),
+            cs59_003_n_=bv.Pointer(CS59),
+            cs59_004_n_=bv.Pointer(CS59),
+            cs59_005_n_=-1,
         )
 
-class CS99A(CS99):
-    ''' ... '''
+class CS60(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            cs60_000_n_=-24,
+            cs60_010_n_=-24,
+            cs60_020_n_=cm.SegId,
+            cs60_021_n_=-32,
+            cs60_060_n_=-3,
 
-class CS99B(CS99):
-    ''' ... '''
+            cs60_066_n_=cm.ObjRef,
+            cs60_067_n_=cm.ObjRef,
+            cs60_078_n_=-32,
+            cs60_079_n_=-32,
+            cs60_080_n_=cm.TimedProperty,
+            cs60_081_n_=cm.TimedProperty,
+            cs60_082_n_=cm.TimedProperty,
+            cs60_083_n_=cm.TimedProperty,
+            #cs60_090_n_=-73,
+            cs60_097_n_=-16,
+            cs60_098_n_=-19,
+            cs60_099_n_=-32,
+        )
 
-class CS99C(CS99):
-    ''' ... '''
+class CS61(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            cs61_010_n_=-32,
+            cs61_011_n_=bv.Pointer(CS58),
+            cs61_020_n_=-1,
+            cs61_021_n_=-32,
+            cs61_022_n_=bv.Pointer(CS59),
+        )
 
+class CS62(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            cs62_000_n_=bv.Array(0x2ff, CS55, vertical=True),
+            cs62_001_n_=bv.Pointer(CS54),
+        )
 
-class V1011T83(ManagerSegment):
+class V1011T83(cm.ManagerSegment):
 
     VPID = 1011
     TAG = 0x83
     TOPIC = "Code_Segment"
 
     def spelunk_manager(self):
+       '''...'''
 
-        self.std_head = StdHead(self, self.seg_head.hi).insert()
-
-        y = PointerArray(
-            self,
-            self.std_head.hd_012_n.val,
-            dimension=1009,
-            cls=CS98,
-        ).insert()
-
-        CS96(self, self.std_head.hd_010_n.val).insert()
-
-        # This looks like a huge bitmap...
-        bv.Array(0x2fe, CS99A)(self, self.std_head.hd_008_n.val, vertical=True).insert()
+       CS56(self, 0xa1).insert()
+       
+       if False:
+           b = 0x0c07326
+           n = 0x2fd
+           t = b - n * 16443
+           t=0x1560d1d
+           for a in range(t, t + 1):
+           #for a in range(0x000429c, t):
+               for n in self.find_all(a):
+                   print("NN", hex(a), hex(n))
