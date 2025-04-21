@@ -53,12 +53,8 @@ class G01(bv.Struct):
             bvtree,
             lo,
             g01_000_c_=bv.Pointer(G02),
-            g01_001_p_=-35,
+            g01_001_b_=35,
         )
-        #self.points_to(bvtree, self.g01_002_p.val, G06)
-        #assert self.u01_000_c_.val == 4
-        #assert self.u01_003_z_.val == 0
-        #assert self.u01_004_z_.val == 0
 
 class G02(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -69,14 +65,9 @@ class G02(bv.Struct):
             g02_010_p_=cm.TimedProperty,
             g02_020_p_=cm.TimedProperty,
             g02_030_p_=cm.TimedProperty,
-            g02_040_p_=cm.ObjRef,
-            g02_050_p_=-32,
-            g02_060_p_=-32,
-            g02_070_p_=-31,
-            g02_080_p_=-32,
-            g02_090_p_=-32,
-            g02_098_p_=-10,
-            g02_099_p_=-10,
+            g02_obj_=bv.Array(2, cm.ObjRef),
+            g02_valid_=bv.Array(2, -32),
+            g02_nbr_n_=bv.Array(2, -10),
             vertical=True,
         )
 
@@ -103,7 +94,7 @@ class GroupHead(bv.Struct):
             vertical=True,
             mgr_=cm.MgrHead,
             hd_sh_=bv.Pointer(GroupSubHead),
-            hd_001_p_=bv.Pointer(bv.Array(1024, -1)),
+            hd_001_p_=bv.Pointer(GroupBitMap),
             hd_002_n_=-32,
             hd_003_p_=bv.Pointer(cm.BTree),
         )
@@ -116,9 +107,29 @@ class GroupSubHead(bv.Struct):
             lo,
             vertical=True,
             sh_001_n_=-32,
-            sh_002_p_=bv.Pointer(),
+            sh_002_p_=bv.Pointer(GroupHash),
             sh_003_n_=-32,
             sh_004_n_=-33,
+        )
+
+class GroupBitMap(bv.Struct):
+   
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            gb_001_b_=-1024,
+        )
+
+class GroupHash(bv.Struct):
+    def __init__(self, bvtree, lo, **kwargs):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            hash_=bv.Array(101, bv.Pointer(G00), vertical=True),
+            **kwargs,
         )
 
 class V1005T7D(cm.ManagerSegment):
@@ -130,10 +141,3 @@ class V1005T7D(cm.ManagerSegment):
     def spelunk_manager(self):
 
         self.head = GroupHead(self, self.seg_head.hi).insert()
-
-        y = cm.PointerArray(
-            self,
-            self.head.hd_sh.dst().sh_002_p.val,
-            dimension=101,
-            cls=G00,
-        ).insert()

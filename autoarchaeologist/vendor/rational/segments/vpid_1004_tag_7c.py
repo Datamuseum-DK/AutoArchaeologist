@@ -77,19 +77,17 @@ class U03(bv.Struct):
             u03_001_b_=cm.TimedProperty,
             u03_002_b_=cm.TimedProperty,
             u03_003_b_=cm.TimedProperty,
-            u03_004_c_=cm.ObjRef,
-            u03_005_c_=cm.ObjRef,
-            u03_006__=bv.Constant(32, 1),
-            u03_007_=-32,
-            u03_009_s_=U17,
-            u03_020_s_=U17,
-            u03_099_z__=-128,	# = 0x0
+            u03_obj_=bv.Array(2, cm.ObjRef),
+            u03_valid_=bv.Array(2, -32),
+            u03_009_s_=bv.Array(2, U17, vertical=True),
+            u03_099_z_=bv.Constant(128, 0),	# = 0x0
             vertical=True,
             **kwargs,
         )
 
     def dot_node(self, dot):
         return None, ["color=orange"]
+
 
 class U07(bv.Struct):
     def __init__(self, bvtree, lo, **kwargs):
@@ -137,15 +135,6 @@ class ListEntry(bv.Struct):
     def dot_node(self, dot):
         return None, ["color=cyan"]
 
-class SessionList(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            u16_010_c_=cm.ObjRef,
-            u16_040_n_=bv.Pointer(SessionList),
-        )
-
 class U17(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -179,7 +168,7 @@ class UserHead(bv.Struct):
             vertical=True,
             mgr_=cm.MgrHead,
             hd_sh_=bv.Pointer(UserSubHead),
-            hd_001_p_=bv.Pointer(),
+            hd_001_p_=bv.Pointer(U26),
             hd_002_n_=-32,
             hd_003_p_=bv.Pointer(cm.BTree),
         )
@@ -192,11 +181,20 @@ class UserSubHead(bv.Struct):
             lo,
             vertical=True,
             sh_001_n_=-32,
-            sh_002_p_=bv.Pointer(),
+            sh_002_p_=bv.Pointer(UserHash),
             sh_003_n_=-32,
             sh_004_n_=-33,
         )
 
+class UserHash(bv.Struct):
+    def __init__(self, bvtree, lo, **kwargs):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            hash_=bv.Array(101, bv.Pointer(U00), vertical=True),
+            **kwargs,
+        )
 
 class V1004T7C(cm.ManagerSegment):
 
@@ -204,20 +202,5 @@ class V1004T7C(cm.ManagerSegment):
     TAG = 0x7c
     TOPIC = "User"
 
-    def find_ptr(self, adr, width=32):
-        print("FF", hex(adr), hex(self.bits.find(bin((1<<width)|adr)[3:])))
-
     def spelunk_manager(self):
-
         self.head = UserHead(self, self.seg_head.hi).insert()
-
-        #if True:
-            # Possibly the array limits of hd_009_p
-        #    U26(self, self.head.hd_007_p.val).insert()
-
-        y = cm.PointerArray(
-            self,
-            self.head.hd_sh.dst().sh_002_p.val,
-            dimension=101,
-            cls=U00,
-        ).insert()
