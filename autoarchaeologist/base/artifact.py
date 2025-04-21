@@ -10,6 +10,7 @@
 
 '''
 
+import os
 import hashlib
 import html
 import mmap
@@ -541,6 +542,9 @@ class Artifact(result_page.ResultPage):
             file.write(html.escape(line) + '\n')
         file.write("</pre>\n")
 
+    def adopted(self):
+        ''' ... '''
+
 class ArtifactStream(Artifact):
 
     '''
@@ -663,9 +667,19 @@ class ArtifactFragmented(Artifact):
         assert self._len > 0
         self._file.flush()
         self._file.close()
-        self._file = None
+        del self._file
         with open(self._backing.filename, 'rb') as file:
-             self._map = memoryview(mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)).toreadonly()
+             if self._len < (1<<16):
+                 self._map = memoryview(file.read()).toreadonly()
+             else:
+                 self._map = memoryview(
+                     mmap.mmap(
+                         file.fileno(),
+                         0,
+                         access=mmap.ACCESS_READ,
+                         #XXX: Python3.13 and forward use: trackfd=False,
+                     )
+                 ).toreadonly()
         i = hashlib.sha256()
         off = 0
         for frag in self._frags:
@@ -674,6 +688,11 @@ class ArtifactFragmented(Artifact):
             off += l
             i.update(frag.frag)
         self.set_digest(i.hexdigest())
+
+    def adopted(self):
+        bn = self.top.filename_for(self, suf=".back")
+        os.rename(self._backing.filename, bn.filename)
+        self._backing = bn
 
     def writetofile(self, file):
         file.write(self._map)

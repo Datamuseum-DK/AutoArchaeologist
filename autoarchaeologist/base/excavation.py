@@ -150,6 +150,7 @@ class Excavation(result_page.ResultPage):
             return
         this.top = self
         self.add_artifact(this)
+        this.adopted()
 
     def add_artifact(self, this):
         ''' Add an artifact, and start examining it '''
