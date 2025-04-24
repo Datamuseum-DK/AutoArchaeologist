@@ -299,7 +299,7 @@ class Inode(ov.Struct):
             if len(ll[-1]) == 0:
                 print(self.tree.this, self, "Sparse file?", ",".join("%04x" % len(x.octets()) for x in l))
                 return None
-            elif ll[-1][:32] == b'_UNREAD_' * 4:
+            elif ll[-1].tobytes().find(b'_UNREAD_' * 8) > -1:
                 if not self.badblocks:
                     print(self.tree.this, self, "Badblock file", hex(x.lo))
                 self.badblocks += 1
