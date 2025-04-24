@@ -12,41 +12,39 @@
    papertapes, an identifier is punched in ASCII with even
    parity:
 
-       "U*U*U*U*" product-number checksum
+       "U*U*U*U*" [something]
 
-   We guess the last two characters is a checksum, but that
-   is only a guess.  The specific checksum calculation has
-   not been investigated/found.
+   We suspect the last two characters is a checksum, but we
+   have not been able to identify the algorithm.  Sometimes
+   a product number is part of [something].
 '''
 
-class DGC_PaperTapeCheckSum():
+from ...base import type_case
+
+class PaperTapeCheckSum():
+
+    ''' ... '''
 
     def __init__(self, this):
         if this.has_note("DGC-PaperTapeCheckSum"):
             return
 
-        start = this.tobytes().rfind(b'\xaa\x55\xaa\x55\xaa\x55\xaa\x55')
-        if start < 0:
-            return
-        last = bytes(this[start:]).find(b'\x00')
-        if last < 0:
-            stop = start + len(this[start:])
-        else:
-            stop = start + last + 1
-        if stop - start > 30:
-            return
-
-        txt = ""
-        for i in this[start:stop]:
-            i = i & 0x7f
-            if 0x20 < i < 0x7f:
-                txt += "%c" % (i & 0x7f)
-            elif txt[-1] != "_":
-                txt += "_"
-        txt = txt.strip()
-
-        if start or stop < len(this):
-            this = this.create(start=start, stop=stop)
-        if not this.has_note("DGC-PaperTapeCheckSum"):
-            this.add_type("DGC-PaperTapeCheckSum")
-            this.add_note(txt)
+        evenpar_ascii = None
+        npos = 0
+        for pos, octet in enumerate(this):
+            if octet != 0xaa or pos < npos:
+                continue
+            if this[pos:pos+8].tobytes() != b'\xaa\x55\xaa\x55\xaa\x55\xaa\x55':
+                continue
+            for last in range(pos, min(pos + 30, len(this))):
+                if this[last] == 0:
+                    break
+            if last >= len(this) or this[last]:
+                continue
+            if evenpar_ascii is None:
+                evenpar_ascii = type_case.EvenPar(type_case.ascii)
+            txt = evenpar_ascii.decode_long(this[pos:last])
+            that = this.create(start=pos, stop=last)
+            that.add_type("DGC-PaperTapeCheckSum")
+            that.add_note(txt)
+            npos = last
