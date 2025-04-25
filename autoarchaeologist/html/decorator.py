@@ -226,6 +226,29 @@ class Decorator():
 
             self.top.emit_interpretations(fo, domore=True)
 
+    def html_interpretation_children(self, file, this):
+        ''' Default interpretation list of children'''
+
+        file.write("<H3>Children</H3>\n")
+        file.write("<table>\n")
+        file.write("<tr>\n")
+        file.write("<th>Start</th>\n")
+        file.write("<th>End</th>\n")
+        file.write("<th>Artifact</th>\n")
+        file.write("<th>Summary</th>\n")
+        file.write("</tr>\n")
+        for start, stop, that in sorted(this.layout):
+            file.write('<tr>\n')
+            file.write("<td>0x%08x</td>" % start)
+            file.write("<td>0x%08x</td>" % stop)
+            file.write("<td>")
+            file.link_to_that(that)
+            file.write("</td><td>")
+            file.write(that.summary(notes=True, types=True, names=True, descriptions=True) + "\n")
+            file.write("</td>\n")
+            file.write('</tr>\n')
+        file.write("</table>\n")
+
     def html_link_to(self, this, link_text=None, anchor=None, **kwargs):
         ''' Return a HTML link to an artifact '''
         t = '<A href="'

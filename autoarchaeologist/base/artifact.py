@@ -461,15 +461,9 @@ class Artifact(result_page.ResultPage):
 
         return retval
 
-    def html_interpretation_children(self, file, _this):
-        ''' Default interpretation list of children'''
-
-        file.write("<H3>Children</H3>\n")
-        file.write("<pre>\n")
-        for start, stop, this in sorted(self.layout):
-            file.write("  0x%08x" % start + "-0x%08x  " % stop)
-            file.write(this.summary() + "\n")
-        file.write("</pre>\n")
+    def html_interpretation_children(self, *args, **kwargs):
+        ''' Interpretation: List of children'''
+        self.top.decorator.html_interpretation_children(*args, **kwargs)
 
     def html_derivation(self, file, target=True):
         ''' Recursively document how this artifact came to be '''
