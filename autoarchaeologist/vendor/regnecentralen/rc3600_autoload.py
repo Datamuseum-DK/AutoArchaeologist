@@ -136,6 +136,8 @@ class AutoLoad(ov.OctetView):
                 adr = a0
             else:
                 ld = None
+            if adr >= len(this):
+                break
             y = AbsBinRecord(self, adr, cls)
             wc =  y.wc.val
             if wc == 1 or wc >= 0xffef:
@@ -149,6 +151,7 @@ class AutoLoad(ov.OctetView):
             if wc == 1:
                 break
 
-        that = this.create(start = abrecs[0].lo, stop = abrecs[-1].hi)
+        if abrecs:
+            that = this.create(start = abrecs[0].lo, stop = abrecs[-1].hi)
 
         #self.add_interpretation()
