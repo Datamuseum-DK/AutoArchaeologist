@@ -39,12 +39,18 @@ class PaperTapeCheckSum():
             for last in range(pos, min(pos + 30, len(this))):
                 if this[last] == 0:
                     break
-            if last >= len(this) or this[last]:
-                continue
-            if evenpar_ascii is None:
-                evenpar_ascii = type_case.EvenPar(type_case.ascii)
-            txt = evenpar_ascii.decode_long(this[pos:last])
+            if this[last]:
+                if last < len(this) - 1:
+                    continue
+                last += 1
             that = this.create(start=pos, stop=last)
             that.add_type("DGC-PaperTapeCheckSum")
-            that.add_note(txt)
             npos = last
+
+            if last - pos > 0xc:
+                b = this[pos+8:last].tobytes().split(b'\x8d\n')
+                if len(b) > 1:
+                    if evenpar_ascii is None:
+                        evenpar_ascii = type_case.EvenPar(type_case.ascii)
+                    txt = evenpar_ascii.decode_long(b[0])
+                    that.add_note(txt)
