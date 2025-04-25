@@ -12,6 +12,7 @@
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.vendor.regnecentralen import domus_fs
+from autoarchaeologist.vendor.regnecentralen import rc3600_tape
 from autoarchaeologist.vendor.regnecentralen import rc3600_fdtape
 from autoarchaeologist.vendor.regnecentralen import rc3600_bootable_fd
 from autoarchaeologist.vendor.regnecentralen import rc3600_fcopy
@@ -81,7 +82,9 @@ class Rc3600(ddhf.DDHFExcavation):
         self.type_case = DomusDS2089()
 
         self.add_examiner(domus_fs.Domus_Filesystem)
+        self.add_examiner(rc3600_tape.RC3600Tape)
         self.add_examiner(rc3600_fdtape.RC3600_FD_Tape)
+
         self.add_examiner(rc3600_fcopy.Domus_FCOPY)
         self.add_examiner(rc3600_ldfs.LdFs)
         self.add_examiner(rc3600_autoload.AutoLoad)
@@ -90,7 +93,7 @@ class Rc3600(ddhf.DDHFExcavation):
         self.add_examiner(absbin.AbsBin)
         self.add_examiner(relbin.RelBin)
         self.add_examiner(bigtext.BigText)
-        self.add_examiner(papertapechecksum.DGC_PaperTapeCheckSum)
+        self.add_examiner(papertapechecksum.PaperTapeCheckSum)
         self.add_examiner(rcsl.RCSL)
         self.add_examiner(TextFile)
         self.add_examiner(TextFileEven)
