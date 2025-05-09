@@ -51,7 +51,8 @@
 
 from ....base import bitview as bv
 from ....base import namespace
-from .common import Segment, SegHeap, PointerArray, StringArray, StringPointer
+# from .common import Segment, SegHeap, PointerArray, StringArray, StringPointer
+from . import common as cm
 
 class X00(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -67,24 +68,12 @@ class X00(bv.Struct):
             self.add_field("x00_005_n", -32)
             self.add_field("x00_006_n", -32)
             self.add_field("x00_007_n", -32)
-            self.add_field("x00_008_n", bv.Pointer(X01))
+            self.add_field("x00_008_n", bv.Pointer(cm.BTree))
             self.add_field("x00_010_n", bv.Pointer())
             self.add_field("x00_011_n", bv.Pointer())
             self.add_field("x00_012_n", bv.Pointer())
             self.add_field("x00_013_n", bv.Pointer())
         self.done()
-
-class X01(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            x98_049_n_=-205,
-            x98_096_p_=bv.Pointer(X01),
-            x98_097_p_=bv.Pointer(X01),
-            x98_098_p_=bv.Pointer(X01),
-            x98_099_p_=bv.Pointer(X01),
-        )
 
 class X02(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -113,8 +102,18 @@ class X03(bv.Struct):
             bvtree,
             lo,
             x98_000_n__=bv.Constant(32, 0),
-            x98_010_n_=bv.Pointer(StringArray),
-            x98_048_n_=bv.Pointer(X03),
+            x98_010_p_=bv.Pointer(cm.StringArray),
+            x98_048_p_=bv.Pointer(X03),
+        )
+
+class SegId(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            x99_segkind_=-2,
+            x99_segno_=-21,
+            x99_vpid_=-10,
         )
 
 class X04(bv.Struct):
@@ -122,26 +121,33 @@ class X04(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            x99_000_n__=bv.Constant(32, 0),
-            x99_010_n_=StringPointer,
-            x99_segkind_=-1,
-            x99_segno_=-22,
-            x99_vpid_=-10,
-            x99_049_n__=bv.Constant(32, 0x80),
+            #x99_000_n__=bv.Constant(32, 0),
+            x99_000_n__=-32,
+            x99_010_n_=cm.StringPointer,
+            x99_seg_=SegId,
+            #x99_049_n__=bv.Constant(32, 0x80),
+            x99_049_n__=-32,
             x99_080_n_=bv.Pointer(X04),
         )
-        self.name = name=self.x99_010_n.dst().txt
-        self.segment = "%03x:%06x" % (
-            self.x99_vpid.val,
-            (1 << 23) | self.x99_segno.val,
-        )
-        segidx = bvtree.this.top.by_class["r1k_segs"]
-        segs = segidx.get(self.segment)
-        if segs:
-            print("EESEG", bvtree.this, name, segs)
-            that = segs[max(segs.keys())]
+        if not self.x99_010_n.val:
+            return
+        that = None
+        if self.x99_010_n.dst():
+            self.name = name=self.x99_010_n.dst().txt
         else:
-            that = None
+            self.name = "???"
+        self.segment = "%03x:%06x" % (
+            self.x99_seg.x99_vpid.val,
+            (1 << 23) | self.x99_seg.x99_segno.val,
+        )
+        try:
+            segidx = bvtree.this.top.by_class["r1k_segs"]
+            segs = segidx.get(self.segment)
+            if segs:
+                print("EESEG", bvtree.this, name, segs)
+                that = segs[max(segs.keys())]
+        except KeyError:
+            pass
         # print(self.x99_010_n.dst().txt)
         NameSpace(
             name=self.name,
@@ -166,12 +172,18 @@ class NameSpace(namespace.NameSpace):
     def ns_render(self):
         meta = self.ns_priv
         return [
-            meta.x99_segkind.val,
-            meta.x99_vpid.val,
+            meta.x99_seg.x99_segkind.val,
+            meta.x99_seg.x99_vpid.val,
             meta.segment,
         ] + super().ns_render()
 
-class V0256T70(Segment):
+class V0256T70_(cm.ManagerSegment):
+
+    TOPIC = "EEDB filesystem"
+    VPID = 256
+    TAG = 0x70
+
+class V0256T70(cm.Segment):
 
     VPID = 256
     TAG = 0x70
@@ -183,16 +195,25 @@ class V0256T70(Segment):
             separator = "",
         )
 
-        self.seg_heap = SegHeap(self, 0).insert()
+        self.seg_heap = cm.SegHeap(self, 0).insert()
 
         self.x00 = X00(self, self.seg_heap.hi).insert()
-        print(self.this, "V0256T70", self.x00)
+
         if self.x00.x00_001_n.val != 1:
             return
         self.x02 = X02(self, self.x00.x00_011_n.val).insert()
+        if False:
+            for leaf in self:
+                if not isinstance(leaf, X03):
+                    continue
+                sa = leaf.x98_010_p.dst()
+                if isinstance(sa, cm.StringArray):
+                    y = X04(self, sa.hi).insert()
+                else:
+                    print("NOSA", leaf)
 
 
-        PointerArray(
+        cm.PointerArray(
             self,
             self.x00.x00_013_n.val,
             dimension=101,

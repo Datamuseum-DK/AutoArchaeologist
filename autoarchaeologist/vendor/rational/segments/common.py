@@ -51,16 +51,22 @@ class SegHead(bv.Struct):
         )
 
 class MgrHead(bv.Struct):
+    '''
+       Based on ⟦31d12fb28⟧ group.pure description
+
+       NB:
+       We assume that a 0x40 wide HeapAccessComponent means
+       that there are two pointers, but this is unconfirmed
+       because so far we have never seen mgr_003 point to anything
+    '''
 
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             mgr_001_n_=-31,
-            mgr_002_n_=-32,
-            mgr_003_n_=-32,
-            mgr_004_n_=-32,
-            mgr_005_n_=-32,
+            mgr_002_n_=bv.Array(2, -32),
+            mgr_003_p_=bv.Array(2, bv.Pointer()),
        )
 
 class TimeStamp(bv.Struct):
@@ -95,15 +101,60 @@ class TimeStampPrecise(bv.Struct):
     def render(self):
         yield self.tstamp
 
-class TimedProperty(bv.Struct):
+class Day(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            tp_000_b__=bv.Constant(1, 0),
-            tp_002_b_=TimeStampPrecise,
-            tp_003_b_=-15,
-            tp_004_b_=-24,
+            day_=-17,
+        )
+        self.ts = (self.day.val - (69 * 365 + 18)) * 86400
+        gm = time.gmtime(self.ts)
+        self.tstamp = time.strftime("%Y-%m-%d", gm)
+
+    def render(self):
+        yield self.tstamp
+
+class Time(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            time_=-32,
+        )
+
+    def render(self):
+        tmp = self.time.val >> 15
+        h = tmp // 3600
+        m = (tmp // 60) % 60
+        s = tmp % 60
+        frac = tmp & 0x7fff
+        yield "%02d:%02d:%02d(0x%x)" % (h, m, s, frac)
+
+class DayTime(bv.Struct):
+    '''
+       Based on ⟦31d12fb28⟧ group.pure description
+    '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            day_=Day,
+            time_=Time,
+        )
+
+class TimedProperty(bv.Struct):
+    '''
+       Based on ⟦31d12fb28⟧ group.pure description
+    '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            tp_000_b_=DayTime,
+            tp_001_b_=-24,
         )
 
 class BTree(bv.Struct):
@@ -111,14 +162,35 @@ class BTree(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            bt_00_z_=-143,
-            bt_08_z_=-52,
-            bt_09_z_=-10,
-            bt_10_p_=bv.Pointer(BTree),
-            bt_11_p_=bv.Pointer(BTree),
-            bt_12_p_=bv.Pointer(BTree),
-            bt_13_p_=bv.Pointer(BTree),
+            bt_k0_n_=-9,
+            bt_00_z_=-4,
+            bt_07_z_=-32,
+            bt_08_z_=-32,
+            more=True,
         )
+
+        # This variant structure is based on the "data dictionary" in
+        # the ".pure" GROUP segment.  All inspected ".pure" segments
+        # had the same layout.
+        if self.bt_k0_n.val == 0x1:
+            self.add_field("bt_a0_z", -64)
+            self.add_field("bt_a1_z", -64)
+        elif self.bt_k0_n.val == 0x2:
+            self.add_field("bt_b0_z", -8)
+            self.add_field("bt_b1_z", -8)
+            self.add_field("bt_b9_z", bv.Constant(112, 0))
+        elif self.bt_k0_n.val == 0x3:
+            self.add_field("bt_c0_z", -1)
+            self.add_field("bt_c1_z", -8)
+            self.add_field("bt_c9_z", bv.Constant(119, 0))
+        else:
+            self.add_field("bt_d9_z", bv.Constant(128, 0))
+
+        self.add_field("bt_10_p", bv.Pointer(BTree))
+        self.add_field("bt_11_p", bv.Pointer(BTree))
+        self.add_field("bt_12_p", bv.Pointer(BTree))
+        self.add_field("bt_13_p", bv.Pointer(BTree))
+        self.done()
 
 class PointerArray(bv.Struct):
 
@@ -188,7 +260,10 @@ class StringPointer(bv.Pointer(StringArray)):
             return
         dst = self.dst()
         retval = list(super().render())
-        yield retval[0] + "(»" + dst.txt + "«)"
+        if dst:
+            yield retval[0] + "(»" + dst.txt + "«)"
+        else:
+            yield retval[0] + "(»…«)"
 
 
 class Segment(bv.BitView):
@@ -206,7 +281,7 @@ class Segment(bv.BitView):
         super().__init__(bits = this.bits())
         self.this = this
         self.type_case = this.type_case
-        print(self.__class__.__name__, this, self)
+        print(this, self.__class__.__name__, self)
         self.spelunk()
         if True:
             for lo, hi in self.gaps():
@@ -330,6 +405,14 @@ class AclEntry(bv.Struct):
         )
 
 class ObjRef(bv.Struct):
+    '''
+       Based on ⟦31d12fb28⟧ group.pure description
+
+       According to the group.pure description, this is
+       a variant structure. probably on the "flg" field
+       which could then act as a "valid" flag.
+    '''
+
     def __init__(self, bvtree, lo, **kwargs):
         super().__init__(
             bvtree,
