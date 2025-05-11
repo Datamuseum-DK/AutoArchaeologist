@@ -29,10 +29,11 @@ class TapeHead(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            mgr_=cm.MgrHead,
+            mgr_001_n_=-31,
+            mgr_002_n_=bv.Array(2, -32),
+            mgr_003_p_=bv.Array(2, bv.Pointer()),
             hd_sh_=bv.Pointer(TapeSubHead),
-            hd_001_n_=-32,
-            hd_002_n_=bv.Pointer(cm.BTree),
+            hd_002_n_=bv.Pointer(),
         )
 
 class TapeSubHead(bv.Struct):
@@ -42,11 +43,10 @@ class TapeSubHead(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            sh_000_c_=-32,
+            sh_000_c_=bv.Pointer(),
             sh_001_b_=bv.Pointer(T00),
-            sh_002_b_=-32,
-            sh_003_b_=-32,
-            sh_004_b_=-1,
+            sh_002_b_=-31,
+            sh_003_b_=T04,
         )
 
 class TapeTerHead(bv.Struct):
@@ -65,13 +65,8 @@ class T00(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            t00_000_c_=bv.Pointer(T01),
-            t00_001_c_=bv.Pointer(T01),
-            t00_002_c_=bv.Pointer(T01),
-            t00_003_c_=bv.Pointer(T01),
-            #t00_003_c_=-32,
-            #t00_004_c_=-32,
-            #t00_005_c_=-32,
+            vertical=True,
+            t00_000_c_=bv.Array(4, bv.Pointer(T01), vertical=True),
         )
 
 class T01(bv.Struct):
@@ -79,11 +74,10 @@ class T01(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            t01_000_c_=-32,
-            t01_001_c_=-32,
+            t01_000_c_=bv.Array(2, -32),
             t01_002_c_=bv.Pointer(T02),
-            t01_003_c_=-32,
-            t01_004_c_=-32,
+            t01_003_c_=bv.Pointer(T02),
+            t01_004_c_=bv.Pointer(T02),
             t01_005_c_=-1,
         )
 
@@ -94,17 +88,36 @@ class T02(bv.Struct):
             lo,
             vertical=True,
             t02_000_c_=-2,
-            t02_000_d_=cm.ObjRef,
-            t02_001_c_=-32,
-            t02_002_c_=cm.ObjRef,
-            t02_003_c_=-32,
+            t02_000_s_=T03,
+            t02_001_s_=T03,
             t02_008_c_=cm.TimedProperty,
             t02_009_c_=cm.TimedProperty,
             t02_010_c_=cm.TimedProperty,
-            t02_011_c_=-35,
+            t02_011_c_=-3,
+            t02_012_c_=-32,
             more=True
         )
         self.done()
+
+class T03(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=False,
+            t03_000_d_=cm.ObjRef,
+            t03_001_c_=-32,
+        )
+
+class T04(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=False,
+            t04_000_d_=-2,
+            t04_001_c_=-32,
+        )
 
 class V1007T7F(cm.ManagerSegment):
 
@@ -114,3 +127,4 @@ class V1007T7F(cm.ManagerSegment):
 
     def spelunk_manager(self):
         self.head = TapeHead(self, self.seg_head.hi).insert()
+        bv.Pointer(cm.BTree)(self, self.head.hi).insert()

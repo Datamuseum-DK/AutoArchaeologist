@@ -37,8 +37,14 @@ class UX01(bv.Struct):
             more = True,
         )
         if self.ux01_020_n_.val:
-            self.add_field("text", bv.Text(self.ux01_020_n_.val))
-            self.txt = self.text.txt
+            try:
+                self.add_field("text", bv.Text(self.ux01_020_n_.val))
+                self.txt = self.text.txt
+            except OverflowError:
+                self.txt = "***OVERFLOW***"
+            except ValueError:
+                self.txt = "***VALUE***"
+                 
         else:
             self.txt = None
         self.done()
@@ -108,17 +114,74 @@ class DiscreteComponent(bv.Struct):
             dc_3_n_=bv.Constant(64, 0),
         )
 
-class ArrayComponent(bv.Struct):
+class FloatComponent(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
-            ac_id__=UX01,
-            ac_1_n_=-64,
-            ac_totalbits_=-64,
-            ac_bounds_=ArrayBoundsComponent,
-            vertical=True,
+            dc_id__=UX01,
+            dc_loc_=Location,
+            dc_3_n_=bv.Constant(64, 0),
         )
+
+class Compound(bv.Struct):
+
+    def compound(self):
+        n = 0
+        self.children =[]
+        while True:
+            cls, isheap = some_object(self.tree, self.hi)
+            if cls is None:
+                self.bad_compound = True
+                return
+            if cls == 0:
+                break
+            self.add_field("m%03d" % n, cls)
+            if cls in (
+                HeapAccessComponent,
+                DiscreteComponent,
+                DiscriminatedRecordHeaderComponent,
+                DiscriminatedRecordComponent,
+                ClauseComponent,
+                FloatComponent,
+                RecordComponent,
+                ArrayComponent,
+                ArrayBoundsComponent,
+                NullArrayBoundsComponent,
+                IndirectFieldRefComponent,
+            ):
+                self.children.append(n)
+                if hasattr(self.fields[-1][1], "bad_compound"):
+                    self.bad_compound = True
+                    return
+            else:
+                self.bad_compound = True
+                return
+            n += 1
+
+        self.add_field("eom", -64)
+        for n in reversed(self.children):
+            self.add_field("t%03d" % n, -64)
+
+    def render(self):
+        yield from super().render()
+        if hasattr(self, "bad_compound"):
+            yield "BAD_COMPOUND " + self.__class__.__name__
+
+class ArrayComponent(Compound):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            ac_id__=UX01,
+            ac_loc_=Location,
+            #ac_bounds_=ArrayBoundsComponent,
+            more=True,
+        )
+        self.compound()
+        #self.add_field("z00", -64)
+        self.done()
 
 class NullArrayBoundsComponent(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -127,6 +190,9 @@ class NullArrayBoundsComponent(bv.Struct):
             lo,
             nabc_id__=UX01,
             nabc_loc_=Location,
+            nabc_f00_=-64,
+            nabc_f01_=-64,
+            nabc_f02_=-64,
         )
 
 class ArrayBoundsComponent(bv.Struct):
@@ -135,12 +201,10 @@ class ArrayBoundsComponent(bv.Struct):
             bvtree,
             lo,
             abc_id__=UX01,
-            abc_1_n_=-64,
-            abc_2_n_=-64,
+            abc_loc_=Location,
             abc_3_n_=-64,
             abc_hi_=-64,
             abc_5_n_=-64,
-            vertical=True,
         )
 
 class HeapAccessComponent(bv.Struct):
@@ -153,22 +217,20 @@ class HeapAccessComponent(bv.Struct):
             hac_3_n_=bv.Constant(64, 0),
         )
 
-class ClauseComponent(bv.Struct):
+class ClauseComponent(Compound):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
+            vertical=True,
             clc_id__=UX01,
             clc_loc_=Location,
             clc_3_n_=-64,
             clc_4_n_=-64,
-            clc_5_=DiscreteComponent,
-            clc_6_=DiscreteComponent,
-            clc_7_=-64,
-            clc_8_=-64,
-            clc_9_=-64,
-            vertical=True,
+            more=True,
         )
+        self.compound()
+        self.done()
 
 def some_object(bvtree, lo):
     y = UX01(bvtree, lo)
@@ -176,14 +238,20 @@ def some_object(bvtree, lo):
         return 0, False
     if y.txt == "DISCRETE_COMPONENT":
         return DiscreteComponent, False
+    if y.txt == "FLOAT_COMPONENT":
+        return FloatComponent, False
     if y.txt == "HEAP_ACCESS_COMPONENT":
         return HeapAccessComponent, True
     if y.txt == "RECORD_COMPONENT":
-        return RecordComponent, False
+        return RecordComponent, True
     if y.txt == "DISCRIMINATED_RECORD_COMPONENT":
         return DiscriminatedRecordComponent, False
+    if y.txt == "DISCRIMINATED_RECORD_HEADER_COMPONENT":
+        return DiscriminatedRecordHeaderComponent, False
     if y.txt == "INDIRECT_FIELD_REF_COMPONENT":
         return IndirectFieldRefComponent, False
+    if y.txt == "ARRAY_BOUNDS_COMPONENT":
+        return ArrayBoundsComponent, False
     if y.txt == "ARRAY_COMPONENT":
         return ArrayComponent, False
     if y.txt == "NULL_ARRAY_BOUNDS_COMPONENT":
@@ -193,7 +261,7 @@ def some_object(bvtree, lo):
     print(bvtree.this, "SOMEOBJ", hex(lo), y.txt)
     return None, False
 
-class RecordComponent(bv.Struct):
+class RecordComponent(Compound):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
@@ -203,32 +271,7 @@ class RecordComponent(bv.Struct):
             rc_loc_=Location,
             more=True,
         )
-        n = 0
-        heaps = []
-        while True:
-            cls, isheap = some_object(bvtree, self.hi)
-            if cls is None:
-                self.done()
-                return
-            if cls == 0:
-                break
-            self.add_field("m%03d" % n, cls)
-            if isheap:
-                heaps.append(n)
-            n += 1
-
-        self.add_field("eom", -64)
-        for i in heaps:
-            self.add_field("t%03d" % i, -64)
-        n = 0
-        while n < 3:
-            a, b = some_object(bvtree, self.hi)
-            if a == 0:
-                self.add_field("rc_eom[0x%x]" % n, -64)
-                n += 1
-            else:
-                break
-
+        self.compound()
         self.done()
 
 class IndirectFieldRefComponent(bv.Struct):
@@ -240,7 +283,7 @@ class IndirectFieldRefComponent(bv.Struct):
             ifrc_loc_=Location,
         )
 
-class DiscriminatedRecordComponent(bv.Struct):
+class DiscriminatedRecordComponent(Compound):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
@@ -249,30 +292,10 @@ class DiscriminatedRecordComponent(bv.Struct):
             drc_loc_=Location,
             drc_3_n_=-64,
             drc_4_n_=-64,
-            drc_5_n_=DiscriminatedRecordHeaderComponent,
             vertical=True,
             more=True,
         )
-        n = 6
-        while True:
-            a, b = some_object(bvtree, self.hi)
-            if a in (
-                DiscreteComponent,
-                DiscreteComponent,
-                ClauseComponent,
-            ):
-                self.add_field("drc_%d_o" % n, a)
-                n += 1
-            else:
-                break
-        n = 0
-        while True:
-            a, b = some_object(bvtree, self.hi)
-            if a == 0:
-                self.add_field("drc_eom[0x%x]" % n, -64)
-                n += 1
-            else:
-                break
+        self.compound()
         self.done()
 
 class DiscriminatedRecordHeaderComponent(bv.Struct):
@@ -283,10 +306,7 @@ class DiscriminatedRecordHeaderComponent(bv.Struct):
             drhc_id__=UX01,
             drhc_loc_=Location,
             drhc_3_n_=-64,
-            #drhc_4_n_=DiscreteComponent,
-            #drhc_5_n_=DiscreteComponent,
-            ##drhc_6_n_=DiscreteComponent,
-            vertical=True,
+            vertical=False,
         )
 
 class ObjPtr(bv.Struct):
@@ -621,6 +641,7 @@ class PureHead(bv.Struct):
         super().__init__(
             bvtree,
             lo,
+            vertical=False,
             ph_0_=-32,
             ph_1_=-64,
             ph_2_=-64,
@@ -642,6 +663,7 @@ class Pure():
             self.spelunk()
         except Exception as err:
             print(tree.this, "BOOM", hex(self.recent), err)
+            raise
         self.find_texts()
 
     def spelunk(self):
@@ -693,6 +715,9 @@ class Pure():
             return True
         if txt.txt == "DISCRETE_COMPONENT":
             DiscreteComponent(self.tree, txt.lo).insert()
+            return True
+        if txt.txt == "FLOAT_COMPONENT":
+            FloatComponent(self.tree, txt.lo).insert()
             return True
         if txt.txt == "ARRAY_COMPONENT":
             ArrayComponent(self.tree, txt.lo).insert()
