@@ -8,7 +8,7 @@
    VPID 1002 - TAG 0x7a
    =========================================
 
-   FE_HANDBOOK.PDf 187p
+   FE_HANDBOOK.PDF 187p
 
     Note: […] The D2 mapping is:
 

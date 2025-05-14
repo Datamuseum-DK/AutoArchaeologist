@@ -68,11 +68,11 @@ class X00(bv.Struct):
             self.add_field("x00_005_n", -32)
             self.add_field("x00_006_n", -32)
             self.add_field("x00_007_n", -32)
-            self.add_field("x00_008_n", bv.Pointer(cm.BTree))
-            self.add_field("x00_010_n", bv.Pointer())
-            self.add_field("x00_011_n", bv.Pointer())
-            self.add_field("x00_012_n", bv.Pointer())
-            self.add_field("x00_013_n", bv.Pointer())
+            self.add_field("x00_008_n", bv.Pointer.to(cm.BTree))
+            self.add_field("x00_010_n", bv.Pointer)
+            self.add_field("x00_011_n", bv.Pointer)
+            self.add_field("x00_012_n", bv.Pointer)
+            self.add_field("x00_013_n", bv.Pointer)
         self.done()
 
 class X02(bv.Struct):
@@ -89,7 +89,7 @@ class X02(bv.Struct):
             "ptrs",
             bv.Array(
                 self.x02_001_n.val,
-                bv.Pointer(X03),
+                bv.Pointer.to(X03),
                 vertical=True,
                 #elide={0,},
             )
@@ -102,8 +102,8 @@ class X03(bv.Struct):
             bvtree,
             lo,
             x98_000_n__=bv.Constant(32, 0),
-            x98_010_p_=bv.Pointer(cm.StringArray),
-            x98_048_p_=bv.Pointer(X03),
+            x98_010_p_=bv.Pointer.to(cm.StringArray),
+            x98_048_p_=bv.Pointer.to(X03),
         )
 
 class SegId(bv.Struct):
@@ -127,7 +127,7 @@ class X04(bv.Struct):
             x99_seg_=SegId,
             #x99_049_n__=bv.Constant(32, 0x80),
             x99_049_n__=-32,
-            x99_080_n_=bv.Pointer(X04),
+            x99_080_n_=bv.Pointer.to(X04),
         )
         if not self.x99_010_n.val:
             return

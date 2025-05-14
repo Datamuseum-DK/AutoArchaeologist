@@ -66,7 +66,7 @@ class MgrHead(bv.Struct):
             lo,
             mgr_001_n_=-31,
             mgr_002_n_=bv.Array(2, -32),
-            mgr_003_p_=bv.Array(2, bv.Pointer()),
+            mgr_003_p_=bv.Array(2, bv.Pointer),
        )
 
 class TimeStamp(bv.Struct):
@@ -110,7 +110,7 @@ class Day(bv.Struct):
         )
         self.ts = (self.day.val - (69 * 365 + 18)) * 86400
         gm = time.gmtime(self.ts)
-        self.tstamp = time.strftime("%Y-%m-%d", gm)
+        self.tstamp = time.strftime("%Y-%m-%d", gm) + "(0x%x)" % self.day.val
 
     def render(self):
         yield self.tstamp
@@ -129,7 +129,7 @@ class Time(bv.Struct):
         m = (tmp // 60) % 60
         s = tmp % 60
         frac = tmp & 0x7fff
-        yield "%02d:%02d:%02d(0x%x)" % (h, m, s, frac)
+        yield "%02d:%02d:%02d(0x%x)" % (h, m, s, self.time.val)
 
 class DayTime(bv.Struct):
     '''
@@ -186,10 +186,10 @@ class BTree(bv.Struct):
         else:
             self.add_field("bt_d9_z", bv.Constant(128, 0))
 
-        self.add_field("bt_10_p", bv.Pointer(BTree))
-        self.add_field("bt_11_p", bv.Pointer(BTree))
-        self.add_field("bt_12_p", bv.Pointer(BTree))
-        self.add_field("bt_13_p", bv.Pointer(BTree))
+        self.add_field("bt_10_p", bv.Pointer.to(BTree))
+        self.add_field("bt_11_p", bv.Pointer.to(BTree))
+        self.add_field("bt_12_p", bv.Pointer.to(BTree))
+        self.add_field("bt_13_p", bv.Pointer.to(BTree))
         self.done()
 
 class PointerArray(bv.Struct):
@@ -207,7 +207,14 @@ class PointerArray(bv.Struct):
             self.add_field("pa_max", -32)
             assert self.pa_min.val == 0
             dimension = self.pa_max.val
-        self.add_field("array", bv.Array(dimension, bv.Pointer(cls, elide=elide), vertical=True))
+        self.add_field(
+            "array",
+            bv.Array(
+                dimension,
+                bv.Pointer.args(target=cls, elide=elide),
+                vertical=True
+            )
+        )
         self.done()
 
     def __iter__(self):
@@ -242,8 +249,10 @@ class StringArray(bv.Struct):
     def dot_node(self, dot):
         return "»" + self.txt + '«', ["shape=plaintext"]
 
-class StringPointer(bv.Pointer(StringArray)):
+class StringPointer(bv.Pointer):
     ''' ... '''
+
+    TARGET = StringArray
 
     def text(self):
         if self.val:
@@ -367,7 +376,12 @@ class Segment(bv.BitView):
                             hex(hit - x.lo)
                         )
 
+    def spelunk(self):
+        ''' discover things '''
+        assert None
+
 class ManagerSegment(Segment):
+    ''' Stuff common to manager segments '''
 
     def spelunk(self):
 
@@ -379,10 +393,25 @@ class ManagerSegment(Segment):
                 self.spelunk_manager()
             except Exception as err:
                 print(self.this, self.__class__.__name__, "BOOM", err)
-                #raise
+                raise
         else:
             pure.Pure(self)
             self.this.add_note("Pure")
+
+    def spelunk_manager(self):
+        ''' discover things '''
+        assert None
+
+class IndirectFieldRefComponent(bv.Struct):
+    ''' ... '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            offset_=-32,
+            width_=-32,
+        )
 
 class AclEntry(bv.Struct):
 
@@ -526,4 +555,3 @@ class SegId(bv.Struct):
             segno_n_=-22,
             vpid_n_=-10,
         )
-

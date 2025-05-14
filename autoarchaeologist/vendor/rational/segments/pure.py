@@ -192,7 +192,7 @@ class NullArrayBoundsComponent(bv.Struct):
             nabc_loc_=Location,
             nabc_f00_=-64,
             nabc_f01_=-64,
-            nabc_f02_=-64,
+            #nabc_f02_=-64,
         )
 
 class ArrayBoundsComponent(bv.Struct):
@@ -548,7 +548,7 @@ class DirectoryObject(bv.Struct):
         self.add_field("tail4", -32)
         if self.tail3.val in (0x50000000, 0xf0000000):
             self.add_field("tail5", -4)
-        if self.cls.val == 1 and self.subcls.val in (2, 4, 6):
+        if self.cls.val == 1 and self.subcls.val in (2, 4, 6, 66):
             self.add_field("ada", AdaExtra)
         self.done()
 

@@ -8,7 +8,7 @@
    VPID 1015 - TAG 0x87
    =========================================
 
-   FE_HANDBOOK.PDf 187p
+   FE_HANDBOOK.PDF 187p
 
     Note: […] The D2 mapping is:
 
@@ -30,9 +30,9 @@ class ArchCodeHead(bv.Struct):
             lo,
             vertical=True,
             mgr_=cm.MgrHead,
-            hd_sh_=bv.Pointer(ArchCodeSubHead),
+            hd_sh_=bv.Pointer.to(ArchCodeSubHead),
             hd_001_n_=-32,
-            hd_002_n_=bv.Pointer(cm.BTree),
+            hd_002_n_=bv.Pointer.to(cm.BTree),
         )
 
 class ArchCodeSubHead(bv.Struct):
@@ -43,7 +43,7 @@ class ArchCodeSubHead(bv.Struct):
             lo,
             vertical=True,
             sh_000_c_=-32,
-            sh_001_b_=bv.Pointer(),
+            sh_001_b_=bv.Pointer,
             sh_002_b_=-32,
             sh_003_b_=-32,
             sh_004_b_=-1,

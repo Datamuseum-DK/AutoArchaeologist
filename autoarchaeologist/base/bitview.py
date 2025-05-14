@@ -101,6 +101,18 @@ class Opaque(Bits):
     def render(self):
         yield self.__class__.__name__
 
+class Char(Bits):
+
+    def __init__(self, tree, lo, *args, **kwargs):
+        super().__init__(tree, lo, hi=lo+8, *args, **kwargs)
+        self.val = int(self.bits(), 2)
+
+    def render(self):
+        if 32 <= self.val <= 0x7e:
+            yield "'%c'" % self.val
+        else:
+            yield "'\\x%02x'" % self.val
+
 class Number(Bits):
 
     fmt = None
@@ -163,69 +175,77 @@ def Text(width, glyph_width=8, rstrip = False):
 
     return Text_Class
 
-class Pointer_Class(Bits):
+class Pointer(Bits):
 
     TARGET = None
     WIDTH = None
-    ELIDE = None
+    ELIDE = {}
+    NOWHERE = { 0x0 }
 
-    def __init__(self, bvtree, lo, width=None):
+    def __init__(self, bvtree, lo, width=None, target=None, elide=None):
         if width is None:
             width = self.WIDTH
         if width is None:
             width = bvtree.POINTER_WIDTH
+        if target is None:
+            target = self.TARGET
+        if elide is None:
+            elide = self.ELIDE
         super().__init__(bvtree, lo, width=width)
         self.val = int(self.bits(), 2)
+        self.target = target
+        self.elide = elide
         self.cached_dst = None
-        if self.TARGET is not None:
-            bvtree.points_to(self.val, self.TARGET)
+        if self.target is not None:
+            bvtree.points_to(self.val, self.target)
 
     def dst(self):
-        if self.cached_dst is None:
-            i = list(self.tree.find(self.val, self.val+1))
-            if len(i) == 0:
-                return None
-            if len(i) > 1:
-                dst = set()
-                for j in i:
-                    t = j.__class__.__name__
-                    if j.lo < self.val:
-                        t += "+0x%x" % (self.val - j.lo)
-                    dst.add(t)
-                print(
-                    self.tree.this,
-                    "Pointer at",
-                    hex(self.lo),
-                    "points to",
-                    hex(self.val),
-                    "with",
-                    len(i),
-                    "destinations of class",
-                    ",".join(list(dst)),
-                )
-                return None
-            dst = i[0]
-            if dst.lo != self.val:
-                print(
-                    "Pointer at",
-                    hex(self.lo),
-                    "Points to",
-                    hex(self.val),
-                    "which is",
-                    hex(self.val - dst.lo),
-                    "into object at",
-                    hex(dst.lo),
-                    "which is class",
-                    dst.__class__.__name__,
-                )
-                return None
-            self.cached_dst = dst
+        if self.cached_dst is not None:
+            return self.cached_dst
+        i = list(self.tree.find(self.val, self.val+1))
+        if len(i) == 0:
+            return None
+        if len(i) > 1:
+            dst = set()
+            for j in i:
+                t = j.__class__.__name__
+                if j.lo < self.val:
+                    t += "+0x%x" % (self.val - j.lo)
+                dst.add(t)
+            print(
+                self.tree.this,
+                "Pointer at",
+                hex(self.lo),
+                "points to",
+                hex(self.val),
+                "with",
+                len(i),
+                "destinations of class",
+                ",".join(list(dst)),
+            )
+            return None
+        dst = i[0]
+        if dst.lo != self.val:
+            print(
+                "Pointer at",
+                hex(self.lo),
+                "Points to",
+                hex(self.val),
+                "which is",
+                hex(self.val - dst.lo),
+                "into object at",
+                hex(dst.lo),
+                "which is class",
+                dst.__class__.__name__,
+            )
+            return None
+        self.cached_dst = dst
         return self.cached_dst
 
     def render(self):
-        if self.ELIDE and self.val in self.ELIDE:
+        if self.val in self.elide:
             return
-        if not self.val:
+        if self.val in self.NOWHERE:
             yield "∅"
             return
         i = self.dst()
@@ -241,23 +261,13 @@ class Pointer_Class(Bits):
             src = self
         dot.add_edge(src, self.val)
 
-def make_pointer(cls=None, width=None, elide=None):
+    @classmethod
+    def to(cls, target):
+        return (cls, {"target": target})
 
-    class ClsPointer(Pointer_Class):
-        TARGET = cls
-        WIDTH = width
-        ELIDE = elide
-
-    return ClsPointer
-
-def Pointer(cls=None, width=None, elide=None):
-
-    key = str(("Pointer", cls, width, elide))
-    ptr = class_cache.get(key)
-    if not ptr:
-        ptr = make_pointer(cls, width, elide)
-        class_cache[key] = ptr
-    return ptr
+    @classmethod
+    def args(cls, **kwargs):
+        return (cls, kwargs)
 
 def make_constant(width=32, value=0):
     class ClsConstant(Bits):

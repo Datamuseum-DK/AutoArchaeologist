@@ -92,14 +92,322 @@
         Note: […] The D2 mapping is:
             […]
             DIRECTORY        1009
-            […]
+[…]
 
 
+   Layout based descriptions in pure segment ⟦bb0bd0268⟧
 '''
 
 from ....base import bitview as bv
 from ....base import namespace
 from . import common as cm
+
+class DirectoryHead(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @ 0x5741e59 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-31,
+            m001_n_=bv.Array(2, -32),
+            m002_p_=bv.Array(2, bv.Pointer),	# D05
+            m003_p_=bv.Pointer.to(D04),
+            m004_p_=bv.Array(2, bv.Pointer.to(D03)),
+        )
+
+class D03(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5744f79 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=bv.Array(2, bv.Pointer.to(D06)),
+        )
+
+class D04A(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x57457c1 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_n_=-2,
+            m001_p_=bv.Pointer,			# D07
+        )
+
+class D04(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x57451a1  '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_p_=bv.Pointer,			# D07
+            m001_p_=bv.Pointer.to(D08),
+            m002_n_=-31,
+            m003_s_=D04A,
+        )
+
+class D06(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5745eb9  '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_p_=bv.Array(2, bv.Pointer.to(D10)),
+            m001_p_=bv.Array(2, bv.Pointer),	# D09
+        )
+
+class D07(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5746489  '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=bv.Array(2, -32),
+            m001_p_=bv.Pointer.to(D11),
+            m002_p_=bv.Pointer.to(D07),
+            m003_p_=bv.Pointer.to(D07),
+            m004_n_=-1,
+        )
+
+class D08(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5746fe1  '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_a_=bv.Array(0x2717, bv.Pointer.to(D07), vertical=True, elide=(0,)),
+        )
+
+class D10(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5747841 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=bv.Array(2, -32),
+            m002_n_=-32,
+            m001_a_=bv.Array(0x1386, bv.Pointer.to(D12), vertical=True, elide=(0,)),
+        )
+
+class D11(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x57480a9 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_p_=bv.Pointer.to(D13),
+            m001_n_=-3,
+            m002_n_=-32,
+        )
+
+class D12(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5748831  '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_p_=bv.Array(2, bv.Pointer.to(cm.StringArray)),
+            m001_p_=bv.Pointer.to(D12),
+        )
+
+class D13(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5748e01 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_p_=bv.Pointer.to(D15),
+            m001_p_=bv.Pointer.to(D15),
+        )
+
+class D15A(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x574a579 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-9,
+            m001_n_=-1,
+            m002_n_=-31,
+            m003_n_=-6,
+            m004_n_=-10,
+            m005_n_=-10,
+            m006_n_=-1,
+            m007_n_=-11,
+            m008_n_=-1,
+            m009_n_=-1,
+            m010_n_=-1,
+            m011_n_=-3,
+            more=True,
+        )
+        if self.m000_n.val == 1:	# ⟦bb0bd0268⟧ @0x574bb01
+            self.add_field("m012a_n", -31)
+        elif self.m000_n.val == 2:	# ⟦bb0bd0268⟧ @0x574bed1
+            self.add_field("m012b_p", bv.Pointer.to(D16))
+        self.done(0x75)
+
+class D15(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5749c21 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-31,
+            m001_p_=bv.Pointer,				# D14
+            m002_p_=bv.Array(2, bv.Pointer.to(D18)),	# D18, VersionTree
+            m003_p_=bv.Array(2, bv.Pointer.to(D17)),	# D17, ChildTree
+            m004_n_=-31,
+            m005_s_=D15A,
+        )
+
+class D16A(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x574d6e9 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_n_=-10,
+            m001_n_=-4,
+        )
+
+class D16(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x574c8b9 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-9,
+            m001_n_=-1,
+            m002_n_=-31,
+            m003_n_=-31,
+            more=True,
+        )
+        if self.m000_n.val == 0x101:	#  ⟦bb0bd0268⟧ @0x574d1c1
+            self.add_field("m004_a", bv.Array(7, D16A, vertical=True))
+            self.add_field("m005_a", bv.Array(7, D16A, vertical=True))
+            self.add_field("m006_n", -32)
+            self.add_field("m007_n", -1)
+        self.done()
+
+class D17A(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x574f291 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_n_=2,
+            m001_p_=bv.Pointer,			# D19
+        )
+
+class D17(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x574ec71 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_p_=bv.Pointer.to(D19),
+            m001_p_=bv.Pointer,			# D20
+            m002_n_=-31,
+            m003_s_=D17A,
+        )
+
+class D18A(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x574ffa9 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_n_=2,
+            m001_p_=bv.Pointer,
+        )
+
+class D18(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x574f989 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_p_=bv.Pointer.to(D21),
+            m001_p_=bv.Pointer,				# D22
+            m002_n_=-31,
+            m003_s_=D18A,
+        )
+
+class D19(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x57506a1 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_p_=bv.Pointer.to(cm.StringArray),		# D14
+            m001_n_=-31,
+            m002_p_=bv.Pointer.to(D19),
+            m003_p_=bv.Pointer.to(D19),
+            m004_n_=-1,
+        )
+
+class D21(bv.Struct):
+    ''' ⟦bb0bd0268⟧ @0x5751849 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-31,
+            m001_n_=-31,
+            m002_p_=bv.Pointer.to(D21),
+            m003_p_=bv.Pointer.to(D21),
+            m004_n_=-1,
+        )
+
+class V1009T81(cm.ManagerSegment):
+    ''' Directory Manager Segment - VPID 1009 - TAG 0x81 '''
+
+    VPID = 1009
+    TAG = 0x81
+    TOPIC = "Directory"
+
+    def spelunk_manager(self):
+
+        head = DirectoryHead(self, self.seg_head.hi).insert()
+        bv.Pointer(self, head.hi, target=cm.BTree).insert()
+
+###################################################################
 
 DM04_OFFSET = 6302
 DM04_SIZE = 10007
@@ -161,8 +469,10 @@ class ObjId(bv.Struct):
     def render(self):
         yield "[,%d,]" % self.objid.val
 
-class StringPointer(bv.Pointer(cm.StringArray)):
+class StringPointer(bv.Pointer):
     ''' ... '''
+
+    TARGET = cm.StringArray
 
     def text(self):
         if self.val:
@@ -189,10 +499,10 @@ class DirHead(bv.Struct):
             lo,
             vertical=True,
             mgr_=cm.MgrHead,
-            hd_sh_=bv.Pointer(DirSubHead),
-            hd_001_p_=bv.Pointer(DM01),
+            hd_sh_=bv.Pointer.to(DirSubHead),
+            hd_001_p_=bv.Pointer.to(DM01),
             hd_002_n_=-32,
-            hd_003_p_=bv.Pointer(cm.BTree),
+            hd_003_p_=bv.Pointer.to(cm.BTree),
         )
 
 class DirSubHead(bv.Struct):
@@ -203,7 +513,7 @@ class DirSubHead(bv.Struct):
             lo,
             vertical=True,
             sh_001_n_=-32,
-            sh_002_=bv.Pointer(DM04),
+            sh_002_=bv.Pointer.to(DM04),
             sh_012_n_=-32,
             sh_013_n_=-32,
             sh_014_n_=-1,
@@ -215,7 +525,7 @@ class DM01(bv.Struct):
             bvtree,
             lo,
             hs_000_p_=-32,
-            hs_010_p_=bv.Pointer(DM02),
+            hs_010_p_=bv.Pointer.to(DM02),
         )
 
 class DM02(bv.Struct):
@@ -224,7 +534,7 @@ class DM02(bv.Struct):
             bvtree,
             lo,
             hs_000_p_=-32,
-            hs_010_p_=bv.Pointer(DM03),
+            hs_010_p_=bv.Pointer.to(DM03),
             hs_020_n_=-32,
             hs_030_n_=-32,
         )
@@ -245,7 +555,7 @@ class DM07(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            b3_000_=bv.Pointer(DM08),
+            b3_000_=bv.Pointer.to(DM08),
             b3_locked_=-3,
             b3_002_n_=-32,	# too big to be snapshot
         )
@@ -261,8 +571,8 @@ class DM08(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            b4_000_=bv.Pointer(DM05),
-            b4_001_=bv.Pointer(DM05),
+            b4_000_=bv.Pointer.to(DM05),
+            b4_001_=bv.Pointer.to(DM05),
         )
 
     def show_directory_information(self, out, prefix, path):
@@ -277,11 +587,11 @@ class DM05(bv.Struct):
             bvtree,
             lo,
             b5_dir_=DirNo,
-            b5_name_=StringPointer,
+            b5_name_=bv.Pointer.to(cm.StringArray),
             b5_002__=bv.Constant(32, 0),
-            b5_version_tree_=bv.Pointer(VersionTree),
+            b5_version_tree_=bv.Pointer.to(VersionTree),
             b5_004__=bv.Constant(32, 0),
-            b5_child_tree_=bv.Pointer(ChildTree),
+            b5_child_tree_=bv.Pointer.to(ChildTree),
             b5_objnbr_=ObjId,
             b5_var_=-9,
             b5_control_point_=-1,
@@ -299,7 +609,7 @@ class DM05(bv.Struct):
             vertical=True,
         )
         if self.b5_var.val == 2:
-            self.add_field("b5_010_p", bv.Pointer(DM06))
+            self.add_field("b5_010_p", bv.Pointer.to(DM06))
         else:
             self.add_field("b5_dir_ctrl_point", DirNo)
             self.add_field("b5_011_b_", bv.Constant(1,0))
@@ -311,9 +621,9 @@ class DM05(bv.Struct):
             if self.b5_version_tree.val == 0:
                 return
             ver, nbr = self.b5_version_tree.dst().current_version()
-            if cname == "USER":
+            if 0 and cname == "USER":
                 self.tree.users[nbr] = self.b5_name.text()
-            elif cname == "GROUP":
+            elif 0 and cname == "GROUP":
                 self.tree.groups[nbr] = self.b5_name.text()
 
     def dot_node(self, dot):
@@ -473,9 +783,9 @@ class DMTree(bv.Struct):
             lo,
             dir_00__=bv.Constant(width=33, value=18),
             dir_nbr_=DirNo,
-            dir_02_=bv.Pointer(DM07),
-            dir_03_=bv.Pointer(DMTree),
-            dir_04_=bv.Pointer(DMTree),
+            dir_02_=bv.Pointer.to(DM07),
+            dir_03_=bv.Pointer.to(DMTree),
+            dir_04_=bv.Pointer.to(DMTree),
             dir_05_n_=-1,
         )
 
@@ -530,7 +840,7 @@ class ChildTree(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            b9_root_=bv.Pointer(ChildBranch),
+            b9_root_=bv.Pointer.to(ChildBranch),
             b9_001__=bv.Constant(31, 0),
             b9_leaves_=-32,
             b9_003__=bv.Constant(34, 0),
@@ -545,10 +855,10 @@ class VersionTree(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            b6_000_=bv.Pointer(VersionLeaf),
+            b6_000_=bv.Pointer.to(VersionLeaf),
             b6_001__=bv.Constant(32, 0),
             b6_nver_n_=-33,
-            b6_003_=bv.Pointer(VersionLeaf),
+            b6_003_=bv.Pointer.to(VersionLeaf),
         )
 
     def current_version(self):
@@ -579,8 +889,8 @@ class VersionLeaf(bv.Struct):
             lo,
             ve_ver_n_=-31,
             ve_obj_n_=ObjId,
-            ve_left_=bv.Pointer(VersionLeaf),
-            ve_right_=bv.Pointer(VersionLeaf),
+            ve_left_=bv.Pointer.to(VersionLeaf),
+            ve_right_=bv.Pointer.to(VersionLeaf),
             ve_004_n_=-1,
         )
 
@@ -600,10 +910,10 @@ class ChildBranch(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            de_nam_=StringPointer,
+            de_nam_=bv.Pointer.to(cm.StringArray),
             de_nbr_=DirNo,
-            de_l_=bv.Pointer(ChildBranch),
-            de_r_=bv.Pointer(ChildBranch),
+            de_l_=bv.Pointer.to(ChildBranch),
+            de_r_=bv.Pointer.to(ChildBranch),
             de_04_n_=-1,
         )
 
@@ -678,11 +988,11 @@ class NameList(bv.Struct):
             bvtree,
             lo,
             zw_000_p__=bv.Constant(32, 0),
-            text_=StringPointer,
-            next_=bv.Pointer(NameList),
+            text_=bv.Pointer.to(cm.StringArray),
+            next_=bv.Pointer.to(NameList),
         )
 
-class V1009T81(cm.ManagerSegment):
+class OldV1009T81(cm.ManagerSegment):
 
     VPID = 1009
     TAG = 0x81

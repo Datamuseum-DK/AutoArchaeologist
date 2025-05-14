@@ -8,7 +8,7 @@
    VPID 1010 - TAG 0x82
    =========================================
 
-   FE_HANDBOOK.PDf 187p
+   FE_HANDBOOK.PDF 187p
 
     Note: […] The D2 mapping is:
 

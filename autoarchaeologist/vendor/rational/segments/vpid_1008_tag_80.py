@@ -6,9 +6,9 @@
 
 '''
    VPID 1008 - TAG 0x80
-   =========================================
+   ====================
 
-   FE_HANDBOOK.PDf 187p
+   FE_HANDBOOK.PDF 187p
 
     Note: […] The D2 mapping is:
 
@@ -16,155 +16,185 @@
         TERMINAL       1008
         […]
 
-   Struct Layouts based on pure description in ⟦c05ddcbe7⟧
+   Layout based descriptions in pure segment ⟦c05ddcbe7⟧
 '''
 
 from ....base import bitview as bv
 from . import common as cm
 
-class IndirectFieldRefComponent(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            offset_=-32,
-            width_=-32,
-        )
-
-class T94(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            vertical=True,
-            t94_000_n_=-1,
-            t94_001_n_=-31,
-            t94_002_n_=-31,
-            t94_003_n_=-32,
-        )
-
-class T95(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            vertical=True,
-            t95_000_n_=-1,
-            t95_001_n_=-31,
-            t95_002_n_=-31,
-            # Not quite sure about the rest...
-            t95_003_n_=IndirectFieldRefComponent,
-            t95_004_n_=-32,
-            t95_005_n_=-32,
-            t95_006_n_=bv.Array(0x14, -8),
-        )
-
-class T96(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            vertical=True,
-            t96_000_n_=-4,
-            t96_001_n_=-1,
-            t96_002_n_=-1,
-            t96_003_n_=-1,
-            t96_004_n_=-1,
-            t96_005_n_=-1,
-            t96_006_n_=-1,
-            t96_007_n_=-4,
-            t96_008_n_=-4,
-            t96_009_n_=-2,
-            t96_010_n_=-2,
-            t96_011_n_=-2,
-            t96_012_n_=-1,
-            t96_013_n_=-8,
-            t96_014_n_=-8,
-            t96_015_s_=T95,
-            t96_016_n_=-31,
-            t96_017_n_=-31,
-            t96_018_s_=T94,
-            t96_019_s_=-32,
-        )
-
-
-class T97(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            vertical=True,
-            t97_000_z_=-9,
-            t97_001_s_=T96,
-            t97_002_s_=T96,
-            t97_003_s_=cm.TimedProperty,
-            t97_004_s_=cm.TimedProperty,
-            t97_005_s_=cm.TimedProperty,
-            t97_006_s_=-3,
-            t97_007_s_=-32,
-        )
-
-class T98(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            t98_000_z_=-64,
-            t98_001_z_=bv.Pointer(T97),
-            t98_002_z_=bv.Pointer(),
-            t98_003_z_=bv.Pointer(),
-            t98_004_z_=-1,
-        )
-
-class T99(bv.Struct):
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            t99_049_z_=-205,
-            t99_096_z_=bv.Pointer(T99),
-            t99_097_z_=bv.Pointer(T99),
-            t99_098_z_=bv.Pointer(T99),
-            t99_099_z_=bv.Pointer(T99),
-        )
-
 class TerminalHead(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x3dbb1 '''
 
     def __init__(self, bvtree, lo):
+
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            mgr_=cm.MgrHead,
-            hd_sh_=bv.Pointer(TerminalSubHead),
-            hd_001_n_=-32,
-            hd_002_n_=bv.Pointer(cm.BTree),
+            m000_n_=-31,
+            m001_n_=bv.Array(2, -32),
+            m002_=bv.Array(2, bv.Pointer),
+            #m003 zero length discrete
+            m004_=bv.Array(2, bv.Pointer.to(T04)),
         )
 
-class T04(bv.Struct):
+class T04A(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x412d9 '''
+
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             t04_000_c_=-2,
-            t04_001_b_=bv.Pointer(),
+            t04_001_b_=bv.Pointer,
         )
 
-class TerminalSubHead(bv.Struct):
-    ''' Based on pure spec ⟦c05ddcbe7⟧ '''
+class T04(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x419d1 '''
 
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            sh_000_c_=bv.Pointer(),
-            sh_001_p_=bv.Pointer(),
-            sh_002_b_=-31,
-            sh_003_b_=T04,
+            m000_n_=bv.Pointer,
+            m001_p_=bv.Pointer.to(T06),
+            m002_n_=-31,
+            m003_s_=T04A,
         )
 
+class T05(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x419d1 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_n_=bv.Array(2, -32),
+            m001_p_=bv.Pointer.to(T07),
+            m002_p_=bv.Pointer,
+            m003_p_=bv.Pointer,
+            m004_n_=-1,
+        )
+
+
+class T06(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x42529 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=bv.Array(257, bv.Pointer.to(T05), vertical=True, elide=(0,)),
+        )
+
+class T07E(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x48ac9 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-1,
+            m001_n_=-31,
+            m002_n_=-31,
+            m003_n_=cm.IndirectFieldRefComponent,
+
+            # Not quite sure about the rest...
+
+            x004_n_=-32,
+            x005_n_=-32,
+            x006_n_=bv.Array(0x14, -8),
+        )
+
+class T07D(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x46401 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            m000_n_=-1,
+            m001_n_=-31,
+            m002_n_=-31,
+            m003_n_=-32,
+        )
+
+class T07C(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x430c9 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-4,
+            m001_n_=-1,
+            m002_n_=-1,
+            m003_n_=-1,
+            m004_n_=-1,
+            m005_n_=-1,
+            m006_n_=-1,
+            m007_n_=-4,
+            m008_n_=-4,
+            m009_n_=-2,
+            m010_n_=-2,
+            m011_n_=-2,
+            m012_n_=-1,
+            m013_n_=-8,
+            m014_n_=-8,
+            m015_s_=T07E,
+            m016_n_=-31,
+            m017_n_=-31,
+        )
+
+class T07B(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x42f89 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_s_=T07C,
+            m001_s_=T07D,
+            m002_s_=-32,
+        )
+
+class T07A(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x42cb9 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_n_=-9,
+            m001_s_=T07B,
+            m002_s_=T07B,
+            m003_s_=cm.TimedProperty,
+            m004_s_=cm.TimedProperty,
+            m005_s_=cm.TimedProperty,
+        )
+
+class T07(bv.Struct):
+    ''' ⟦c05ddcbe7⟧ @ 0x42b79 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            m000_=T07A,
+            m001_=-3,
+            m002_=-32,
+        )
+
+
 class V1008T80(cm.ManagerSegment):
+    ''' Terminal Manager Segment - VPID 1008 - TAG 0x80 '''
 
     VPID = 1008
     TAG = 0x80
@@ -172,13 +202,5 @@ class V1008T80(cm.ManagerSegment):
 
     def spelunk_manager(self):
 
-        self.head = TerminalHead(self, self.seg_head.hi).insert()
-
-        y = cm.PointerArray(
-            self,
-            self.head.hd_sh.dst().sh_001_p.val,
-            dimension=257,
-            cls=T98,
-        ).insert()
-
-        bv.Pointer(T99)(self, 0x34e).insert()
+        head = TerminalHead(self, self.seg_head.hi).insert()
+        bv.Pointer(self, head.hi, target=cm.BTree).insert()

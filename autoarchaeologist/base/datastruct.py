@@ -136,6 +136,10 @@ class Struct():
         if isinstance(what, int):
             y = self.number_field(self.hi, what)
             z = y
+        elif isinstance(what, tuple):
+            cls, kwargs = what
+            y = cls(self.tree, self.hi, **kwargs)
+            z = y
         else:
             y = what(self.tree, self.hi)
             z = y
@@ -149,7 +153,7 @@ class Struct():
 
     def suffix(self, adr):
         ''' Suffix in vertical mode is byte offset of field '''
-        return "\t// @0x%x" % (adr - self.lo)
+        return "\t// 0x%x @0x%x " % (adr, adr - self.lo)
 
     def render(self):
         assert not hasattr(self, "args")
@@ -181,7 +185,7 @@ class Struct():
         for name, fld in self.fields:
             fld.dot_edges(dot, src)
 
-def Array(struct_class, count, what, vertical=None, naked=False):
+def Array(struct_class, count, what, vertical=None, naked=False, elide=None):
     ''' An array of things '''
 
     if count > 0:
@@ -190,6 +194,7 @@ def Array(struct_class, count, what, vertical=None, naked=False):
             WHAT = what
             COUNT = count
             NAKED = naked
+            ELIDE = elide
 
             def __init__(self, *args, **kwargs):
                 if vertical:
@@ -212,6 +217,12 @@ def Array(struct_class, count, what, vertical=None, naked=False):
             def __iter__(self):
                 yield from self.array
 
+            def iter_elided(self):
+                for n, x in enumerate(self.items):
+                    if self.ELIDE and x.val in self.ELIDE:
+                        continue
+                    yield n, x
+
             def render(self):
                 if not self.vertical:
                     yield '[' + ", ".join("".join(x.render()) for x in self.items) + "]"
@@ -219,7 +230,7 @@ def Array(struct_class, count, what, vertical=None, naked=False):
                     yield '['
                     i = len("%x" % len(self.items))
                     fmt = "  [0x%%0%dx]: " % i
-                    for n, i in enumerate(self.items):
+                    for n, i in self.iter_elided():
                         for j in i.render():
                             yield fmt % n + j
                     yield ']'
