@@ -10,122 +10,127 @@
 
    Not mentioned in FE_HANDBOOK.PDF 187p
 
+   Layout based descriptions in pure segment ⟦f47e6ad1b⟧
 '''
 
 from ....base import bitview as bv
 from . import common as cm
 
-class NativeSeg01(bv.Struct):
+class NativeSegmentMapHead(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x50d39 '''
+
     def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x50d39 '''
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            m001_n_=-31,
-            m002_n_=bv.Array(2, -32),
-            m003_p_=bv.Array(2, bv.Pointer),
-            m004_p_=bv.Array(2, bv.Pointer.to(NativeSeg04)),
-            m005_p_=bv.Array(2, bv.Pointer.to(NativeSeg03)),
+            m000_n_=-31,
+            m001_n_=bv.Array(2, -32),
+            m002_p_=bv.Array(2, bv.Pointer),		# NSM05
+            m003_p_=bv.Array(2, bv.Pointer.to(NSM04)),
+            m004_p_=bv.Array(2, bv.Pointer.to(NSM03)),
         )
 
-class NativeSeg03(bv.Struct):
+class NSM03(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x53e59 '''
+
     def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x53e59 '''
         super().__init__(
             bvtree,
             lo,
             vertical=True,
             m00_=-5,
             m01_=-22,
-            m02_=bv.Array(2, bv.Pointer.to(NativeSeg05)),
+            m02_=bv.Array(2, bv.Pointer.to(NSM06)),
        )
 
-class NativeSeg04a(bv.Struct):
+class NSM04A(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x54c01 '''
+
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
             lo,
             m00_=-2,
-            m01_=bv.Pointer,
+            m01_=bv.Pointer.to(NSM07),		# NSM07
         )
 
-class NativeSeg04(bv.Struct):
+class NSM04(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x545e1 '''
+
     def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x545e1 '''
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            m00_=bv.Pointer.to(NativeSeg06),
-            m01_=bv.Pointer,
+            m00_=bv.Pointer.to(NSM07),		# NSM07
+            m01_=bv.Pointer,			# NSM08
             m02_=-31,
-            m03_=NativeSeg04a,
+            m03_=NSM04A,
         )
 
-class NativeSeg05(bv.Struct):
+class NSM06(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x552f9 '''
+
     def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x552f9 '''
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            m00_=bv.Array(0x2716 + 1, bv.Pointer.to(NativeSeg08), vertical=True),
+            m00_=bv.Array(0x2716 + 1, bv.Pointer.to(NSM09), vertical=True, elide=(0,)),
         )
 
-class NativeSeg06(bv.Struct):
-    def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x55949 '''
-        super().__init__(
-            bvtree,
-            lo,
-            m00_=bv.Array(2, -32),
-            m01_=bv.Pointer.to(NativeSeg09),
-            m02_=bv.Pointer,
-            m03_=bv.Pointer,
-            m04_=-1,
-        )
+class NSM07(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x55949 '''
 
-class NativeSeg07(bv.Struct):
     def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x564a1 '''
         super().__init__(
             bvtree,
             lo,
             vertical=True,
-            m00_=bv.Array(0x3f0 + 1, -32, vertical=True),
+            m000_=bv.Array(2, -32),
+            m001_=bv.Pointer.to(NSM10),
+            m002_=bv.Pointer.to(NSM07),
+            m003_=bv.Pointer.to(NSM07),
+            m004_=-1,
         )
 
-class NativeSeg08a(bv.Struct):
+class NSM09A(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x56c31 '''
+
     def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x56af1 '''
         super().__init__(
             bvtree,
             lo,
-            m00_=-24,
-            m01_=-24,
-        )
-class NativeSeg08(bv.Struct):
-    def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x56af1 '''
-        super().__init__(
-            bvtree,
-            lo,
-            m00_=NativeSeg08a,
-            m01_=bv.Pointer.to(NativeSeg08),
+            m000_n_=-24,
+            m001_n_=-24,
         )
 
-class NativeSeg09(bv.Struct):
+class NSM09(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x56af1 '''
+
     def __init__(self, bvtree, lo):
-        ''' ⟦f47e6ad1b⟧ @ 0x57439 '''
         super().__init__(
             bvtree,
             lo,
-            m00_=-3,
-            m01_=-32,
+            m000_s_=NSM09A,
+            m001_p_=bv.Pointer.to(NSM09),
+        )
+
+class NSM10(bv.Struct):
+    ''' ⟦f47e6ad1b⟧ @ 0x57439 '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            # m001 is empty record
+            m001_=-3,
+            m002_=-32,
         )
 
 class V1017T89(cm.ManagerSegment):
+    ''' Native Segment Map Manager Segment - VPID 1017 - TAG 0x89 '''
 
     VPID = 1017
     TAG = 0x89
@@ -133,18 +138,8 @@ class V1017T89(cm.ManagerSegment):
 
     def spelunk_manager(self):
 
-        self.ns00 = NativeSeg01(self, self.seg_head.hi).insert()
-        bv.Pointer(self, self.ns00.hi, target=cm.BTree).insert()
+        head = NativeSegmentMapHead(self, self.seg_head.hi).insert()
+        bv.Pointer(self, head.hi, target=cm.BTree).insert()
 
-        #bv.Array(2577, NativeSeg08, vertical=True)(self, 0x4e59c).insert()
-
-        #cm.BTree(self, 0xb7a6e).insert()
-        #cm.BTree(self, 0xbc6a4).insert()
-        #cm.BTree(self, 0xc1216).insert()
-        #cm.BTree(self, 0xc5d88).insert()
-        #cm.BTree(self, 0xca8fa).insert()
-        #cm.BTree(self, 0xcf46c).insert()
-        #cm.BTree(self, 0xd3fde).insert()
-        #cm.BTree(self, 0xd8b50).insert()
-        #cm.BTree(self, 0xdd6c2).insert()
-        #cm.BTree(self, 0xe2234).insert()
+        for i in self.find_all(0xbc603):
+            print("FF", hex(i))
