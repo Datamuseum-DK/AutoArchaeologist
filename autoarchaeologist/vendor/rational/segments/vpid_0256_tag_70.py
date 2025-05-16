@@ -7,7 +7,7 @@
 # NB: This docstring is also used as interpretation
 
 '''
-   EEDB "secret filesystem" - VPID 0256 - TAG 0x70
+   VPID 0256 - TAG 0x70 - EEDB "secret" filesystem
    ===============================================
 
    This is a very fundamental "filesystem" which is only mentioned
@@ -54,7 +54,7 @@ from ....base import namespace
 # from .common import Segment, SegHeap, PointerArray, StringArray, StringPointer
 from . import common as cm
 
-class X00(bv.Struct):
+class EedbHead(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
             bvtree,
@@ -111,8 +111,8 @@ class SegId(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            x99_segkind_=-2,
-            x99_segno_=-21,
+            x99_segkind_=-1,
+            x99_segno_=-22,
             x99_vpid_=-10,
         )
 
@@ -136,13 +136,14 @@ class X04(bv.Struct):
             self.name = name=self.x99_010_n.dst().txt
         else:
             self.name = "???"
-        self.segment = "%03x:%06x" % (
+        self.segment = "%03x:2:%06x" % (
             self.x99_seg.x99_vpid.val,
-            (1 << 23) | self.x99_seg.x99_segno.val,
+            self.x99_seg.x99_segno.val,
         )
         try:
             segidx = bvtree.this.top.by_class["r1k_segs"]
             segs = segidx.get(self.segment)
+            print("SEGS", segs, self.segment)
             if segs:
                 print("EESEG", bvtree.this, name, segs)
                 that = segs[max(segs.keys())]
@@ -197,7 +198,7 @@ class V0256T70(cm.Segment):
 
         self.seg_heap = cm.SegHeap(self, 0).insert()
 
-        self.x00 = X00(self, self.seg_heap.hi).insert()
+        self.x00 = EedbHead(self, self.seg_heap.hi).insert()
 
         if self.x00.x00_001_n.val != 1:
             return

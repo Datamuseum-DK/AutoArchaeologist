@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1006 - TAG 0x7e
-   =========================================
+   VPID 1006 - TAG 0x7e - Session
+   ==============================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        SESSION          1006
-        […]
+	[…]
+	SESSION		1006
+	[…]
 
    Layout based descriptions in pure segment ⟦1ba808117⟧
 '''

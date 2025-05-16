@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1007 - TAG 0x7f
-   =========================================
+   VPID 1007 - TAG 0x7f - Tape
+   ===========================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        TAPE            1007
-        […]
+	[…]
+	TAPE		1007
+	[…]
 
    Layout based descriptions in pure segment ⟦f60d883ea⟧
 '''

@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1015 - TAG 0x87
-   =========================================
+   VPID 1015 - TAG 0x87 - Archived_Code
+   ====================================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        ARCHIVED_CODE      1015
-        […]
+	[…]
+	ARCHIVED_CODE	1015
+	[…]
 
 
    Layout based descriptions in pure segment ⟦25d5b4dea⟧

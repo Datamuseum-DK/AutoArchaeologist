@@ -7,9 +7,16 @@
 # NB: This docstring is also used as interpretation
 
 '''
-   Directory Segments - VPID 1009 - TAG 0x81
-   =========================================
+   VPID 1009 - TAG 0x81 - Directory
+   ================================
 
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
+
+	[…]
+	DIRECTORY	1009
+	[…]
+
+   Layout based descriptions in pure segment ⟦bb0bd0268⟧
    This is the Directory Manager's persistent segment.
 
    The Directory Manager is responsible for:
@@ -87,15 +94,6 @@
    format is called "internal names", and can be used as filenames
    when enclosed in <…>.
 
-   FE_HANDBOOK.PDF 187p:
-
-        Note: […] The D2 mapping is:
-            […]
-            DIRECTORY        1009
-[…]
-
-
-   Layout based descriptions in pure segment ⟦bb0bd0268⟧
 '''
 
 from ....base import bitview as bv

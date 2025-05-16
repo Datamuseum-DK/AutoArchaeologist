@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1010 - TAG 0x82
-   =========================================
+   VPID 1010 - TAG 0x82 - Configuration
+   ====================================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        CONFIGURATION      1010
-        […]
+	[…]
+	CONFIGURATION	1010
+	[…]
 
 
 '''

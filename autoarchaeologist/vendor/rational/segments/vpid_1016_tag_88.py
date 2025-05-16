@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1016 - TAG 0x88
-   =========================================
+   VPID 1016 - TAG 0x88 - Program_Library
+   ======================================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        PROGRAM_LIBRARY      1016
-        […]
+	[…]
+	PROGRAM_LIBRARY	1016
+	[…]
 
 
 '''

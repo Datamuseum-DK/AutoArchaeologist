@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1005 - TAG 0x7d
-   =========================================
+   VPID 1005 - TAG 0x7d - Group
+   ============================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        GROUP           1005
-        […]
+	[…]
+	GROUP		1005
+	[…]
 
    Layout based descriptions in pure segment ⟦31d12fb28⟧
 '''

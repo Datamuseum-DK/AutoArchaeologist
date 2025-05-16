@@ -292,7 +292,7 @@ class Segment(bv.BitView):
         self.type_case = this.type_case
         print(this, self.__class__.__name__, self)
         self.spelunk()
-        if True:
+        if False:
             for lo, hi in self.gaps():
                 print(this, "GAP", hex(lo), hex(hi), hex(hi - lo))
         # dot_graph.add_interpretation(this, self)
@@ -393,7 +393,7 @@ class ManagerSegment(Segment):
                 self.spelunk_manager()
             except Exception as err:
                 print(self.this, self.__class__.__name__, "BOOM", err)
-                raise
+                #raise
         else:
             pure.Pure(self)
             self.this.add_note("Pure")

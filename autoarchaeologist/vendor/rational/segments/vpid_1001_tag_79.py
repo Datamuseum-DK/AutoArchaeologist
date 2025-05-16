@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1001 - TAG 0x79
-   =========================================
+   VPID 1001 - TAG 0x79 - Ada
+   ==========================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        ADA            1001
-        […]
+	[…]
+	ADA		1001
+	[…]
 
    Layout based descriptions in pure segment ⟦adef73778⟧
 '''

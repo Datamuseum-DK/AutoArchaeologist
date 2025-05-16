@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1014 - TAG 0x86
-   =========================================
+   VPID 1014 - TAG 0x86 - Pipe
+   ===========================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        PIPE      1014
-        […]
+	[…]
+	PIPE		1014
+	[…]
 
    Layout based descriptions in pure segment ⟦d4fc19176⟧
 '''

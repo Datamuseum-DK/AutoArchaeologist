@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1003 - TAG 0x7b
-   =========================================
+   VPID 1003 - TAG 0x7b - File
+   ===========================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        FILE            1003
-        […]
+	[…]
+	FILE		1003
+	[…]
 
    hd_002_n is highest file number ?
 
@@ -183,6 +181,5 @@ class V1003T7B(cm.ManagerSegment):
     TOPIC = "File"
 
     def spelunk_manager(self):
-
         head = FileHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()

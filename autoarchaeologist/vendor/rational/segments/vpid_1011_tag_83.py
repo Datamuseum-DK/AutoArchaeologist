@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1011 - TAG 0x83
-   =========================================
+   VPID 1011 - TAG 0x83 - Code_Segment
+   ===================================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        CODE_SEGMENT    1011
-        […]
+	[…]
+	CODE_SEGMENT	1011
+	[…]
 
 '''
 

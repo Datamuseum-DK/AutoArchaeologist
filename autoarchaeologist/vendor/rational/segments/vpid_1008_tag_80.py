@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1008 - TAG 0x80
-   ====================
+   VPID 1008 - TAG 0x80 - Terminal
+   ===============================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        TERMINAL       1008
-        […]
+	[…]
+	TERMINAL	1008
+	[…]
 
    Layout based descriptions in pure segment ⟦c05ddcbe7⟧
 '''

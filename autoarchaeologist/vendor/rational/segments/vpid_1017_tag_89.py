@@ -5,10 +5,11 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1017 - TAG 0x89
+   VPID 1017 - TAG 0x89 - Native_Segment_Map
    =========================================
 
    Not mentioned in FE_HANDBOOK.PDF 187p
+   Not mentioned in Guru Course 1 pg 133
 
    Layout based descriptions in pure segment ⟦f47e6ad1b⟧
 '''

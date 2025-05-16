@@ -553,6 +553,22 @@ class DirectoryObject(bv.Struct):
         self.done()
 
 
+class LinkObject(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            link_0_=Property,
+            link_1_=Property,
+            link_2_=-64,
+            link_3_=ObjId,
+            link_4_=-64,
+            link_5_=Property,
+            link_6_=ObjId,
+            link_7_=-64,
+        )
+
 class NullObject(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -610,6 +626,8 @@ class Object(bv.Struct):
             self.add_field("obj", TerminalObject)
         elif self.kind.mgr_id.val == 9:
             self.add_field("obj", DirectoryObject)
+        elif self.kind.mgr_id.val == 12:
+            self.add_field("obj", LinkObject)
         elif self.kind.mgr_id.val == 13:
             self.add_field("obj", NullObject)
         elif self.kind.mgr_id.val == 15:

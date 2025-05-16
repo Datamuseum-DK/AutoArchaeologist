@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1004 - TAG 0x7c
-   =========================================
+   VPID 1004 - TAG 0x7c - User
+   ===========================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        USER            1004
-        […]
+	[…]
+	USER		1004
+	[…]
 
    Layout based descriptions in pure segment ⟦cde05a7c6⟧
 '''

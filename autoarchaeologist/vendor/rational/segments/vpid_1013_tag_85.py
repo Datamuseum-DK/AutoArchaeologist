@@ -5,16 +5,14 @@
 # See LICENSE file for full text of license
 
 '''
-   VPID 1013 - TAG 0x85
-   =========================================
+   VPID 1013 - TAG 0x85 - Null
+   ===========================
 
-   FE_HANDBOOK.PDF 187p
+   FE_HANDBOOK.PDF 187p: Note: […] The D2 mapping is:
 
-    Note: […] The D2 mapping is:
-
-        […]
-        NULL      1013
-        […]
+	[…]
+	NULL		1013
+	[…]
 
    Layout based descriptions in pure segment ⟦ebffc519d⟧
 '''
