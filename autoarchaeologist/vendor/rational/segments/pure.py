@@ -371,6 +371,28 @@ class AdaObject(bv.Struct):
             ada_007_=-64,
         )
 
+class ObjRef(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            or_000_=PureTxt,
+            or_001_=ObjId,
+        )
+
+class DdbObject(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            #ddb_000_=Property,
+            ddb_001_=-64,
+            more=True,
+        )
+        self.add_field("props", bv.Array(self.ddb_001.val, ObjRef, vertical=True))
+        self.done()
+
 class FileObject(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -612,6 +634,8 @@ class Object(bv.Struct):
         )
         if self.kind.mgr_id.val == 1:
             self.add_field("obj", AdaObject)
+        elif self.kind.mgr_id.val == 2:
+            self.add_field("obj", DdbObject)
         elif self.kind.mgr_id.val == 3:
             self.add_field("obj", FileObject)
         elif self.kind.mgr_id.val == 4:
