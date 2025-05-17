@@ -171,12 +171,3 @@ class V1011T83(cm.ManagerSegment):
     def spelunk_manager(self):
         head = CodeSegHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()
-
-        for t in (
-            0x11e1e7e,
-            0x11e482a,
-            0x14a6c30,
-            0x14b49db,
-        ):
-            for i in self.find_all(t):
-                print("FF", hex(i), "->", hex(t))

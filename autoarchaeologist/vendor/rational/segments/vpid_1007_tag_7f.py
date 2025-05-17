@@ -138,4 +138,3 @@ class V1007T7F(cm.ManagerSegment):
     def spelunk_manager(self):
         head = TapeHead(self, self.seg_head.hi).insert()
         y = bv.Pointer(self, head.hi, target=cm.BTree).insert()
-        print("Y", hex(head.hi), y)

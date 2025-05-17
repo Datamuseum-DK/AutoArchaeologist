@@ -80,12 +80,3 @@ class V1014T86(cm.ManagerSegment):
     def spelunk_manager(self):
         head = PipeHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()
-
-        cm.BTree(self, 0x0736d).insert()
-        #cm.BTree(self, 0x0e498).insert()
-        #cm.BTree(self, 0x155c3).insert()
-        #cm.BTree(self, 0x1c6ee).insert()
-        #cm.BTree(self, 0x23819).insert()
-        #cm.BTree(self, 0x2a944).insert()
-        #cm.BTree(self, 0x31a6f).insert()
-        #cm.BTree(self, 0x38b9a).insert()

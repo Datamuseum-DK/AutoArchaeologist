@@ -199,6 +199,5 @@ class V1008T80(cm.ManagerSegment):
     TOPIC = "Terminal"
 
     def spelunk_manager(self):
-
         head = TerminalHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()

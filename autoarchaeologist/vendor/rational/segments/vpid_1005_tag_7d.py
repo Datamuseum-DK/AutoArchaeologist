@@ -150,10 +150,5 @@ class V1005T7D(cm.ManagerSegment):
     TOPIC = "Group"
 
     def spelunk_manager(self):
-
         head = GroupHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()
-
-        # Accoring to the ⟦31d12fb28⟧ group.pure description
-        # The BTree pointer is not part of GroupHead{}
-        #bv.Pointer(self, self.head.hi, target=cm.BTree).insert()

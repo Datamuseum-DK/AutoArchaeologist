@@ -143,9 +143,7 @@ class X04(bv.Struct):
         try:
             segidx = bvtree.this.top.by_class["r1k_segs"]
             segs = segidx.get(self.segment)
-            print("SEGS", segs, self.segment)
             if segs:
-                print("EESEG", bvtree.this, name, segs)
                 that = segs[max(segs.keys())]
         except KeyError:
             pass

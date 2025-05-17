@@ -401,7 +401,6 @@ class V1009T81(cm.ManagerSegment):
     TOPIC = "Directory"
 
     def spelunk_manager(self):
-
         head = DirectoryHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()
 

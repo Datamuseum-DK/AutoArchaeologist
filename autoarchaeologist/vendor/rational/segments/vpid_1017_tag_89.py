@@ -138,9 +138,5 @@ class V1017T89(cm.ManagerSegment):
     TOPIC = "Native_Segment_Map"
 
     def spelunk_manager(self):
-
         head = NativeSegmentMapHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()
-
-        for i in self.find_all(0xbc603):
-            print("FF", hex(i))

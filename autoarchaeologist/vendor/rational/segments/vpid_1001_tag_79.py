@@ -312,9 +312,5 @@ class V1001T79(cm.ManagerSegment):
     TOPIC = "Ada"
 
     def spelunk_manager(self):
-
         head = AdaHead(self, self.seg_head.hi).insert()
         bv.Pointer(self, head.hi, target=cm.BTree).insert()
-
-        # 0x1858409 -> 0x492aae6
-        print(self.this, "FF", list(self.find_all(0x1857fd8)))
