@@ -638,6 +638,22 @@ class ArchivedCodeObject(bv.Struct):
             ac_7_=-64,
         )
 
+class ProgramLibraryObject(bv.Struct):
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            vertical=True,
+            pl_0_=Property,
+            pl_1_=Property,
+            pl_2_=-64,
+            pl_3_=-64,
+            pl_4_=-1,
+            pl_5_=Property,
+            pl_6_=ObjId,
+            pl_7_=-64,
+        )
+
 class Object(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -675,6 +691,8 @@ class Object(bv.Struct):
             self.add_field("obj", NullObject)
         elif self.kind.mgr_id.val == 15:
             self.add_field("obj", ArchivedCodeObject)
+        elif self.kind.mgr_id.val == 16:
+            self.add_field("obj", ProgramLibraryObject)
         self.done()
 
     def xrender(self):

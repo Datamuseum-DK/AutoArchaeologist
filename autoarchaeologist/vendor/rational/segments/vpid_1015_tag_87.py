@@ -108,7 +108,7 @@ class AC08(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_a_=bv.Array(0x3b, bv.Pointer.to(AC07), vertical=True),
+            m000_a_=bv.Array(0x3b, bv.Pointer.to(AC07), vertical=True, elide=(0,)),
         )
 
 class AC10(bv.Struct):
