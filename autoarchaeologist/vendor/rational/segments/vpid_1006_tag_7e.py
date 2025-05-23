@@ -32,7 +32,7 @@ class SessionHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_=bv.Array(2, bv.Pointer), #5
             m003_=bv.Pointer.to(S04),
-            m004_=bv.Array(2, bv.Pointer.to(S03)),
+            m004_=cm.FarPointer.to(S03),
         )
 
 class S03(bv.Struct):
@@ -79,7 +79,7 @@ class S07(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, -32),
+            m000_p_=cm.ObjName,
             m001_p_=bv.Pointer.to(S09),
             m002_p_=bv.Pointer.to(S07),
             m003_p_=bv.Pointer.to(S07),
@@ -117,7 +117,7 @@ class S10A(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, bv.Pointer.to(S11)),
+            m000_p_=bv.Array(2, bv.Pointer.to(S11)),	# Rev Far ?
             m001_n_=bv.Array(10, bv.Char),
             m002_s_=cm.DayTime,
             m003_s_=cm.DayTime,

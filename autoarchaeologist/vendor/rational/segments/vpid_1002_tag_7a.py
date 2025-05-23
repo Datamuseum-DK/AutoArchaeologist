@@ -28,7 +28,7 @@ class DdbHeadA(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, bv.Pointer.to(D04)),		# D04
+            m000_p_=cm.FarPointer.to(D04),		# D04
             m001_p_=bv.Pointer,				# D03
         )
 

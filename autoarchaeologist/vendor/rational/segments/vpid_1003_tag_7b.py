@@ -32,9 +32,9 @@ class FileHead(bv.Struct):
             vertical=True,
             m000_n_=-31,
             m001_n_=bv.Array(2, -32),
-            m002_p_=bv.Array(2, bv.Pointer),	# F05
+            m002_p_=cm.FarPointer,			# F05
             m003_p_=bv.Pointer.to(F04),
-            m004_p_=bv.Array(2, bv.Pointer.to(F03)),
+            m004_p_=cm.FarPointer.to(F03),
         )
 
 class F03(bv.Struct):
@@ -80,7 +80,7 @@ class F06(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_=bv.Array(2, -32),
+            m000_=cm.ObjName,
             m001_=bv.Pointer.to(F08),
             m002_=bv.Pointer.to(F06),
             m003_=bv.Pointer.to(F06),
@@ -119,7 +119,7 @@ class F09B(bv.Struct):
             lo,
             vertical=True,
             m000_=cm.Acl,
-            m001_=bv.Array(2, -32),		# F11
+            m001_=cm.FarPointer,		# F11
             m002_=cm.TimedProperty,
             m003_=cm.ObjRef,
             m004_=-32,
@@ -136,8 +136,8 @@ class F09A(bv.Struct):
             # pure defines these as:
             #   HeapAccessComponent {hac_loc=Location {0x0+0x40=0x40}, hac_3_n=CONST(0x0)}
             # The first element do not point into this heap and the second is 0x80
-            m000_=bv.Array(2, -32),	# F10
-            m001_=bv.Array(2, -32),	# F10
+            m000_=cm.FarPointer,	# F10
+            m001_=cm.FarPointer,	# F10
        )
 
 class F09(bv.Struct):
@@ -155,7 +155,7 @@ class F09(bv.Struct):
             m004_=-1,
             m005_=-1,
             m006_=-1,
-            m007_=bv.Array(2, bv.Pointer),	# F07
+            m007_=cm.FarPointer,	# F07
             m008_=F09A,
             m009_=F09B,
             m010_=F09B,

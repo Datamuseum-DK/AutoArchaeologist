@@ -28,8 +28,8 @@ class NativeSegmentMapHead(bv.Struct):
             m000_n_=-31,
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),		# NSM05
-            m003_p_=bv.Array(2, bv.Pointer.to(NSM04)),
-            m004_p_=bv.Array(2, bv.Pointer.to(NSM03)),
+            m003_p_=cm.FarPointer.to(NSM04),
+            m004_p_=cm.FarPointer.to(NSM03),
         )
 
 class NSM03(bv.Struct):
@@ -42,7 +42,7 @@ class NSM03(bv.Struct):
             vertical=True,
             m00_=-5,
             m01_=-22,
-            m02_=bv.Array(2, bv.Pointer.to(NSM06)),
+            m02_=bv.Array(2, bv.Pointer.to(NSM06)),	# Rev Far
        )
 
 class NSM04A(bv.Struct):
@@ -89,7 +89,7 @@ class NSM07(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_=bv.Array(2, -32),
+            m000_=cm.ObjName,
             m001_=bv.Pointer.to(NSM10),
             m002_=bv.Pointer.to(NSM07),
             m003_=bv.Pointer.to(NSM07),

@@ -32,7 +32,7 @@ class ProgLibHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),	# PL05
             m003_p_=bv.Pointer.to(PL04),	# PL04
-            m004_p_=bv.Array(2, bv.Pointer.to(PL03)),    # PL03
+            m004_p_=cm.FarPointer.to(PL03),    # PL03
         )
 
 class PL03(bv.Struct):
@@ -42,7 +42,7 @@ class PL03(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_p_=bv.Array(2, bv.Pointer.to(PL06)),
+            m000_p_=bv.Array(2, bv.Pointer.to(PL06)),	 # Rev Far
         )
 
 class PL04A(bv.Struct):
@@ -77,7 +77,7 @@ class PL06(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_h_=bv.Array(2, bv.Pointer.to(PL09)),
+            m000_h_=bv.Array(2, bv.Pointer.to(PL09)),	# Rev Far
         )
 
 class PL07(bv.Struct):
@@ -87,8 +87,7 @@ class PL07(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            vertical=True,
-            m000_=bv.Array(2, -32),
+            m000_=cm.ObjName,
             m001_=bv.Pointer.to(PL10),
             m002_=bv.Pointer.to(PL07),
             m003_=bv.Pointer.to(PL07),
@@ -136,8 +135,8 @@ class PL12A(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_s_=bv.Array(2, -32),
-            m001_s_=bv.Array(2, -32),
+            m000_s_=cm.FarPointer,
+            m001_s_=cm.FarPointer,
         )
 
 class PL12B(bv.Struct):
@@ -149,7 +148,7 @@ class PL12B(bv.Struct):
             lo,
             vertical=True,
             m000_n_=-1,
-            m001_h_=bv.Array(2, -32),
+            m001_h_=cm.FarPointer,
             m002_s_=cm.TimedProperty,
             m003_s_=cm.ObjRef,
             m004_n_=-32,
@@ -170,7 +169,7 @@ class PL12(bv.Struct):
             m004_n_=-1,
             m005_n_=-1,
             m006_n_=-1,
-            m007_h_=bv.Array(2, -32),
+            m007_h_=cm.FarPointer,
             m008_s_=PL12A,
             m009_s_=PL12B,
             m010_s_=PL12B,

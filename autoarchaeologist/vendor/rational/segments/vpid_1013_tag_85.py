@@ -32,7 +32,7 @@ class NullHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),	# T04
             # m003_n_=0 zero length discrete
-            m004_p_=bv.Array(2, bv.Pointer.to(N03)),
+            m004_p_=cm.FarPointer.to(N03),
         )
 
 class N03A(bv.Struct):
@@ -69,7 +69,7 @@ class N05(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_=bv.Array(2, -32),
+            m000_=cm.ObjName,
             m001_=bv.Pointer.to(N07),
             m002_=bv.Pointer.to(N05),
             m003_=bv.Pointer.to(N05),

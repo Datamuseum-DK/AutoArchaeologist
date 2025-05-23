@@ -30,9 +30,9 @@ class LinkHead(bv.Struct):
             vertical=True,
             m000_n_=-31,
             m001_n_=bv.Array(2, -32),
-            m002_p_=bv.Array(2, bv.Pointer),		# LH05
+            m002_p_=cm.FarPointer,			# LH05
             m003_p_=bv.Pointer.to(LH04),		# LH04
-            m004_p_=bv.Array(2, bv.Pointer.to(LH03)),	# LH03
+            m004_p_=cm.FarPointer.to(LH03),
         )
 
 class LH03(bv.Struct):
@@ -43,7 +43,7 @@ class LH03(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, bv.Pointer.to(LH06)),
+            m000_p_=bv.Array(2, bv.Pointer.to(LH06)),	# Not Far
         )
 
 class LH04A(bv.Struct):
@@ -105,7 +105,7 @@ class LH07(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_n_=-64,
+            m000_n_=cm.ObjName,
             m001_p_=bv.Pointer.to(LH11),
             m002_p_=bv.Pointer.to(LH07),
             m003_p_=bv.Pointer.to(LH07),
@@ -131,7 +131,7 @@ class LH09(bv.Struct):
             bvtree,
             lo,
             vertical=False,
-            m000_n_=bv.Array(2, -32),
+            m000_n_=cm.ObjName,
             m001_s_=cm.ObjRef,
             m002_p_=bv.Pointer.to(LH09),
             m003_p_=bv.Pointer.to(LH09),
@@ -169,9 +169,9 @@ class LH12A(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            vertical=True,
-            m000_n_=bv.Array(2, -32),
-            m001_n_=bv.Array(2, -32),
+            #vertical=True,
+            m000_n_=cm.FarPointer,
+            m001_n_=cm.FarPointer,
         )
 
 class LH12B(bv.Struct):
@@ -183,7 +183,7 @@ class LH12B(bv.Struct):
             lo,
             vertical=True,
             m000_n_=LH12C,
-            m001_n_=bv.Array(2, -32),			# LH14
+            m001_n_=cm.FarPointer,			# LH14
             m002_s_=cm.TimedProperty,
             m003_s_=cm.ObjRef,
             m004_n_=-32,
@@ -216,7 +216,7 @@ class LH12(bv.Struct):
             m004_n_=-1,
             m005_n_=-1,
             m006_n_=-1,
-            m007_p_=bv.Array(2, -32),			# LH14
+            m007_p_=cm.FarPointer,			# LH14
             m008_s_=LH12A,
             m009_s_=LH12B,
             m010_s_=LH12B,

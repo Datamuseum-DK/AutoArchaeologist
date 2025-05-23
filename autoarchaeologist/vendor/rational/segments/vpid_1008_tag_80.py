@@ -33,7 +33,7 @@ class TerminalHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_=bv.Array(2, bv.Pointer),
             #m003 zero length discrete
-            m004_=bv.Array(2, bv.Pointer.to(T04)),
+            m004_=cm.FarPointer.to(T04),
         )
 
 class T04A(bv.Struct):
@@ -68,7 +68,7 @@ class T05(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_n_=bv.Array(2, -32),
+            m000_n_=cm.ObjName,
             m001_p_=bv.Pointer.to(T07),
             m002_p_=bv.Pointer,
             m003_p_=bv.Pointer,

@@ -110,9 +110,9 @@ class DirectoryHead(bv.Struct):
             vertical=True,
             m000_n_=-31,
             m001_n_=bv.Array(2, -32),
-            m002_p_=bv.Array(2, bv.Pointer),	# D05
+            m002_p_=cm.FarPointer,	# D05
             m003_p_=bv.Pointer.to(D04),
-            m004_p_=bv.Array(2, bv.Pointer.to(D03)),
+            m004_p_=cm.FarPointer.to(D03),
         )
 
 class D03(bv.Struct):
@@ -123,7 +123,7 @@ class D03(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_n_=bv.Array(2, bv.Pointer.to(D06)),
+            m000_n_=bv.Array(2, bv.Pointer.to(D06)),	# Rev Far
         )
 
 class D04A(bv.Struct):
@@ -159,8 +159,8 @@ class D06(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, bv.Pointer.to(D10)),
-            m001_p_=bv.Array(2, bv.Pointer),	# D09
+            m000_p_=bv.Array(2, bv.Pointer.to(D10)),	# Rev Far
+            m001_p_=bv.Array(2, bv.Pointer),		# Rev Far D09
         )
 
 class D07(bv.Struct):
@@ -170,7 +170,7 @@ class D07(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_n_=bv.Array(2, -32),
+            m000_n_=cm.ObjName,
             m001_p_=bv.Pointer.to(D11),
             m002_p_=bv.Pointer.to(D07),
             m003_p_=bv.Pointer.to(D07),
@@ -222,7 +222,7 @@ class D12(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, bv.Pointer.to(cm.StringArray)),
+            m000_p_=bv.Array(2, bv.Pointer.to(cm.StringArray)), # Rev Far
             m001_p_=bv.Pointer.to(D12),
         )
 
@@ -276,8 +276,8 @@ class D15(bv.Struct):
             vertical=True,
             m000_n_=-31,
             m001_p_=bv.Pointer,				# D14
-            m002_p_=bv.Array(2, bv.Pointer.to(D18)),	# D18, VersionTree
-            m003_p_=bv.Array(2, bv.Pointer.to(D17)),	# D17, ChildTree
+            m002_p_=bv.Array(2, bv.Pointer.to(D18)),	# D18, Rev Far VersionTree
+            m003_p_=bv.Array(2, bv.Pointer.to(D17)),	# D17, Rev Far ChildTree
             m004_n_=-31,
             m005_s_=D15A,
         )

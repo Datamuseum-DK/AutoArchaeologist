@@ -69,6 +69,29 @@ class MgrHead(bv.Struct):
             mgr_003_p_=bv.Array(2, bv.Pointer),
        )
 
+class FarPointer(bv.Struct):
+    ''' ... '''
+
+    def __init__(self, bvtree, lo, target=None):
+        super().__init__(
+            bvtree,
+            lo,
+            more=True,
+        )
+        y = bv.Number(bvtree, lo + 32, width=32)
+        if y.val == 0:
+            self.add_field("dst", bv.Pointer.to(target))
+            self.add_field("off_", -32)
+        else:
+            self.add_field("seg", -22),
+            self.add_field("world", -10),
+            self.add_field("off", -32),
+        self.done()
+
+    @classmethod
+    def to(cls, target):
+        return (cls, {"target": target})
+
 class TimeStamp(bv.Struct):
     def __init__(self, bvtree, lo):
         super().__init__(
@@ -443,6 +466,23 @@ class Acl(bv.Struct):
             lo,
             a_=bv.Array(7, AclEntry),
         )
+
+class ObjName(bv.Struct):
+    ''' ... '''
+    def __init__(self, bvtree, lo, **kwargs):
+        super().__init__(
+            bvtree,
+            lo,
+            oclass_=-32,
+            onumber_=-32,
+        )
+
+    def render(self):
+        c = OBJECTS.get(self.oclass.val)
+        if not c:
+            yield "<0x%x,%d>" % (self.oclass.val, self.onumber.val)
+        else:
+            yield "<%s,%d>" % (c[0], self.onumber.val)
 
 class ObjRef(bv.Struct):
     '''

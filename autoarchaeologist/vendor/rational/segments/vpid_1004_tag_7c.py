@@ -32,7 +32,7 @@ class UserHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),
             m003_p_=bv.Pointer.to(U04),
-            m004_p_=bv.Array(2, bv.Pointer.to(U03)),
+            m004_p_=cm.FarPointer.to(U03),
         )
 
 class U03(bv.Struct):
@@ -78,7 +78,7 @@ class U07(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_c_=bv.Array(2, -32),
+            m000_c_=cm.ObjName,
             m001_p_=bv.Pointer.to(U09),
             m002_p_=bv.Pointer.to(U07),
             m003_p_=bv.Pointer.to(U07),
@@ -122,8 +122,8 @@ class U10A(bv.Struct):
             m000_n_=-32,
             m001_s_=cm.ObjRef,
             m002_s_=cm.ObjRef,
-            m003_p_=bv.Array(2, bv.Pointer.to(U12)),
-            m004_p_=bv.Array(2, bv.Pointer.to(U11)),
+            m003_p_=bv.Array(2, bv.Pointer.to(U12)),	# Rev Far ?
+            m004_p_=bv.Array(2, bv.Pointer.to(U11)),	# Rev Far ?
         )
 
 class U10(bv.Struct):

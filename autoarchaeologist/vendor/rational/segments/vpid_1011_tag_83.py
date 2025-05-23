@@ -31,8 +31,8 @@ class CodeSegHead(bv.Struct):
             m000_n_=-31,
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),			#CS05
-            m003_p_=bv.Array(2, bv.Pointer.to(CS04)),		#CS04
-            m004_p_=bv.Array(2, bv.Pointer.to(CS03)),		#CS03
+            m003_p_=cm.FarPointer.to(CS04),		#CS04
+            m004_p_=cm.FarPointer.to(CS03),		#CS03
         )
 
 class CS03A(bv.Struct):
@@ -104,7 +104,7 @@ class CS07(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_n_=bv.Array(2, -32),
+            m000_n_=cm.ObjName,
             m001_p_=bv.Pointer.to(CS09),
             m002_p_=bv.Pointer.to(CS07),
             m003_p_=bv.Pointer.to(CS07),
@@ -132,7 +132,7 @@ class CS09A(bv.Struct):
             vertical=True,
             m000_n_=-24,
             m001_n_=-24,
-            m002_p_=bv.Array(2, -32),
+            m002_p_=cm.FarPointer,
             m003_n_=-1,
             m004_n_=-1,
             m005_n_=-1,

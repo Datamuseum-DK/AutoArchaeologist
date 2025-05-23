@@ -32,7 +32,7 @@ class GroupHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),	#5
             m003_p_=bv.Pointer.to(G04),
-            m004_p_=bv.Array(2, bv.Pointer.to(G03)),
+            m004_p_=cm.FarPointer.to(G03),
         )
 
 class G03A(bv.Struct):
@@ -90,7 +90,7 @@ class G06(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            m000_n_=bv.Array(2, -32),
+            m000_n_=cm.ObjName,
             m001_p_=bv.Pointer.to(G08),
             m002_p_=bv.Pointer.to(G06),
             m003_p_=bv.Pointer.to(G06),

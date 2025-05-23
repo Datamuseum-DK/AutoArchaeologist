@@ -32,7 +32,7 @@ class AdaHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),		# A05
             m003_p_=bv.Pointer.to(A04),
-            m004_p_=bv.Array(2, bv.Pointer.to(A03)),
+            m004_p_=cm.FarPointer.to(A03),
         )
 
 class A03(bv.Struct):
@@ -43,7 +43,7 @@ class A03(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, bv.Pointer.to(A06)),	#AX06
+            m000_p_=bv.Array(2, bv.Pointer.to(A06)),	# Rev Far AX06
         )
 
 class A04A(bv.Struct):
@@ -80,9 +80,9 @@ class A06(bv.Struct):
             lo,
             vertical=True,
             m000_n_=-6,
-            m001_p_=bv.Array(2, bv.Pointer.to(A11)),	#A11
-            m002_p_=bv.Array(2, bv.Pointer.to(A10)),	#A10
-            m003_p_=bv.Array(2, bv.Pointer.to(A09)),	#A09
+            m001_p_=bv.Array(2, bv.Pointer.to(A11)),	# Rev Far A11
+            m002_p_=bv.Array(2, bv.Pointer.to(A10)),	# Rev Far A10
+            m003_p_=bv.Array(2, bv.Pointer.to(A09)),	# Rev Far A09
         )
 
 class A07(bv.Struct):
@@ -92,8 +92,7 @@ class A07(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            vertical=True,
-            m000_n_=bv.Array(2, -32),
+            m000_n_=cm.ObjName,
             m001_p_=bv.Pointer.to(A12),			#A12
             m002_p_=bv.Pointer.to(A07),			#A07
             m003_p_=bv.Pointer.to(A07),			#A07
@@ -265,7 +264,7 @@ class A16B(bv.Struct):
             lo,
             vertical=True,
             m000_s_=A16C,
-            m001_p_=bv.Array(2, -32),		# A18
+            m001_p_=cm.FarPointer,		# A18
             m002_s_=cm.TimedProperty,
             m003_s_=cm.ObjRef,
             m004_n_=-32,
@@ -279,8 +278,8 @@ class A16A(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, -32),		# A17
-            m001_p_=bv.Array(2, -32),		# A17
+            m000_p_=cm.FarPointer,		# A17
+            m001_p_=cm.FarPointer,		# A17
         )
 
 class A16(bv.Struct):
@@ -298,7 +297,7 @@ class A16(bv.Struct):
             m004_n_=-1,
             m005_n_=-1,
             m006_n_=-1,
-            m007_n_=bv.Array(2, bv.Pointer),		#A18
+            m007_n_=cm.FarPointer,		#A18
             m008_s_=A16A,
             m009_s_=A16B,
             m010_s_=A16B,

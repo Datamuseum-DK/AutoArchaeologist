@@ -32,7 +32,7 @@ class PipeHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),	# P05
             m003_n_=bv.Pointer.to(P04),
-            m004_p_=bv.Array(2, bv.Pointer.to(P03)),
+            m004_p_=cm.FarPointer.to(P03),
         )
 
 class P03(bv.Struct):

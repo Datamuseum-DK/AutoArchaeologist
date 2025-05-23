@@ -33,7 +33,7 @@ class ArchCodeHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer.to(AC05)),
             m003_p_=bv.Pointer.to(AC04),
-            m004_p_=bv.Array(2, bv.Pointer.to(AC03)),
+            m004_p_=cm.FarPointer.to(AC03),
         )
 
 class AC03(bv.Struct):
@@ -93,7 +93,7 @@ class AC07(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_a_=bv.Array(2, -32),
+            m000_a_=cm.ObjName,
             m001_=bv.Pointer.to(AC10),
             m002_=bv.Pointer.to(AC07),
             m003_=bv.Pointer.to(AC07),
@@ -133,7 +133,7 @@ class AC12B(bv.Struct):
             lo,
             vertical=True,
             # m000 empty record
-            m001_s_=bv.Array(2, -32),	# AC14
+            m001_s_=cm.FarPointer,	# AC14
             m002_s_=cm.TimedProperty,
             m003_s_=cm.ObjRef,
             m004_n_=-32,
@@ -147,8 +147,8 @@ class AC12A(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_p_=bv.Array(2, -32),	# AC13
-            m001_p_=bv.Array(2, -32),	# AC13
+            m000_p_=cm.FarPointer,	# AC13
+            m001_p_=cm.FarPointer,	# AC13
         )
 
 class AC12(bv.Struct):
@@ -166,7 +166,7 @@ class AC12(bv.Struct):
             m004_p_=-1,
             m005_p_=-1,
             m006_p_=-1,
-            m007_p_=bv.Array(2, bv.Pointer),	# AC14
+            m007_p_=cm.FarPointer,	# AC14
             m008_s_=AC12A,
             m009_s_=AC12B,
             m010_s_=AC12B,

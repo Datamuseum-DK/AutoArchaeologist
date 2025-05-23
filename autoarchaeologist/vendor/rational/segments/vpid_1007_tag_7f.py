@@ -32,7 +32,7 @@ class TapeHead(bv.Struct):
             m001_n_=bv.Array(2, -32),
             m002_p_=bv.Array(2, bv.Pointer),	# T04
             # m003_n_ zero length discrete
-            m004_p_=bv.Array(2, bv.Pointer.to(T03)),
+            m004_p_=cm.FarPointer.to(T03),
         )
 
 class T03A(bv.Struct):
@@ -67,7 +67,7 @@ class T05(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            t01_000_c_=bv.Array(2, -32),
+            t01_000_c_=cm.ObjName,
             t01_002_c_=bv.Pointer.to(T07),
             t01_003_c_=bv.Pointer.to(T05),
             t01_004_c_=bv.Pointer.to(T05),
