@@ -170,7 +170,6 @@ class D07(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            vertical=True,
             m000_n_=bv.Array(2, -32),
             m001_p_=bv.Pointer.to(D11),
             m002_p_=bv.Pointer.to(D07),
@@ -283,16 +282,6 @@ class D15(bv.Struct):
             m005_s_=D15A,
         )
 
-class D16A(bv.Struct):
-    ''' ⟦bb0bd0268⟧ @0x574d6e9 '''
-
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            m000_n_=-10,
-            m001_n_=-4,
-        )
 
 class D16(bv.Struct):
     ''' ⟦bb0bd0268⟧ @0x574c8b9 '''
@@ -309,8 +298,8 @@ class D16(bv.Struct):
             more=True,
         )
         if self.m000_n.val == 0x101:	#  ⟦bb0bd0268⟧ @0x574d1c1
-            self.add_field("m004_a", bv.Array(7, D16A, vertical=True))
-            self.add_field("m005_a", bv.Array(7, D16A, vertical=True))
+            self.add_field("m004_a", cm.Acl),
+            self.add_field("m005_a", cm.Acl),
             self.add_field("m006_n", -32)
             self.add_field("m007_n", -1)
         self.done()

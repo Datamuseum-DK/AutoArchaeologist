@@ -125,7 +125,7 @@ class NSM10(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            # m001 is empty record
+            # m001 is empty record (XXX: m000 ?)
             m001_=-3,
             m002_=-32,
         )

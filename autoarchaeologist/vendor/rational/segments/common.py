@@ -414,6 +414,7 @@ class IndirectFieldRefComponent(bv.Struct):
         )
 
 class AclEntry(bv.Struct):
+    ''' ... '''
 
     # Not quite a bitmap...
     modes = {
@@ -431,6 +432,16 @@ class AclEntry(bv.Struct):
             lo,
             subj_=-10,
             mode_=-4,
+        )
+
+class Acl(bv.Struct):
+    ''' ... '''
+
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            a_=bv.Array(7, AclEntry),
         )
 
 class ObjRef(bv.Struct):

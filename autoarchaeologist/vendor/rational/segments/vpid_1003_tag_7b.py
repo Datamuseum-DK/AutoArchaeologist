@@ -80,7 +80,6 @@ class F06(bv.Struct):
         super().__init__(
             bvtree,
             lo,
-            vertical=True,
             m000_=bv.Array(2, -32),
             m001_=bv.Pointer.to(F08),
             m002_=bv.Pointer.to(F06),
@@ -111,17 +110,6 @@ class F08(bv.Struct):
             m002_=-32,
         )
 
-class F09C(bv.Struct):
-    ''' ⟦8133374fe⟧ @ 0x4717d09 '''
-
-    def __init__(self, bvtree, lo):
-        super().__init__(
-            bvtree,
-            lo,
-            m000_=-10,
-            m001_=-4,
-        )
-
 class F09B(bv.Struct):
     ''' ⟦8133374fe⟧ @ 0x4717861 '''
 
@@ -130,7 +118,7 @@ class F09B(bv.Struct):
             bvtree,
             lo,
             vertical=True,
-            m000_=bv.Array(7, F09C, vertical=True),
+            m000_=cm.Acl,
             m001_=bv.Array(2, -32),		# F11
             m002_=cm.TimedProperty,
             m003_=cm.ObjRef,
