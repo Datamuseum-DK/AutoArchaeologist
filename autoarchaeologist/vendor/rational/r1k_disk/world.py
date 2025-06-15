@@ -59,7 +59,7 @@ class WorldIndex(ObjSector):
         super().__init__(
             ovtree,
             lba,
-            vertical=False,
+            vertical=True,
             what="W",
             legend="World",
             f0_=-8,
@@ -111,7 +111,7 @@ class WorldList(ObjSector):
             lba,
             what="W",
             legend="World",
-            vertical=False,
+            vertical=True,
             f0_=-8,
             f1_=-9,
             cnt_=-6,
@@ -134,8 +134,8 @@ class WorldPtr(bv.Struct):
         super().__init__(
             tree,
             lo,
-            f1_=-10,
-            f2_=-24,
+            vpid_=-10,
+            segid_=-24,
             snapshot_=-31,
             lba_=-24,
         )
@@ -173,7 +173,7 @@ class World(ObjSector):
             self.add_field("cnt", -4)
             self.add_field("aa", AdaArray)
             self.add_field(
-                "worlds2",
+                "segs",
                 bv.Array(self.cnt.val, SegmentDesc, vertical=True)
             )
         else:
@@ -192,9 +192,9 @@ class World(ObjSector):
             world = World(self.ovtree, wptr.lba.val)
             yield from world.iter_worlds()
 
-    def commit_segments(self, volumes):
+    def commit_segments(self, r1ksys):
         ''' ... '''
         if self.wl0.val != 2:
             return
-        for segdesc in self.worlds2:
-            segdesc.commit(volumes[segdesc.vol.val])
+        for segdesc in self.segs:
+            segdesc.commit(r1ksys, r1ksys.volumes[segdesc.vol.val])

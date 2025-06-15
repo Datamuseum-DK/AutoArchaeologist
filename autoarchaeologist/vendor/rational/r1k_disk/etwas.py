@@ -59,7 +59,7 @@ class Etwas(ObjSector):
         if (SECTBITS - self.hi)//span > 0:
             self.add_field(
                 "q98",
-                bv.Array((SECTBITS - self.hi)//span, span, vertical=True)
+                bv.Array((SECTBITS - self.hi)//span, -span, vertical=True)
             )
         self.add_field("q99", SECTBITS - self.hi)
         self.done()
@@ -80,6 +80,41 @@ class Etwas1331(Etwas):
 
 ##################################################################################
 
+class Etwas6a1ChildEntry(bv.Struct):
+    ''' Unknown sector content '''
+    def __init__(self, bvtree, lo):
+        super().__init__(
+            bvtree,
+            lo,
+            f0_=-21,	# As in Etwas6a1Entry
+            f1_=-1,	# Speculative
+            f2_=-10,	# Looks like a vpid ?
+            f3_=-2,	# Speculative
+            f4_=-32,	# Speculative
+            f5_=-32,	# Speculative
+            f6_=-64,	# Speculative, first two bytes look like a range?
+            f7_=-64,	# Speculative
+            f8_=-8,	# Speculative
+        )
+
+class Etwas6a1Child(ObjSector):
+    ''' Unknown sector content '''
+    def __init__(self, ovtree, lba):
+        super().__init__(
+            ovtree,
+            lba,
+            duplicated=True,
+            vertical=True,
+            more=True,
+            f0_=-17,
+            cnt_=-6,
+            aa_=AdaArray,
+        )
+        self.add_field(
+            "ary",
+            bv.Array(self.cnt.val, Etwas6a1ChildEntry, vertical=True)
+        )
+        self.done()
 
 class Etwas6a1Entry(bv.Struct):
     ''' Unknown sector content '''
@@ -91,8 +126,6 @@ class Etwas6a1Entry(bv.Struct):
             lba_=-24,
         )
 
-class Etwas6a1Child(Etwas):
-    ''' ... '''
 
 class Etwas6a1(ObjSector):
     ''' Unknown sector content '''
@@ -113,4 +146,4 @@ class Etwas6a1(ObjSector):
         )
         self.done()
         for i in self.ary:
-            Etwas6a1Child(ovtree, i.lba.val, duplicated=True).insert()
+            Etwas6a1Child(ovtree, i.lba.val).insert()

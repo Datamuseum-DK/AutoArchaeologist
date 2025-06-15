@@ -11,7 +11,7 @@
 
 from ....base import bitview as bv
 
-from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT, LSECSIZE, NameSpace
+from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT, LSECSIZE, SegNameSpace
 from .object import ObjSector
 
 UNREAD = memoryview(b'_UNREAD_' * (LSECSIZE // 8))
@@ -94,28 +94,46 @@ class Indir2(Indir):
         if self.multiplier.val != 0xa2:
             raise BadIndir("Indir2 multiplier not 0xa2")
 
+class Segment():
+    ''' A Segment '''
+
+    def __init__(self, vpid, id, version, this):
+        self.vpid = vpid
+        self.id =  id
+        self.version = version
+        self.this = this
+        self.name = "%03x:%06x" % (vpid, id)
+        this.add_note('R1k_Segment')
+        this.add_name(self.name)
+
+    def __repr__(self):
+        return "<Segment " + self.name + "(0x%x)>" % self.version
+
 class SegmentDesc(bv.Struct):
-    ''' ... '''
+    '''
+       other3c: (hypothesis)  Some kind of open/active/live
+          0x0000 in all snapshots <= superblock.snapshot2
+          0x0000 or 0x1000 in snapshots > superblock.snapshot2
+    '''
     def __init__(self, tree, lo):
         super().__init__(
             tree,
             lo,
             vertical=False,
             vpid_=-10,
-            segtyp_=-2,
-            segno_=-22,
+            segid_=-24,
             snapshot_=-31,
             other2a_=-8,
             col9_=-9,
-            other3a__=-17,	# 0x00200
+            other3a__=bv.Constant(17, 0x200),
             vol_=-4,
             other3c_=-13,
             bootno_=-10,
-            col5b__=-10,	# 0x000
+            col5b__=bv.Constant(10, 0x0),
             col5d_=-32,
             version_=-22,
             npg_=-31,
-            other6__=-14,	# 0x2005
+            other6__=bv.Constant(14, 0x2005),
             multiplier_=-32,
             aa_=AdaArray,
             ary_=bv.Array(10, Extent, vertical=False),
@@ -125,16 +143,12 @@ class SegmentDesc(bv.Struct):
         assert self.lo + 915 == self.hi
         self.namespace = None
 
-        assert self.col5b_.val == 0
-        assert self.other3a_.val == 0x200
-        assert self.other6_.val == 0x2005
-
         while self.ary.array:
             if self.ary.array[-1].flg.val != 0:
                 break
             self.ary.array.pop(-1)
 
-    def commit(self, ovtree):
+    def commit(self, r1ksys, ovtree):
         if self.other3c.val:
             return
         npg = 0
@@ -185,24 +199,22 @@ class SegmentDesc(bv.Struct):
                 bits.append(UNREAD)
             #print("E", bits[-1])
         that = ovtree.this.create(records=bits)
-        that.add_note('R1k_Segment')
-        that.add_note("tag_%02x" % self.col9.val)
         that.add_note("vpid_%04d" % self.vpid.val)
-        name = "%03x:%x:%06x:%x" % (self.vpid.val, self.segtyp.val, self.segno.val, self.version.val)
-        segidx = ovtree.this.top.by_class["r1k_segs"]
-        n2 = "%03x:%x:%06x" % (self.vpid.val, self.segtyp.val, self.segno.val)
-        if n2 not in segidx:
-            segidx[n2] = {}
-        if self.version.val in segidx[n2]:
-            print("Collision", name)
-            for i, j in segidx[n2].items():
-                print("  ", i, j)
-        assert self.version.val not in segidx[n2]
-        segidx[n2][self.version.val] = that
-
-        self.namespace = NameSpace(
+        that.add_note("tag_%02x" % self.col9.val)
+        seg = Segment(self.vpid.val, self.segid.val, self.version.val, that)
+        r1ksys.add_segment(seg)
+        
+        self.namespace = SegNameSpace(
             parent = ovtree.namespace,
-            name = name,
+            name = seg.name + "(0x%x)" % self.version.val,
             priv = self,
             this = that,
         )
+
+
+    def doc(self, that):
+        with that.add_utf8_interpretation("Segment") as file:
+             self.vertical=True
+             for i in self.render():
+                 file.write(i + "\n")
+             self.vertical=False

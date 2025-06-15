@@ -25,17 +25,13 @@ class ObjHead(bv.Struct):
             tree,
             lo,
             flag_=-1,
-            obj1_=-6,
+            obj1_=bv.Constant(6, 0x0),
             boot_=-16,  # [[Bits:30003857]] pg 134: Boot_Number
-            obj3_=-10,
+            obj3_=bv.Constant(10, 0x0),
             usq_=-32,   # [[Bits:30003857]] pg 134: Unique_Sequence_Number
             vol_=-5,
             lba_=-24,
         )
-        if self.obj1.val:
-            raise BadObject("Bad Object: obj1 is 0x%x should be 0x0" % self.obj1.val)
-        if self.obj3.val:
-            raise BadObject("Bad Object: obj3 is 0x%x should be 0x0" % self.obj3.val)
 
     def render(self):
         yield "{OBJ %x:%x:%x:%02x:%06x}" % (

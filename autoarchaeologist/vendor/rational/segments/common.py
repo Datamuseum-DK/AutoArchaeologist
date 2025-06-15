@@ -13,8 +13,10 @@ import time
 
 from ....base import bitview as bv
 from ....base import dot_graph
-
+from .. import r1k_defs 
 from . import pure
+
+OBJECTS = r1k_defs.OBJECT_MANAGERS
 
 class Unallocated(bv.Opaque):
     ''' ... '''
@@ -133,7 +135,7 @@ class Day(bv.Struct):
         )
         self.ts = (self.day.val - (69 * 365 + 18)) * 86400
         gm = time.gmtime(self.ts)
-        self.tstamp = time.strftime("%Y-%m-%d", gm) + "(0x%x)" % self.day.val
+        self.tstamp = time.strftime("%Y-%m-%d", gm)
 
     def render(self):
         yield self.tstamp
@@ -145,14 +147,15 @@ class Time(bv.Struct):
             lo,
             time_=-32,
         )
-
-    def render(self):
         tmp = self.time.val >> 15
         h = tmp // 3600
         m = (tmp // 60) % 60
         s = tmp % 60
         frac = tmp & 0x7fff
-        yield "%02d:%02d:%02d(0x%x)" % (h, m, s, self.time.val)
+        self.tstamp = "%02d:%02d:%02d.0x%04x" % (h, m, s, self.time.val & 0x7fff)
+
+    def render(self):
+        yield self.tstamp
 
 class DayTime(bv.Struct):
     '''
@@ -179,6 +182,15 @@ class TimedProperty(bv.Struct):
             tp_000_b_=DayTime,
             tp_001_b_=-24,
         )
+
+    def render(self):
+        yield "Timed_Property {" + ", ".join(
+            (
+                 self.tp_000_b.day.tstamp,
+                 self.tp_000_b.time.tstamp,
+                 hex(self.tp_001_b.val),
+            )
+        ) + "}"
 
 class BTree(bv.Struct):
     def __init__(self, bvtree, lo):
@@ -320,12 +332,6 @@ class Segment(bv.BitView):
                 print(this, "GAP", hex(lo), hex(hi), hex(hi - lo))
         # dot_graph.add_interpretation(this, self)
         self.add_interpretation(more=True)
-
-    def add_interpretation(self, title="BitView", more=False, **kwargs):
-        ''' Render via UTF-8 file '''
-        with self.this.add_utf8_interpretation(title, more=more) as file:
-            for line in self.render(default_width=128, **kwargs):
-                file.write(line + '\n')
 
     def find_all(self, match, start=0, stop=None, width=32):
         b = self.bits
@@ -526,77 +532,6 @@ def obj_name(cls, subclass=None):
     if scn is None:
         scn = "%d" % subclass
     return cln + "." + scn
-
-# See 5d3bfb73b, 00_class, 75_tag, seg_0ea8df
-OBJECTS = {
-    1: ("ADA", {
-            2: "WORLD",
-            3: "DIRECTORY",
-            4: "SUBSYSTEM",
-            5: "SPEC_VIEW",
-            6: "LOAD_VIEW",
-            8: "GENERIC_PROCEDURE",
-            9: "GENERIC_FUNCTION",
-            10: "GENERIC_PACKAGE",
-            12: "PACKAGE_INSTANTIATION",
-            13: "PACKAGE_SPEC",
-            16: "PROCEDURE_INSTANTIATION",
-            17: "PROCEDURE_SPEC",
-            20: "FUNCTION_INSTANTIATION",
-            21: "FUNCTION_SPEC",
-            28: "PROCEDURE_BODY",
-            29: "FUNCTION_BODY",
-            31: "TASK_BODY",
-            32: "PACKAGE_BODY",
-            33: "UNRECOGNIZABLE",
-            39: "COMPILATION_UNIT",
-            56: "MAIN_PROCEDURE_SPEC",
-            57: "MAIN_PROCEDURE_BODY",
-            59: "MAIN_FUNCTION_BODY",
-            62: "LOADED_PROCEDURE_SPEC",
-            63: "LOADED_FUNCTION_SPEC",
-            66: "COMBINED_VIEW",
-            77: "SYSTEM_SUBSYSTEM",
-        }
-    ),
-    2: ("DDB", {}),
-    3: ("FILE", {
-            0: "NIL",
-            42: "TEXT",
-            43: "BINARY",
-            47: "SWITCH",
-            46: "ACTIVITY",
-            48: "SEARCH_LIST",
-            49: "OBJECT_SET",
-            51: "POSTSCRIPT",
-            52: "SWITCH_DEFINITION",
-            61: "COMPATIBILITY_DATABASE",
-            70: "CMVC_DATABASE",
-            71: "DOCUMENT_DATABASE",
-            72: "CONFIGURATION",
-            73: "VENTURE",
-            74: "WORK_ORDER",
-            80: "CMVC_ACCESS",
-            83: "MARKUP",
-            555: "BINARY_GATEWAY",
-            597: "REMOTE_TEXT_GATEWAY",
-        }
-    ),
-    4: ("USER", {}),
-    5: ("GROUP", {}),
-    6: ("SESSION", {}),
-    7: ("TAPE", {}),
-    8: ("TERMINAL", {}),
-    9: ("DIRECTORY", {}),
-    10: ("CONFIGURATION", {}),
-    11: ("CODE_SEGMENT", {}),
-    12: ("LINK", {}),
-    13: ("NULL_DEVICE", {}),
-    14: ("PIPE", {}),
-    15: ("ARCHIVED_CODE", {}),
-    16: ("PROGRAM_LIBRARY", {}),
-    17: ("NATIVE_SEGMENT_MAP", {}),
-}
 
 class SegId(bv.Struct):
     def __init__(self, bvtree, lo):

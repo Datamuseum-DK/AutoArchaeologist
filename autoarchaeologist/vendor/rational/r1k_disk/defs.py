@@ -27,6 +27,9 @@
 
 from ....base import bitview as bv
 from ....base import namespace as ns
+from .. import r1k_defs 
+
+OBJECT_MANAGERS = r1k_defs.OBJECT_MANAGERS
 
 ELIDE_FREELIST = True
 ELIDE_BADLIST = True
@@ -110,7 +113,7 @@ class AdaArray(bv.Struct):
     def render(self):
         yield "0x%x*0x%x" % ((self.a2.val - 0x40) // self.a4.val, self.a4.val)
 
-class NameSpace(ns.NameSpace):
+class SegNameSpace(ns.NameSpace):
     ''' ... '''
 
     TABLE = (
@@ -124,13 +127,19 @@ class NameSpace(ns.NameSpace):
         ("r", "version"),
         ("r", "npg"),
         ("r", "mgr"),
-        ("r", "mobj"),
         ("l", "name"),
         ("l", "artifact"),
     )
 
     def ns_render(self):
         seg = self.ns_priv
+        om = OBJECT_MANAGERS.get(seg.mgr.val)
+        if om:
+            ofld = om[0] + ":%d" % seg.mobj.val
+        elif seg.mgr.val or seg.mobj.val:
+            ofld = "0x%x:0x%x" % (seg.mgr.val, seg.mobj.val)
+        else:
+            ofld = "-"
         return [
             hex(seg.snapshot.val),
             hex(seg.other2a.val),
@@ -141,7 +150,6 @@ class NameSpace(ns.NameSpace):
             hex(seg.col5d.val),
             hex(seg.version.val),
             hex(seg.npg.val),
-            hex(seg.mgr.val),
-            hex(seg.mobj.val),
+            ofld,
         ] + super().ns_render()
 

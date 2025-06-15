@@ -12,7 +12,7 @@
 from ....generic import disk
 from ....base import octetview as ov
 
-from .defs import LSECSHIFT, NameSpace
+from .defs import LSECSHIFT, SegNameSpace
 from .superblock import SuperBlock
 from .system import add_volume
 from .world import WorldIndex
@@ -30,9 +30,6 @@ class Volume(disk.Disk):
         if not this.top in this.parents:
             return
 
-        if "r1k_segs" not in this.top.by_class:
-            this.top.by_class["r1k_segs"] = {}
-
         super().__init__(
             this,
             geometry=[[1655, 15, 45, 1024]],
@@ -40,7 +37,7 @@ class Volume(disk.Disk):
 
         self.sblk = SuperBlock(self, 2).insert()
         self.volnbr = self.sblk.volnbr.val
-        self.namespace = NameSpace(
+        self.namespace = SegNameSpace(
             name="",
             separator="",
         )
@@ -62,10 +59,6 @@ class Volume(disk.Disk):
                 Etwas644(self, self.sblk.at0644.lba.val, duplicated=True, span=213).insert()
             if self.sblk.at06a1.lba.val:
                 Etwas6a1(self, self.sblk.at06a1.lba.val).insert()
-
-        if False:
-            self.completed()
-            return
 
         if True:
             self.sblk.freelist.commit(self)
@@ -89,7 +82,7 @@ class Volume(disk.Disk):
             self.sblk.do_replacesect(self)
 
         self.what = {}
-        add_volume(self)
+        self.r1ksys = add_volume(this.top, self)
 
     def completed(self):
         ''' Call-back from system once it is done '''
