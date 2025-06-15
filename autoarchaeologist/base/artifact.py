@@ -187,7 +187,9 @@ class Artifact(result_page.ResultPage):
     def define_rec(self, rec):
         ''' Define a record '''
         assert isinstance(rec, Record)
-        assert rec.key not in self._keys
+        if rec.key in self._keys:
+            print("Duplicate key:", rec.key)
+            assert rec.key not in self._keys
         if len(self._keys) == 0:
             self._key_len = len(rec.key)
             self._key_min = list(rec.key)
