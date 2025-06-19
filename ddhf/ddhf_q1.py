@@ -12,7 +12,7 @@
 from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import samesame
 
-from autoarchaeologist.vendor.q1 import q1_microlite
+from autoarchaeologist.vendor.q1 import q1_filesystem
 from autoarchaeologist.vendor.q1 import q1_text
 
 import ddhf
@@ -54,7 +54,7 @@ class Q1(ddhf.DDHFExcavation):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.add_examiner(q1_microlite.Q1Microlite)
+        self.add_examiner(q1_filesystem.Q1FileSystem)
         self.add_examiner(samesame.SameSame)
         self.add_examiner(q1_text.Q1Text)
         self.type_case = Q1TypeCase()
