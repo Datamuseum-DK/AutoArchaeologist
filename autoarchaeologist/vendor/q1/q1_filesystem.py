@@ -111,7 +111,7 @@ class Q1FileSystem(ov.OctetView):
         if this.top not in this.parents:
             return
 
-        print(this, "Q1Microlite")
+        print(this, "Q1FileSystem")
         super().__init__(this)
 
         self.namespace = NameSpace(
