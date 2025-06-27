@@ -82,10 +82,13 @@ class Bits(bintree.BinTreeLeaf):
 
 class BitView(bintree.BinTree):
 
-    def __init__(self, octets=None, bits=None, type_case=None):
+    def __init__(self, octets=None, bits=None, type_case=None, this=None):
+        if this and not bits:
+            bits = this.bits()
         self.octets = octets
         self.bits = bits
         self.type_case = type_case
+        self.this = this
         assert self.bits
         super().__init__(
             lo=0,
@@ -95,6 +98,12 @@ class BitView(bintree.BinTree):
 
     def prefix(self, lo, hi):
         return "*0x" + self.adrfmt % lo + "…" + self.adrfmt % hi
+
+    def add_interpretation(self, title="BitView", more=False, **kwargs):
+        ''' Render via UTF-8 file '''
+        with self.this.add_utf8_interpretation(title, more=more) as file:
+            for line in self.render(default_width=128, **kwargs):
+                file.write(line + '\n')
 
 class Opaque(Bits):
 

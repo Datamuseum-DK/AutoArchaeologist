@@ -28,23 +28,20 @@ class FloppyToolsContainer(artifact.ArtifactFragmented):
             if not flds or flds[0] != "sector":
                 continue
             chs = CHS(flds[2])
-            if not 0 <= chs.c < 77:
-                print("BAD C", chs)
-            if not 1 <= chs.s <= 26:
-                print("BAD S", chs)
             b = bytes.fromhex(flds[3])
-            if len(b) != 128:
-                print("BAD B", len(b))
             sects[chs.chs] = b
+        if not sects:
+            raise EOFError
         hasbad = False
-        for cyl in range(0, 77):
-            for sect in range(1, 27):
-                chs = (cyl, 0, sect)
-                if chs in sects:
-                    continue
-                sects[chs] = b'_UNREAD_' * 16
-                print("UNREAD", chs, filename)
-                hasbad = True
+        if False:
+            for cyl in range(0, 77):
+                for sect in range(1, 27):
+                    chs = (cyl, 0, sect)
+                    if chs in sects:
+                        continue
+                    sects[chs] = b'_UNREAD_' * 16
+                    print("UNREAD", chs, filename)
+                    hasbad = True
         offset = 0
         for chs, octets in sorted(sects.items()):
             # print(chs, offset, octets)
@@ -59,10 +56,4 @@ class FloppyToolsContainer(artifact.ArtifactFragmented):
         if hasbad:
             self.add_note("BADSECTs")
         self.completed()
-
-#def FloppyToolsDirectory(dir):
-#
-#    for fn in sorted(glob.glob(dir + "/*/*.cache")):
-#        y = FloppyToolsContainer(fn)
-#        if len(y):
-#            yield fn, y
+        print("SELF", self)

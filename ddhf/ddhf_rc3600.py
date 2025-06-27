@@ -12,6 +12,7 @@
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.vendor.regnecentralen import domus_fs
+from autoarchaeologist.vendor.regnecentralen import rc3600_disass
 from autoarchaeologist.vendor.regnecentralen import rc3600_tape
 from autoarchaeologist.vendor.regnecentralen import rc3600_fdtape
 from autoarchaeologist.vendor.regnecentralen import rc3600_bootable_fd
@@ -92,6 +93,7 @@ class Rc3600(ddhf.DDHFExcavation):
         self.add_examiner(rc7000_comal.ComalSaveFile)
         self.add_examiner(absbin.AbsBin)
         self.add_examiner(relbin.RelBin)
+        #self.add_examiner(rc3600_disass.Rc3600Disass)
         self.add_examiner(bigtext.BigText)
         self.add_examiner(papertapechecksum.PaperTapeCheckSum)
         self.add_examiner(rcsl.RCSL)

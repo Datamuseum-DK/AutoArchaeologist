@@ -15,10 +15,12 @@ from itertools import zip_longest
 from . import bintree
 from . import datastruct
 
+# Base leaf type
+
 class Octets(bintree.BinTreeLeaf):
     ''' Base class, just some random octets '''
 
-    def __init__(self, tree, lo, width=None, hi=None, name=None, maxlines=None):
+    def __init__(self, tree, lo, width=None, hi=None, maxlines=None, default_width=32):
         if hi is None:
             assert width is not None
             hi = lo + width
@@ -30,6 +32,7 @@ class Octets(bintree.BinTreeLeaf):
         if width is None:
             width = len(self)
         self.width = width
+        self.default_width = default_width
 
     def __len__(self):
         return self.hi - self.lo
@@ -67,24 +70,45 @@ class Octets(bintree.BinTreeLeaf):
                 yield i[j]
 
     def insert(self):
-        ''' Insert in tree (NB: Optional!) '''
+        ''' Insert in tree (NB: You dont have to do this) '''
         self.tree.insert(self)
         return self
 
     def render(self):
         ''' Render hexdumped + text-column '''
-        hd = self.this.hexdump(lo=self.lo, hi=self.hi, width=self.width)
+        hd = self.this.hexdump(lo=self.lo, hi=self.hi, width=self.default_width)
+        hd = list(hd)
         if self.maxlines is None:
             yield from hd
             return
         for _i,j in zip(range(self.maxlines), hd):
             yield j
 
+# Bulk types
+
+class FillRecord(Octets):
+    ''' ... '''
+
+    def __init__(self, tree, lo, hi):
+        super().__init__(tree, lo=lo, hi=hi)
+
+    def render(self):
+        ''' ... '''
+        yield "0x%02x" % self.this[self.lo] + "[0x%x]" % len(self)
+
+class EmptyRecord(Octets):
+    ''' ... '''
+
+    def __init__(self, tree, lo, hi, width):
+        super().__init__(tree, lo=lo, hi=hi)
+        self.width = width
+
+    def render(self):
+        ''' ... '''
+        yield from self.this.hexdump(self.lo, self.hi, width=self.width)
+
 class Dump(Octets):
     ''' basic (hex)dump '''
-
-    WIDTH = 32
-    FMT = "%02x"
 
     def render(self):
         ''' ... '''
@@ -129,6 +153,14 @@ class Opaque(Octets):
         else:
             yield self.rendered
 
+class HexOctets(Octets):
+    ''' Octets rendered without text column '''
+
+    def render(self):
+        yield "".join("%02x" % i for i in self)
+
+# Text types
+
 def Text(width, rstrip=False):
     ''' Produce class for width text String (convenient for Struct) '''
 
@@ -156,11 +188,7 @@ def Text(width, rstrip=False):
 
     return Text_Class
 
-class HexOctets(Octets):
-    ''' Octets rendered without text column '''
-
-    def render(self):
-        yield "".join("%02x" % i for i in self)
+# Value types
 
 class Octet(Octets):
     ''' A single octet (convenient for Struct) '''
@@ -304,6 +332,8 @@ class L1032(Octets):
     def render(self):
         yield "0x%08x" % self.val
 
+# Complex types
+
 def cstruct_to_fields(text):
     ''' Create FIELDS from C struct(-ish) text '''
     retval = []
@@ -365,13 +395,16 @@ class Struct(datastruct.Struct, Octets):
 def Array(count, what, **kwargs):
     return datastruct.Array(Struct, count, what, **kwargs)
 
+# The tree itself
+
 class OctetView(bintree.BinTree):
     ''' ... '''
 
-    def __init__(self, this, max_render=None, default_width=16):
+    def __init__(self, this, default_width=32):
         self.this = this
         self.separators = None
         self.separators_width = 0
+        self.default_width = default_width
         hi = len(this)
         super().__init__(
             lo = 0,
@@ -379,16 +412,40 @@ class OctetView(bintree.BinTree):
             leaf = Octets,
         )
 
-    def render(self, **kwargs):
+    def render(self):
         ''' Rendering iterator with padding '''
         self.separators = [
             (x.lo, " " + str(x.key)) for x in self.this.iter_rec() if x.key is not None
         ]
+
         if self.separators:
+            self.separators.append((len(self.this),"The end"))
+        for n in range(0, len(self.separators)-1):
+            # Dump empty records individually, with uniform line length
+            fm = self.separators[n]
+            to = self.separators[n+1]
+            i = list(self.find(fm[0], to[0]))
+            if len(i) != 0:
+                continue
+            s = set(self.this[fm[0]:to[0]])
+            if len(s) == 1:
+                FillRecord(self, lo=fm[0], hi=to[0]).insert()
+                continue
+            wid = fm[0] - to[0]
+            for o in range(0, wid, self.default_width):
+                EmptyRecord(
+                    self,
+                    lo=fm[0] + o,
+                    hi=fm[0] + min(o + self.default_width, wid),
+                    width=self.default_width
+                ).insert()
+
+        if self.separators:
+            self.separators.pop(-1)
             self.separators_width = max(len(y) for x, y in self.separators)
         else:
             self.separators_width = 0
-        yield from super().render(**kwargs)
+        yield from super().render(default_width=self.default_width)
 
     def add_interpretation(self, title="OctetView", more=False, **kwargs):
         ''' Render via UTF-8 file '''

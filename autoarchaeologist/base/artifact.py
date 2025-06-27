@@ -107,8 +107,8 @@ class Artifact(result_page.ResultPage):
         self.by_class = {} # Experimental extension point
         self._keys = {}
         self._reclens = {}
-        self._key_min = list()
-        self._key_max = list()
+        self._key_min = []
+        self._key_max = []
         self._key_len = 0
 
         self.metrics = None # Used only for toplevel artifacts
@@ -196,7 +196,13 @@ class Artifact(result_page.ResultPage):
             self._key_max = list(rec.key)
         else:
             if self._key_len != len(rec.key):
-                print(self, "Records have different key lengths:", self._key_len, len(rec.key), rec.key)
+                print(
+                    self,
+                    "Records have different key lengths:",
+                    self._key_len,
+                    len(rec.key),
+                    rec.key
+                )
                 assert self._key_len == len(rec.key)
             for i in range(self._key_len):
                 self._key_min[i] = min(self._key_min[i], rec.key[i])
@@ -665,17 +671,17 @@ class ArtifactFragmented(Artifact):
         self._file.close()
         del self._file
         with open(self._backing.filename, 'rb') as file:
-             if self._len < (1<<16):
-                 self._map = memoryview(file.read()).toreadonly()
-             else:
-                 self._map = memoryview(
-                     mmap.mmap(
-                         file.fileno(),
-                         0,
-                         access=mmap.ACCESS_READ,
-                         #XXX: Python3.13 and forward use: trackfd=False,
-                     )
-                 ).toreadonly()
+            if self._len < (1<<16):
+                self._map = memoryview(file.read()).toreadonly()
+            else:
+                self._map = memoryview(
+                    mmap.mmap(
+                        file.fileno(),
+                        0,
+                        access=mmap.ACCESS_READ,
+                        #XXX: Python3.13 and forward use: trackfd=False,
+                    )
+                ).toreadonly()
         i = hashlib.sha256()
         off = 0
         for frag in self._frags:
