@@ -12,7 +12,7 @@
 from autoarchaeologist.base import type_case
 
 from autoarchaeologist.vendor.regnecentralen import domus_fs
-from autoarchaeologist.vendor.regnecentralen import rc3600_disass
+#from autoarchaeologist.vendor.regnecentralen import rc3600_disass
 from autoarchaeologist.vendor.regnecentralen import rc3600_tape
 from autoarchaeologist.vendor.regnecentralen import rc3600_fdtape
 from autoarchaeologist.vendor.regnecentralen import rc3600_bootable_fd
