@@ -431,7 +431,7 @@ class OctetView(bintree.BinTree):
             if len(s) == 1:
                 FillRecord(self, lo=fm[0], hi=to[0]).insert()
                 continue
-            wid = fm[0] - to[0]
+            wid = to[0] - fm[0]
             for o in range(0, wid, self.default_width):
                 EmptyRecord(
                     self,

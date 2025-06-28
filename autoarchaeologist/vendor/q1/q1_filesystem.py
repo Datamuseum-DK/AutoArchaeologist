@@ -133,4 +133,4 @@ class Q1FileSystem(ov.OctetView):
                     y = Catalog(self, i.lo).insert()
 
         this.add_interpretation(self, self.namespace.ns_html_plain)
-        self.add_interpretation(more=True)
+        self.add_interpretation(title="Q1FileSystem", more=True)
