@@ -21,3 +21,4 @@ class SameSame():
         this.add_type(kind)
         with self.this.add_utf8_interpretation(kind) as file:
             file.write(kind + '\n')
+        this.metrics = False

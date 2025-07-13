@@ -16,7 +16,7 @@ class Metrics():
 
     def __init__(self, this):
         self.this = this
-        self.children = set(this.iter_all_children())
+        self.children = set(x for x in this.iter_all_children() if x.metrics is not False)
         self.overlaps = {}
         if len(self.children) > 1:
             self.children.remove(this)
