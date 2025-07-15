@@ -807,6 +807,10 @@ class ComalUPAS():
                     self.this[offset:offset + i[1] * 2]
                 )
             )
+            if i[1] <= 0:
+                print(up.this, "UPAS loop", i)
+                break
+
             offset += i[1] * 2
         if this[4] == 0xe9:
             self.filename = string(list(this[4:65*2]))
