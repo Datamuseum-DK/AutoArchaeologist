@@ -109,7 +109,7 @@ class NameSpace():
     def ns_path(self):
         ''' Get the path to this node '''
         if not self.ns_parent:
-            return  self.ns_name
+            return self.ns_name
         return self.ns_parent.ns_path_recurse() + self.ns_name
 
     def ns_render(self):
