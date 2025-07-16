@@ -3,19 +3,28 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # See LICENSE file for full text of license
+#
+# Doc found in Appendix D in:
+#	http://novasareforever.org/user/archive/public/docs/dg/sw/os/rdos.utils/
+#		069-400019-01__RDOS-DOS_Assembly_Language_and_Program_Utilities__1983-1984.pdf
+#
+# TBD:
+# ----
+# DG and RC differs on specifics, and this class should properly be
+# subclassed for RC's case.
+#
+# It also looks like DG messed up some of the asignments of record types
+# and fixed it by changing the .TITL records from octal 4 to octal 14
+# as a marker of the new assignment.  (See appendix B in versions of the
+# DG assembler manual)
 
 '''
    Data General Relocatable Binary objects and libraries
    -----------------------------------------------------
 '''
 
-import struct
-
-class Invalid(Exception):
-    ''' Something's not right '''
-
-VALID_FIRST = set([2, 6, 7, 9,])
-VALID_LAST = set([6,])
+from ...base import octetview as ov
+from ...base import namespace as ns
 
 REC_MAX_LEN = {
     1: -15,
@@ -26,9 +35,29 @@ REC_MAX_LEN = {
     6: -2,
     7: -3,
     9: -3,
+    10: -3,
     11: -15,
     12: -15,
     13: -15,
+}
+
+REC_SYMBOLS = {
+    # Bool: do we show the value
+    3: True,
+    4: False,
+    5: True,
+    7: False,
+}
+
+RELOC_MARKERS = {
+    '0': '⁰',
+    '1': ' ',
+    '2': "'",
+    '3': '"',
+    '4': '-',
+    '5': '=',
+    '6': '$',
+    '7': '*',
 }
 
 def b40(x):
@@ -55,188 +84,173 @@ def b40(x):
     }.get(x[1] & 0x1f)
     if symtyp is None:
         symtyp = ".SYM%02x" % (x[1] & 0x1f)
-    return symtyp, t[::-1]
+    return symtyp, t[::-1].rstrip('_')
 
-
-class RelBinRec():
-    ''' A single RelBin record '''
-    def __init__(self, this, i):
-        self.padlen = 0
-        while i < len(this) and not this[i]:
-            self.padlen += 1
-            i += 1
-        if len(this[i:]) < 12:
-            raise Invalid("Too Short")
-        words = struct.unpack("<Hh", this[i:i+4])
-        if words[0] not in REC_MAX_LEN:
-            raise Invalid("RELBIN Bad Recno @0x%x (0x%x) w1=%d" % (i, words[0],words[1]))
-        if words[1] > -1:
-            raise Invalid("RELBIN Invalid Length w0=0x%x (%d)" % (words[0], words[1]))
-        if REC_MAX_LEN[words[0]] > words[1]:
-            raise Invalid("RELBIN Bad Length w0=0x%x (%d)" % (words[0], words[1]))
-        nwords = 6 + -words[1]
-        if len(this[i:]) < nwords * 2:
-            raise Invalid("Too Short")
-        self.words = struct.unpack("<%dH" % nwords, this[i:i+nwords*2])
-        self.chksum = sum(self.words) & 0xffff
-        if False and self.chksum:
-            print("RELBIN bad CS " + " ".join(["%04x" % i for i in self.words]))
-            raise Invalid("RELBIN Bad checksum (0x%04x)" % self.chksum)
-        if self.words[0] == 7:
-            _i, j = b40(self.words[6:8])
-            self.name = j + " "
-        else:
-            self.name = ""
-
-    def length(self):
-        ''' length in bytes of this record '''
-        return self.padlen + 2 * len(self.words)
-
-    def __repr__(self):
-        return "<RBR " + self.render() + ">"
+class Reloc(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            r0_=ov.Le16,
+            r1_=ov.Le16,
+            r2_=ov.Le16,
+        )
+        self.reloc = "%05o%05o%05o" % (self.r0.val >> 1, self.r1.val >> 1, self.r2.val >> 1)
 
     def render(self):
-        ''' render as hexdumped words '''
-        if self.padlen:
-            t = "(%d)" % self.padlen
+        yield "Reloc {" + self.reloc + "}"
+
+class Symb(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            f0_=ov.Le16,
+            f1_=ov.Le16,
+            equiv_=ov.Le16,
+        )
+        self.kind, self.name = b40((self.f0.val, self.f1.val))
+
+    def render(self):
+        yield "Symbol {" + self.kind + ": " + self.name + " = 0x%04x}" % self.equiv.val
+
+class InvalidRbRecord(ValueError):
+    ''' ... '''
+
+class RbRec(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            more=True,
+            kind_=ov.Le16,
+            wcnt_=ov.Ls16,
+            reloc_=Reloc,
+            csum_=ov.Le16,
+        )
+        lim = REC_MAX_LEN.get(self.kind.val)
+        if lim is None:
+            self.done()
+            raise InvalidRbRecord()
+        if self.wcnt.val < lim or self.hi + -2 * self.wcnt.val > len(tree.this):
+            self.done()
+            raise InvalidRbRecord()
+        if self.kind.val in REC_SYMBOLS:
+            self.add_field("s", ov.Array(-self.wcnt.val//3, Symb))
         else:
-            t = "   "
-        t += " %2d" % self.words[0]
-        t += " %3d" % (self.words[1] - 65536)
-        t += " " + " ".join("%06o" % (x >> 1) for x in self.words[2:5])
-        t += " " + " ".join(["%04x" % x for x in self.words[5:]])
-        if self.chksum:
-            t += "  CS=0x%04x" % self.chksum
-        return t
+            self.add_field("w", ov.Array(-self.wcnt.val, ov.Le16))
+        tmp = ov.Array((self.hi - self.lo)//2, ov.Le16)(tree, self.lo)
+        self.rsum = sum(x.val for x in tmp) & 0xffff
+        self.done()
+        if self.kind.val > 0o17:
+            raise InvalidRbRecord()
+        if self.rsum:
+            raise InvalidRbRecord()
 
-    def symbols(self):
-        ''' Iterate all symbols '''
-        if self.words[0] in (7,3,4,5):
-            for x in range(6, len(self.words) - 1, 4):
-                y = b40(self.words[x:x+2])
-                yield y[0].strip(), y[1].strip()
-
-    def html_as_interpretation(self, fo):
-        ''' Render as hexdump, list symbols '''
-        fo.write(self.render())
-        if self.words[0] in (2,):
-            reloc = "%05o" % (self.words[2] >> 1)
-            reloc += "%05o" % (self.words[3] >> 1)
-            reloc += "%05o" % (self.words[4] >> 1)
-            bstring = []
-            rptr = 1
-            for i in self.words[7:]:
-                if reloc[rptr] != '1':
-                    i = 0
-                rptr += 1
-                bstring.append(i >> 8)
-                bstring.append(i & 0xff)
-            fo.write("     " * (22 - len(self.words)))
-            fo.write("|")
-            for i in bstring:
-                if i == 0x26:
-                    fo.write('&amp;')
-                elif i == 0x3c:
-                    fo.write('&lt;')
-                elif 32 <= i <= 126:
-                    fo.write("%c" % i)
+    def interpretation(self, file):
+        r = self.reloc.reloc
+        file.write("%02x -%02x %s" % (self.kind.val, -self.wcnt.val, r))
+        file.write(" %04x" % self.csum.val)
+        if self.kind.val in REC_SYMBOLS:
+            for rl, sym in zip(r, self.s):
+                file.write("\n\t" + sym.kind.ljust(7) + sym.name.ljust(6))
+                if self.kind.val in (3, 7):
+                    self.tree.this.add_name(sym.name)
+                if REC_SYMBOLS[self.kind.val]:
+                    file.write(" = %04x" % sym.equiv.val + RELOC_MARKERS[rl])
+        else:
+            hwb = []
+            hwl = []
+            for rl, w in zip(r, self.w):
+                if rl == '1':
+                    hwb.append(self.tree.this.type_case.decode((w.val >> 8, w.val & 0xff)))
+                    hwl.append(self.tree.this.type_case.decode((w.val & 0xff, w.val >> 8)))
                 else:
-                    fo.write(" ")
-            fo.write("|")
+                    hwb.append('  ')
+                    hwl.append('  ')
+                file.write(" %04x" % w.val + RELOC_MARKERS[rl])
+            if len(self.w) > 1:
+                file.write(" " * 6 * (15 - len(self.w)))
+                file.write("  ┆" + ''.join(hwb[1:]).ljust(28) + "┆")
+                file.write(''.join(hwl[1:]).ljust(28) + "┆")
+        file.write("\n")
 
-        fo.write("\n")
-        for i, j in self.symbols():
-            fo.write(" " * 10 + i + " " + j + "\n")
+class NameSpace(ns.NameSpace):
+    ''' ... '''
+    KIND = "Relocatable Library"
 
-class RelBin():
-    '''
-       Data General Relocatable Binary object or library
-    '''
+class RelBin(ov.OctetView):
     def __init__(self, this):
-        if this.has_type("RelBin") or this.has_type("RelBinLib"):
-            return
+        super().__init__(this)
 
-        idx = 0
-        while idx < len(this) and not this[idx]:
-            idx += 1
+        rbs = []
+        kinds = []
 
-        pfx = idx
-
-        self.this = this
-        objs = []
-
-        i = pfx
-        while True:
-            x = self.find_next(i)
-            if not x[1]:
+        ptr = 0
+        while ptr <= len(this) - 12:
+            while ptr < len(this) and this[ptr] == 0:
+                ptr += 1
+            if ptr == len(this):
                 break
-            objs.append(x)
-            i += x[0] + x[1]
-
-        if not objs:
-            return
-
-        #print("??RELBIN", this, i, len(l), l[0][0])
-        if len(objs) > 1:
-            this.add_type("RelBinLib")
-            offset = 0
-            for a, b, _r in objs:
-                this.create(start=offset+a, stop=offset+a+b)
-                offset += a + b
-            return
-
-        # Only a single RelBin
-
-        r = objs[0][2]
-
-        if r[0].words[0] not in VALID_FIRST:
-            return
-
-        this = this.create(start=pfx, stop=i)
-        if this.has_type("RelBin"):
-            return
-        self.this = this
-
-        this.add_type("RelBin")
-
-        self.r = r
-        self.this.add_interpretation(self, self.html_as_interpretation)
-        for i in r:
-            for j, k in sorted(i.symbols()):
-                if j in (".ENT", ".TITL") and k:
-                    this.add_note(k)
-        if self.r[0].name:
-            this.add_name(self.r[0].name.strip())
-
-    def html_as_interpretation(self, fo, _this):
-        ''' List all the records '''
-        fo.write("\n")
-        fo.write("<H3>RelBin</H3>\n")
-        fo.write("<pre>\n")
-        for r in self.r:
-            r.html_as_interpretation(fo)
-        fo.write("</pre>\n")
-
-
-    def find_next(self, i):
-        ''' Find boundaries of next relbin obj '''
-        pfxlen = 0
-        while i < len(self.this) and not self.this[i]:
-            i += 1
-            pfxlen += 1
-
-        start = i
-        r = []
-        while i < len(self.this):
+            if ptr > len(this) - 12:
+                break
             try:
-                j = RelBinRec(self.this, i)
-            except Invalid as error:
-                if r:
-                    print("RELBIN", self.this, error)
+                rb = RbRec(self, ptr)
+            except InvalidRbRecord:
                 break
-            # print("RELBIN", self.this, j)
-            r.append(j)
-            i += j.length()
-            if j.words[0] in VALID_LAST:
-                break
-        return pfxlen, i - start, r
+            rbs.append(rb)
+            kinds.append(rb.kind.val)
+            ptr = rb.hi
+
+        if len(rbs) == 0:
+            return
+
+        if ptr != len(this):
+            print(this, "OD", hex(ptr), hex(len(this)), hex(this[ptr]))
+            # Other data follows.
+            # Snip out the reloc records, which we will get back to.
+            this.create(start=rbs[0].lo, stop=rbs[-1].hi)
+            return
+
+        if kinds.count(6) > 1:
+
+            this.add_type("RelBinLib")
+            rns = NameSpace(name = '', root = this, separator = "")
+
+            def commit(recs):
+                that = this.create(start=recs[0].lo, stop=recs[-1].hi)
+                nm = "@0x%x" % recs[0].lo
+                for rec in recs:
+                    if rec.kind.val == 7:
+                        nm = rec.s[0].name
+                        break
+                NameSpace(
+                    name=nm,
+                    parent=rns,
+                    this=that,
+                )
+
+            c = []
+            for k, rb in zip(kinds, rbs):
+                c.append(rb)
+                if k in (9, 10):
+                    c = []
+                    continue
+                if k in (6,):
+                    commit(c)
+                    c = []
+            if c:
+                commit(c)
+            this.add_interpretation(self, rns.ns_html_plain)
+        else:
+            this.add_type("RelBin")
+            f = this.add_utf8_interpretation("RelBin")
+            with open(f.filename, "w", encoding="utf8") as file:
+                for i in rbs:
+                    i.interpretation(file)
+
+        for rb in rbs:
+            rb.insert()
+            if rb.kind.val == 7:
+                this.add_name(rb.s[0].name)
+        self.add_interpretation(title="RelBin", more=True)
