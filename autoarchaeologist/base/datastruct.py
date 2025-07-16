@@ -217,6 +217,9 @@ def Array(struct_class, count, what, vertical=None, naked=False, elide=None):
             def __iter__(self):
                 yield from self.array
 
+            def __len__(self):
+                return self.COUNT
+
             def iter_elided(self):
                 for n, x in enumerate(self.items):
                     if self.ELIDE and x.val in self.ELIDE:
@@ -258,6 +261,9 @@ def Array(struct_class, count, what, vertical=None, naked=False, elide=None):
 
         def __iter__(self):
             yield from self.array
+
+        def __len__(self):
+            return self.COUNT
 
         def render(self):
             yield '[]'
