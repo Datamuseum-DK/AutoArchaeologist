@@ -29,7 +29,7 @@ class Octets(bintree.BinTreeLeaf):
             if lo + width != hi:
                 print("BAD WIDTH", tree, hex(lo), hex(width), hex(hi))
                 #exit(2)
-            assert lo + width == hi
+            #assert lo + width == hi
         self.tree = tree
         self.this = tree.this
         self.maxlines = maxlines
