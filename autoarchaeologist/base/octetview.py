@@ -25,6 +25,11 @@ class Octets(bintree.BinTreeLeaf):
             assert width is not None
             hi = lo + width
         assert hi > lo
+        if width is not None:
+            if lo + width != hi:
+                print("BAD WIDTH", tree, hex(lo), hex(width), hex(hi))
+                #exit(2)
+            assert lo + width == hi
         self.tree = tree
         self.this = tree.this
         self.maxlines = maxlines
@@ -188,6 +193,20 @@ def Text(width, rstrip=False):
 
     return Text_Class
 
+class String(Octets):
+
+    def __init__(self, tree, lo, **kwargs):
+        hi = lo
+        while tree.this[hi] != 0x00:
+            hi += 1
+        super().__init__(tree, lo=lo, hi=hi + 1)
+        type_case = self.this.type_case
+        self.type_case = type_case
+        self.txt = type_case.decode(list(self.iter_bytes())[:-1])
+
+    def render(self):
+        yield "»" + self.txt + "«"
+
 # Value types
 
 class Octet(Octets):
@@ -210,6 +229,22 @@ class Le16(Octets):
 
     def render(self):
         yield "0x%04x" % self.val
+
+class Ls16(Octets):
+    ''' Two bytes Big Endian '''
+
+    def __init__(self, tree, lo, **kwargs):
+        super().__init__(tree, lo, width=2, **kwargs)
+        self.val = self.this[lo + 1] << 8
+        self.val |= self.this[lo]
+        if self.val & 0x8000:
+            self.val -= 1<<16
+
+    def render(self):
+        if self.val < 0:
+            yield "-0x%04x" % -self.val
+        else:
+            yield "+0x%04x" % self.val
 
 class Le24(Octets):
     ''' Three bytes Little Endian '''
@@ -263,6 +298,22 @@ class Be16(Octets):
 
     def render(self):
         yield "0x%04x" % self.val
+
+class Bs16(Octets):
+    ''' Two bytes Big Endian, Signed '''
+
+    def __init__(self, tree, lo, **kwargs):
+        super().__init__(tree, lo, width=2, **kwargs)
+        self.val = self.this[lo] << 8
+        self.val |= self.this[lo + 1]
+        if self.val & 0x8000:
+            self.val -= 1<<16
+
+    def render(self):
+        if self.val < 0:
+            yield "-0x%04x" % -self.val
+        else:
+            yield "+0x%04x" % self.val
 
 class Be24(Octets):
     ''' Three bytes Big Endian '''
