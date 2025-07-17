@@ -21,7 +21,7 @@ def argv_file(excavation, fn):
     print("Loading", fn)
     ext = os.path.splitext(fn)
     try:
-        if ext[1] in (".tap", ".TAP",):
+        if ext[1] in (".tap", ".TAP", ".9trk",):
             this = simh_tap_file.SimhTapContainer(excavation, filename = fn)
         elif ext[1] in (".imd", ".IMD",):
             this = imd_file.ImdContainer(excavation, filename = fn)
