@@ -88,8 +88,14 @@ class ProbeDirSec(ov.Struct):
         self.done()
         self.score()
 
+    def __str__(self):
+        return "<PDS %s %d>" % (str(self.rec), self.credible)
+
     def score(self):
         ''' Tally up points for the credibilty of this sector '''
+        #if self.rec.key[0] > 0:
+        #    self.credible = -1
+        #    return
         for n, de in enumerate(self.dirents):
             if de.status == 0xe5:
                 pass
@@ -102,8 +108,11 @@ class ProbeDirSec(ov.Struct):
                     return
                 self.attribs += 1
             elif not de.looks_sane():
+                #print("CR2", self.rec, self.credible, de)
                 self.credible = -1
                 return
+                #if self.rec.key != (0,3,10):
+                #    return
             elif max(de.al) > 0:
                 self.credible += 1
         if self.attribs == 0:
@@ -443,6 +452,7 @@ class ProbeCpmFileSystem(ov.OctetView):
         for dirsect in self.order_dir(self.best_interleave):
             if dirsect.credible > 0:
                 file.write("  0x%07x %s\n" % (dirsect.lo, str(dirsect.rec.key)))
+                #file.write("  0x%07x %s cred=%d\n" % (dirsect.lo, str(dirsect.rec.key), dirsect.credible))
                 for de in dirsect.dirents:
                     if de.status <= 0x20:
                         file.write("    " + str(de) + "\n")
@@ -507,6 +517,7 @@ class ProbeCpmFileSystem(ov.OctetView):
         '''
 
         dirorder = [x.credible for x in self.order_dir(order)]
+        # self.log.write("DIL " + str(order) + " > " + str(dirorder) + "\n")
 
         # Trim incredible and empty dirsects from the tail
         while dirorder and dirorder[-1] <= 0:

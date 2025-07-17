@@ -194,12 +194,12 @@ class BinTree(BinTreeBranch):
             i = ""
         return "0x" + self.adrfmt % lo + "…" + self.adrfmt % hi + i.ljust(self.separators_width)
 
-    def render(self, default_width=32):
+    def render(self, line_length=32):
         ''' Rendering iterator with padding '''
         prev_line = None
         repeat_line = 0
         pending = None
-        for leaf in self.iter_padded(pad_width=default_width):
+        for leaf in self.iter_padded(pad_width=line_length):
             if isinstance(leaf, self.leaf_class):
                 for line in leaf.render():
                     if line == prev_line:

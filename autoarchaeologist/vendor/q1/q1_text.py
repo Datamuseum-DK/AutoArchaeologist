@@ -45,5 +45,5 @@ class Q1Text():
             for rec in this.iter_rec():
                 if len(rec) <= 128:
                     w = len(rec)
-                ov.Octets(tmp, lo = rec.lo, hi = rec.hi, width=w, ).insert()
+                ov.Octets(tmp, lo = rec.lo, hi = rec.hi, line_length=w, ).insert()
             tmp.add_interpretation(title="HexDump")

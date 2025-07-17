@@ -28,6 +28,7 @@ class Sector(ov.Octets):
         head=None,
         sect=None,
         lo=None,
+        hi=None,
         unread_note=None,
         **kwargs,
     ):
@@ -35,10 +36,12 @@ class Sector(ov.Octets):
             lo = tree.seclo[(cyl, head, sect)]
         else:
             cyl, head, sect = tree.losec[lo]
+        if hi is None:
+            hi = lo + tree.width[(cyl, head, sect)]
         super().__init__(
             tree,
             lo,
-            width=tree.width[(cyl, head, sect)],
+            hi=hi,
             **kwargs,
         )
         self.cyl = cyl
@@ -135,7 +138,7 @@ class Disk(ov.OctetView):
         if unread_pattern is None:
             unread_pattern = b'_UNREAD_' * (physsect // 8)
         self.unread_pattern = unread_pattern
-        super().__init__(this, default_width=physsect)
+        super().__init__(this, line_length=physsect)
 
     def iter_chsb(self):
         ''' Iterate all CHSB '''

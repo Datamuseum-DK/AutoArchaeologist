@@ -508,35 +508,32 @@ class Artifact(result_page.ResultPage):
         ''' Descriptions, one per line '''
         return "<br>\n".join(sorted(self.descriptions))
 
-    def hexdump(self, lo, hi, width=32, fmt="%02x"):
+    def hexdump(self, lo, hi, line_length=32, fmt="%02x"):
         ''' General (hex)dump helper '''
-        n = (hi - lo) // width
-        for _i in range(n):
-            octets = self.type_case.decode(self[lo:lo+width])
-            dump = " ".join(fmt % x for x in self[lo:lo+width])
-            yield dump + "   ┆" + octets + "┆"
-            lo += width
-        if lo == hi:
-            return
-        octets = self.type_case.decode(self[lo:hi])
-        dump = " ".join(fmt % x for x in self[lo:hi])
-        pad = " " * (len(fmt % 0xff) + 1) * (width - (hi - lo))
-        yield dump + pad + "   ┆" + octets + "┆"
+        pad = ""
+        for ptr in range(lo, hi, line_length):
+            end = ptr + line_length
+            if end > hi:
+                pad = (end - hi) * (" " * (len(fmt % 0xff) + 1))
+                end = hi
+            dump = " ".join(fmt % x for x in self[ptr:end])
+            octets = self.type_case.decode(self[ptr:end])
+            yield dump + pad + "   ┆" + octets + "┆"
 
-    def html_default_interpretation(self, file, this, max_lines=None, width=None, **kwargs):
+    def html_default_interpretation(self, file, this, max_lines=None, line_length=None, **kwargs):
         ''' Default interpretation is a hexdump '''
 
         if max_lines is None:
             max_lines = self.top.MAX_LINES
-        if width is None:
-            width = 32
+        if line_length is None:
+            line_length = 0x20
         file.write("<H3>Hex Dump</H3>\n")
         file.write("<pre>\n")
         tmp = ov.OctetView(this)
         if len(self._keys) > max_lines:
-            file.write("Dumping the first 0x%x bytes of each record\n" % width)
+            file.write("Dumping the first 0x%x bytes of each record\n" % line_length)
             for rec in sorted(self._keys.values()):
-                ov.Octets(tmp, lo = rec.lo, hi=rec.hi, width=width, maxlines=1).insert()
+                ov.Octets(tmp, lo = rec.lo, hi=rec.hi, line_length=line_length, maxlines=1).insert()
         for cnt, line in enumerate(tmp.render(**kwargs)):
             if max_lines and cnt > max_lines:
                 file.write("[…truncated at %d lines…]\n" % max_lines)

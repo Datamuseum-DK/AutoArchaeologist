@@ -20,16 +20,15 @@ from . import datastruct
 class Octets(bintree.BinTreeLeaf):
     ''' Base class, just some random octets '''
 
-    def __init__(self, tree, lo, width=None, hi=None, maxlines=None, default_width=32):
+    def __init__(self, tree, lo, width=None, hi=None, maxlines=None, line_length=32):
         if hi is None:
             assert width is not None
             hi = lo + width
         assert hi > lo
         if width is not None:
             if lo + width != hi:
-                print("BAD WIDTH", tree, hex(lo), hex(width), hex(hi))
-                #exit(2)
-            #assert lo + width == hi
+                print("BAD WIDTH", tree.this, hex(lo), hex(width), hex(hi))
+            assert lo + width == hi
         self.tree = tree
         self.this = tree.this
         self.maxlines = maxlines
@@ -37,7 +36,7 @@ class Octets(bintree.BinTreeLeaf):
         if width is None:
             width = len(self)
         self.width = width
-        self.default_width = default_width
+        self.line_length = line_length
 
     def __len__(self):
         return self.hi - self.lo
@@ -81,7 +80,7 @@ class Octets(bintree.BinTreeLeaf):
 
     def render(self):
         ''' Render hexdumped + text-column '''
-        hd = self.this.hexdump(lo=self.lo, hi=self.hi, width=self.default_width)
+        hd = self.this.hexdump(lo=self.lo, hi=self.hi, line_length=self.line_length)
         hd = list(hd)
         if self.maxlines is None:
             yield from hd
@@ -104,13 +103,13 @@ class FillRecord(Octets):
 class EmptyRecord(Octets):
     ''' ... '''
 
-    def __init__(self, tree, lo, hi, width):
+    def __init__(self, tree, lo, hi, line_length):
         super().__init__(tree, lo=lo, hi=hi)
-        self.width = width
+        self.line_length = line_length
 
     def render(self):
         ''' ... '''
-        yield from self.this.hexdump(self.lo, self.hi, width=self.width)
+        yield from self.this.hexdump(self.lo, self.hi, line_length=self.line_length)
 
 class Dump(Octets):
     ''' basic (hex)dump '''
@@ -451,11 +450,11 @@ def Array(count, what, **kwargs):
 class OctetView(bintree.BinTree):
     ''' ... '''
 
-    def __init__(self, this, default_width=32):
+    def __init__(self, this, line_length=32):
         self.this = this
         self.separators = None
         self.separators_width = 0
-        self.default_width = default_width
+        self.line_length = line_length
         hi = len(this)
         super().__init__(
             lo = 0,
@@ -483,12 +482,12 @@ class OctetView(bintree.BinTree):
                 FillRecord(self, lo=fm[0], hi=to[0]).insert()
                 continue
             wid = to[0] - fm[0]
-            for o in range(0, wid, self.default_width):
+            for o in range(0, wid, self.line_length):
                 EmptyRecord(
                     self,
                     lo=fm[0] + o,
-                    hi=fm[0] + min(o + self.default_width, wid),
-                    width=self.default_width
+                    hi=fm[0] + min(o + self.line_length, wid),
+                    line_length=self.line_length
                 ).insert()
 
         if self.separators:
@@ -496,7 +495,7 @@ class OctetView(bintree.BinTree):
             self.separators_width = max(len(y) for x, y in self.separators)
         else:
             self.separators_width = 0
-        yield from super().render(default_width=self.default_width)
+        yield from super().render(line_length=self.line_length)
 
     def add_interpretation(self, title="OctetView", more=False, **kwargs):
         ''' Render via UTF-8 file '''

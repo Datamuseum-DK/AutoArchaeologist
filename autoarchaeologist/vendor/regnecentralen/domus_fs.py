@@ -268,6 +268,7 @@ class Cat():
                 catent.commit(self.pnamespace)
             except:
                 print("CEFAIL", catent)
+                raise
         for catent in self.catents:
             if not catent.is_subcat:
                 continue

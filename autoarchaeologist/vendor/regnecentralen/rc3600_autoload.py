@@ -25,7 +25,7 @@ class Preamble(ov.Struct):
             more=True,
         )
         if 0xffe0 < self.wc.val < 0xfff8:
-            print("PP", hex(self.wc.val), hex(self.hi), hex(len(tree.this)))
+            print(tree.this, "PP", hex(self.wc.val), hex(self.hi), hex(len(tree.this)))
             self.add_field(
                 "preamble",
                 ov.Array(0xffff - self.wc.val, ov.Be16,)
