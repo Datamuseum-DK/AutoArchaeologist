@@ -772,6 +772,8 @@ class ComalStatement():
     def render(self):
         ''' render as statement '''
         stream = list(self.this[3:])
+        if len(stream) == 0:
+            return
         tokens = list(self.render_statement(stream))
         txt = " ".join(tokens)
         if not stream or stream[0] == 0xe2:
@@ -877,7 +879,7 @@ class ComalUDAS():
         self.this = this
 
         self.variables = []
-        for offset in range(104*2, self.up.u_dvs * 2, 10):
+        for offset in range(104*2, min(self.up.u_dvs * 2, len(this)-9), 10):
             self.variables.append(ComalVariable(self.up, self.this[offset:offset + 10]))
 
     def html_detailed(self, fo, _this):
