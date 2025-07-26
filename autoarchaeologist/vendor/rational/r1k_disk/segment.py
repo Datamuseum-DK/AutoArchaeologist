@@ -13,8 +13,29 @@ from ....base import bitview as bv
 
 from .defs import AdaArray, ELIDE_INDIR, LSECSHIFT, LSECSIZE, SegNameSpace
 from .object import ObjSector
+from . import user_data
 
 UNREAD = memoryview(b'_UNREAD_' * (LSECSIZE // 8))
+
+class UserData(bv.Bits):
+    ''' USER_DATA field '''
+    def __init__(self, tree, lo):
+        super().__init__(tree, lo, width=9)
+        self.val = int(self.bits(), 2)
+
+    def render(self):
+        yield "%03x(%s)" % (self.val, user_data.user_data_to_string(self.val))
+
+class Family(bv.Struct):
+    ''' ... '''
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            up_=-10,
+            proc_=-10,
+            seq_=-32,
+        )
 
 class Extent(bv.Struct):
     ''' ... '''
@@ -123,15 +144,16 @@ class SegmentDesc(bv.Struct):
             vpid_=-10,
             segid_=-24,
             snapshot_=-31,
-            other2a_=-8,
-            col9_=-9,
+            other2a_=-8,  # 0x02 probably "DELETED"
+            user_data_=UserData,
             other3a__=bv.Constant(17, 0x200),
             vol_=-4,
             other3c_=-13,
-            bootno_=-10,
-            col5b__=bv.Constant(10, 0x0),
-            col5d_=-32,
-            version_=-22,
+            #bootno_=-10,
+            #col5b__=bv.Constant(10, 0x0),
+            #col5d_=-32,
+            family_=Family,
+            generation_=-22,
             npg_=-31,
             other6__=bv.Constant(14, 0x2005),
             multiplier_=-32,
@@ -200,13 +222,13 @@ class SegmentDesc(bv.Struct):
             #print("E", bits[-1])
         that = ovtree.this.create(records=bits)
         that.add_note("vpid_%04d" % self.vpid.val)
-        that.add_note("tag_%02x" % self.col9.val)
-        seg = Segment(self.vpid.val, self.segid.val, self.version.val, that)
+        that.add_note("tag_%03x" % self.user_data.val)
+        seg = Segment(self.vpid.val, self.segid.val, self.generation.val, that)
         r1ksys.add_segment(seg)
         
         self.namespace = SegNameSpace(
             parent = ovtree.namespace,
-            name = seg.name + "(0x%x)" % self.version.val,
+            name = seg.name + "(0x%x)" % self.generation.val,
             priv = self,
             this = that,
         )

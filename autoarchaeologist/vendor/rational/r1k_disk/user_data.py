@@ -31,8 +31,45 @@ user_data_strings = {
     0x074: "Code_Segment_Manager.Open",
     0x075: "EEDB_File_Generic.Code_Segment_Ops.Create",
     0x076: "Testbed_User_Interface..Code_Segment_Ops.Creat",
-# 0x078-0x095 -> code@ 0x207b	"Manager" ?  
-# 0x096-0x0b3 -> code@ 0x2083	"Data" ?
+
+    # 0x78…0x95 range for "Manager"
+    0x079: "ADA Manager",
+    0x07a: "DDB Manager",
+    0x07b: "FILE Manager",
+    0x07c: "USER Manager",
+    0x07d: "GROUP Manager",
+    0x07e: "SESSION Manager",
+    0x07f: "TAPE Manager",
+    0x080: "TERMINAL Manager",
+    0x081: "DIRECTORY Manager",
+    0x082: "CONFIGURATION Manager",
+    0x083: "CODE_SEGMENT Manager",
+    0x084: "LINK Manager",
+    0x085: "NULL_DEVICE Manager",
+    0x086: "PIPE Manager",
+    0x087: "ARCHIVED_CODE Manager",
+    0x088: "Program_Library Manager",	# Kernel CLI says "unknown Manager"
+    0x089: "1017 Manager",	# Kernel CLI says "unknown Manager"
+
+    # 0x96…0xb3 range for "Data"
+    0x097: "ADA data",
+    0x098: "DDB data",
+    0x099: "FILE data",
+    0x09a: "USER data",
+    0x09b: "GROUP data",
+    0x09c: "SESSION data",
+    0x09d: "TAPE data",
+    0x09e: "TERMINAL data",
+    0x09f: "DIRECTORY data",
+    0x0a0: "CONFIGURAITON data",
+    0x0a1: "CODE_SEGMENT data",
+    0x0a2: "LINK data",
+    0x0a3: "NULL_DEVICE data",
+    0x0a4: "PIPE data",
+    0x0a5: "ARCHIVED_CODE data",
+    0x0a6: "Program_Library data",	# Kernel CLI says "unknown Data"
+    0x0a7: "1017 data",			# Kernel CLI says "unknown Data"
+
     0x0c8: "AOE session maps",
     0x0c9: "Session heap",
     0x0ca: "Search_List",
@@ -105,4 +142,4 @@ def user_data_to_string(x):
         return "?Data"
     if 0x200 <= x <= 0x2ff:
         return "Job_Segment for Job"
-    return "unknown(0x03x)" % x
+    return "unknown"
