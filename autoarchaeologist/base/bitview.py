@@ -102,7 +102,7 @@ class BitView(bintree.BinTree):
     def add_interpretation(self, title="BitView", more=False, **kwargs):
         ''' Render via UTF-8 file '''
         with self.this.add_utf8_interpretation(title, more=more) as file:
-            for line in self.render(default_width=128, **kwargs):
+            for line in self.render(line_length=128, **kwargs):
                 file.write(line + '\n')
 
 class Opaque(Bits):
