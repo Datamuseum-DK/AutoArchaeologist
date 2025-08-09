@@ -16,7 +16,12 @@ class Rc850(cpm_exc.DdhfExcavationCpm):
 
     ''' All RC850 artifacts '''
 
+    MEDIA_TYPES = (
+        '8" Floppy Disk',
+    )
+
     BITSTORE = (
+        "RC/RC850",
         "RC/RC850/CPM",
     )
 
