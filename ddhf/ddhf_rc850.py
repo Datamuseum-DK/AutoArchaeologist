@@ -22,6 +22,7 @@ class Rc850(cpm_exc.DdhfExcavationCpm):
 
     BITSTORE = (
         "RC/RC850",
+        "RC/RC850/SW",
         "RC/RC850/CPM",
     )
 
