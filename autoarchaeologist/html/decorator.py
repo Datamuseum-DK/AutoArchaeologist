@@ -215,7 +215,10 @@ class Decorator():
                 fo.write('</td>')
                 fo.write('<td>' + this.html_description() + "</td>\n")
                 fo.write("</tr>\n")
-                fo.write("<tr>\n")
+                if n & 1:
+                    fo.write('<tr class="stripe">\n')
+                else:
+                    fo.write("<tr>\n")
                 fo.write("<td></td>")
                 fo.write("<td></td>")
                 fo.write('<td style="font-size: 70%;">')

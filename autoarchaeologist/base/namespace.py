@@ -186,8 +186,11 @@ class NameSpace():
         file.write('  </thead>\n')
 
         file.write('  <tbody>\n')
-        for row in tbl:
-            file.write('    <tr class="stripe">\n')
+        for ln, row in enumerate(tbl):
+            if ln & 1:
+                file.write('    <tr class="stripe">\n')
+            else:
+                file.write('    <tr>\n')
             for colno, col in enumerate(row):
                 if col is None:
                     col = '-'
