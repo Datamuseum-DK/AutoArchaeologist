@@ -109,9 +109,9 @@ class SpaceInfo(MetaTapeFile):
             widths, (
                 "?1",
                 "vpid",
-                "?3",
-                "?4",
-                "?5",
+                "kind",
+                "objno",
+                "space",
                 "?6",
                 "NBLK",
                 "?8",
