@@ -40,6 +40,7 @@ class Q1(ddhf.DDHFExcavation):
     #MAX_LINES = 1000
 
     BITSTORE = (
+        "-30006593", # Bagit kryoflux
         #"30006592",
         "-30006119",
         "-30006120",
