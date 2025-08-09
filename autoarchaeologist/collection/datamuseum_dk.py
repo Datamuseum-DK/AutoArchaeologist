@@ -12,10 +12,11 @@
 import sys
 import os
 import mmap
+import zipfile
 import urllib.request
 
 import ddhf_bitstore_metadata
-import ddhf_bitstore_metadata.sections.media as media
+from ddhf_bitstore_metadata.sections import media
 
 from ..base import artifact
 from ..base import excavation
@@ -39,7 +40,7 @@ if BS_HOME is None:
 BITSTORE_FORMATS = {
     "PDF": False,
     "MP4": False,
-    "BAGIT": False,
+    "BAGIT": True,
     "TAR": True,
     "SIMH-TAP": simh_tap_file.SimhTapContainer,
     "ASCII": True,
@@ -88,21 +89,168 @@ class FromBitStore():
         if nbr and not 30000000 <= nbr <= 39999999:
             nbr = None
         if nbr is not None:
-            self.fetch_single(arg)
+            self.process_artifact(arg)
         else:
-            self.fetch_pattern(arg)
+            self.process_keyword(arg)
+
+    def process_keyword(self, arg):
+        ''' Fetch and parse the keyword page from the wiki '''
+
+        metalist = self.fetch_wiki_source('Bits:Keyword/' + arg)
+        lines = metalist.split("\n")
+        while lines:
+            line1 = lines.pop(0)
+            if line1[:9] == '|[[Bits:3':
+                pass
+            elif PRIVATE_ACCESS and line1[:10] == '|([[Bits:3':
+                pass
+            else:
+                continue
+
+            line2 = lines.pop(0)
+            if '<s>' in line2:
+                continue
+            if not PRIVATE_ACCESS and '(' in line2:
+                continue
+
+            ident = line1.split("Bits:")[1][:8]
+            if ident in self.blacklist:
+                continue
+            _line3 = lines.pop(0)	# Excavation
+            line4 = lines.pop(0)
+            line5 = lines.pop(0)
+            j = self.FORMATS.get(line4[1:])
+            if j is None:
+                print("FORMAT? --", line4, line5)
+                continue
+            if not j:
+                continue
+            self.process_artifact(ident)
+
+    def process_artifact(self, arg):
+        ''' Fetch and parse the metadata page from the wiki '''
+
+        if arg in self.loaded or arg in self.blacklist:
+            return
+
+        metatxt = self.fetch_meta(arg)
+        if metatxt is None:
+            print(arg, "Could not fetch meta")
+            return
+
+        meta = ddhf_bitstore_metadata.internals.metadata.MetadataBase(metatxt)
+        if meta is None:
+            print(arg, "Could not load meta")
+            return
+
+        if not hasattr(meta, "Media"):
+            print(arg, "Meta has no media.* section")
+            return
+
+        if self.media_types and not self.check_media_type(meta):
+            # silent
+            return
+
+        handler = self.FORMATS.get(meta.BitStore.Format.val)
+        if handler is None:
+            print(arg, "Ignored, unknown format", meta.BitStore.Format.val)
+            return
+
+        if handler is False:
+            # media section check should have spotted this ?
+            return
+
+        summary = self.find_summary(meta)
+        if not summary:
+            print(arg, "Ignored, no Summary found")
+            return
+
+        self.loaded.add(arg)
+
+        if meta.BitStore.Format.val == "BAGIT":
+            self.add_bagit(arg, meta)
+            return
+
+        b = self.fetch_artifact_contents(arg, int(meta.BitStore.Size.val))
+
+        self.add_one_artifact(arg, meta, handler, b)
+
+    def add_bagit(self, arg, meta):
+        ''' Add a bagit artifact '''
+
+        zfn = self.fetch_artifact_filename(arg)
+        with zipfile.ZipFile(zfn) as zf:
+            for zi in zf.infolist():
+                if zi.is_dir():
+                    continue
+                if '/data/' not in zi.filename:
+                    continue
+                zbn = os.path.basename(zi.filename)
+                if zbn[-4:].lower() == ".imd":
+                    handler = self.FORMATS["IMAGEDISK"]
+                else:
+                    print(arg, "BAGIT", "ignoring", zbn)
+                    continue
+
+                with zf.open(zi.filename) as zfi:
+                    zb = zfi.read()
+
+                self.add_one_artifact(arg, meta, handler, zb, "/" + zbn)
+
+    def add_one_artifact(self, arg, meta, handler, octets, suff=""):
+        ''' Add one artifact '''
+
+        if handler is not True:
+            try:
+                octets = handler(self.top, octets)
+            except AssertionError:
+                raise
+            except Exception as err:
+                print(arg, "Handler", handler.__name__, "failed with", [err])
+                print(repr(sys.exc_info()))
+                return
+
+        link_summary = '<A href="' + BS_HOME + '/wiki/Bits:' + arg + '">'
+        link_summary += "Bits:" + arg + suff + '</a>&nbsp'
+        link_summary += self.find_summary(meta)
+
+        try:
+            this = self.top.add_top_artifact(octets, description=link_summary)
+        except excavation.DuplicateArtifact as why:
+            this = why.that
+        except:
+            raise
+
+        if handler is not True:
+            this.add_type(handler.__name__)
+        self.impose_geometry(meta, this)
+        self.set_media_type(meta, this)
+
+        self.add_symlink(arg, this)
+
+    def add_symlink(self, arg, this):
+        ''' Add symlink from 3xxxxxxx number '''
+
+        symlink = os.path.join(self.top.html_dir, arg + ".html")
+        try:
+            os.remove(symlink)
+        except FileNotFoundError:
+            pass
+        os.symlink(self.top.basename_for(this), symlink, )
 
     def cache_fetch_file(self, key, url):
         ''' Fetch something if not cached '''
         cache_file = os.path.join(self.cache_dir, key)
         try:
-            fi = open(cache_file, "rb")
+            with open(cache_file, "rb") as file:
+                pass
             return cache_file
         except FileNotFoundError:
             pass
         print("fetching " + url)
         try:
-            body = urllib.request.urlopen(url).read()
+            with urllib.request.urlopen(url) as fin:
+                body = fin.read()
         except urllib.error.HTTPError:
             return None
         with open(cache_file, "wb") as file:
@@ -147,13 +295,13 @@ class FromBitStore():
         body = body.split('</textarea>')[0]
         return body
 
-    def fetch_artifact_file(self, arg):
+    def fetch_artifact_filename(self, arg):
         ''' Fetch the actual bits from the bitstore '''
         url = PROTOCOL + '://' + SERVERNAME + "/bits/" + arg
         filename = self.cache_fetch_file(arg + ".bin", url)
         return filename
 
-    def fetch_artifact(self, arg, expected):
+    def fetch_artifact_contents(self, arg, expected):
         ''' Fetch the actual bits from the bitstore '''
         url = PROTOCOL + '://' + SERVERNAME + "/bits/" + arg
         body = self.cache_fetch(arg + ".bin", url)
@@ -178,145 +326,34 @@ class FromBitStore():
 
         return None
 
-    def fetch_single(self, arg):
-        ''' Fetch and parse the metadata page from the wiki '''
-        if arg in self.loaded or arg in self.blacklist:
-            return
-        metatxt = self.fetch_meta(arg)
-        if metatxt is None:
-            print("Could not fetch", arg)
-            return
-
-        meta = ddhf_bitstore_metadata.internals.metadata.MetadataBase(metatxt)
-        if meta is None:
-            return
-
-        if self.media_types and not self.check_media_type(meta):
-            return
-
-        handler = self.FORMATS.get(meta.BitStore.Format.val)
-        if handler is None:
-            print(arg, "Ignored, unknown format", meta.BitStore.Format.val)
-            return
-        if handler is False:
-            return
-
-        summary = self.find_summary(meta)
-        if not summary:
-            print(arg, "Ignored, no Summary found")
-            return
-
-        link_summary = '<A href="' + BS_HOME + '/wiki/Bits:' + arg + '">'
-        link_summary += "Bits:" + arg + '</a>&nbsp'
-        link_summary += summary
-
-        expected = int(meta.BitStore.Size.val)
-
-        b = self.fetch_artifact(arg, expected)
-
-        self.loaded.add(arg)
-
-        if handler is not True:
-            try:
-                b = handler(self.top, b)
-            except AssertionError:
-                raise
-            except Exception as err:
-                print(link_summary)
-                print("Handler", handler.__name__, "failed with", [err])
-                print(repr(sys.exc_info()))
-                return
-
-        try:
-            this = self.top.add_top_artifact(b, description=link_summary)
-        except excavation.DuplicateArtifact as why:
-            this = why.that
-        except:
-            raise
-
-        if handler is not True:
-            this.add_type(handler.__name__)
-        self.impose_geometry(meta, this)
-        self.set_media_type(meta, this)
-
-        symlink = os.path.join(self.top.html_dir, arg + ".html")
-        try:
-            os.remove(symlink)
-        except FileNotFoundError:
-            pass
-        os.symlink(self.top.basename_for(this), symlink, )
-
-    def fetch_pattern(self, arg):
-        ''' Fetch and parse the keyword page from the wiki '''
-        metalist = self.fetch_wiki_source('Bits:Keyword/' + arg)
-        lines = metalist.split("\n")
-        while lines:
-            line1 = lines.pop(0)
-            if line1[:9] == '|[[Bits:3':
-                pass
-            elif PRIVATE_ACCESS and line1[:10] == '|([[Bits:3':
-                pass
-            else:
-                continue
-
-            line2 = lines.pop(0)
-            if '<s>' in line2:
-                continue
-            if not PRIVATE_ACCESS and '(' in line2:
-                continue
-
-            ident = line1.split("Bits:")[1][:8]
-            if ident in self.blacklist:
-                continue
-            _line3 = lines.pop(0)	# Excavation
-            line4 = lines.pop(0)
-            line5 = lines.pop(0)
-            j = self.FORMATS.get(line4[1:])
-            if j is None:
-                print("FORMAT? --", line4, line5)
-                continue
-            if not j:
-                continue
-            self.fetch_single(ident)
 
     def check_media_type(self, meta):
         ''' Check Media.Type against filter '''
 
-        i = getattr(meta, "Media", None)
-        if i is None:
-            return False
-        i = getattr(i, "Type", None)
-        if i is None or i.val is None:
-            return False
-        return i.val in self.media_types
+        i = getattr(meta.Media, "Type", None)
+        if i and i.val:
+            return i.val in self.media_types
+        return False
 
     def set_media_type(self, meta, this):
         ''' Set Media.Type on artifact '''
 
-        i = getattr(meta, "Media", None)
-        if i is None:
-            return
-        i = getattr(i, "Type", None)
-        if i is None or i.val is None:
-            return
-        this.add_type(i.val)
+        i = getattr(meta.Media, "Type", None)
+        if i and i.val:
+            this.add_type(i.val)
 
-    # XXX: On Wang floppies sectors count from zero
     def impose_geometry(self, meta, this):
         ''' Impose Media.Geometry as records '''
-        if this._keys:
-            # Probably an aliased artifact
+
+        if this.num_rec() > 0: # Probably an aliased artifact
             return
-        i = getattr(meta, "Media", None)
-        if i is None:
-            return
-        i = getattr(i, "Geometry", None)
-        if i is None or i.val is None:
-            return
-        impose_bitstore_geometry(this, i.val)
+        i = getattr(meta.Media, "Geometry", None)
+        if i and i.val:
+            impose_bitstore_geometry(this, i.val)
 
 
 def impose_bitstore_geometry(this, gspec):
+    ''' Impose a bitstore geometry spec on the artifact '''
 
     geom = media.ParseGeometry(gspec, tolerant=True)
     try:
