@@ -118,12 +118,13 @@ class Indir2(Indir):
 class Segment():
     ''' A Segment '''
 
-    def __init__(self, vpid, id, version, this):
+    def __init__(self, vpid, kind, id, version, this):
         self.vpid = vpid
+        self.kind =  kind
         self.id =  id
         self.version = version
         self.this = this
-        self.name = "%03x:%06x" % (vpid, id)
+        self.name = "%03x:%x:%06x" % (vpid, kind, id)
         this.add_note('R1k_Segment')
         this.add_name(self.name)
 
@@ -142,7 +143,8 @@ class SegmentDesc(bv.Struct):
             lo,
             vertical=False,
             vpid_=-10,
-            segid_=-24,
+            kind_=-2,
+            segid_=-22,
             snapshot_=-31,
             other2a_=-8,  # 0x02 probably "DELETED"
             user_data_=UserData,
@@ -223,7 +225,7 @@ class SegmentDesc(bv.Struct):
         that = ovtree.this.create(records=bits)
         that.add_note("vpid_%04d" % self.vpid.val)
         that.add_note("tag_%03x" % self.user_data.val)
-        seg = Segment(self.vpid.val, self.segid.val, self.generation.val, that)
+        seg = Segment(self.vpid.val, self.kind.val, self.segid.val, self.generation.val, that)
         r1ksys.add_segment(seg)
         
         self.namespace = SegNameSpace(
