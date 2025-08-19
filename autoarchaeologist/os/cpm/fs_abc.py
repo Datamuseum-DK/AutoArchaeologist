@@ -367,21 +367,22 @@ class CpmFileSystem(ov.OctetView):
 
     def build_signature(self):
         ''' Build a compact signature describing the filesystem layout '''
-        ils = [self.SECTORS[0]]
         prev = self.SECTORS[0]
+        ils = [prev]
         for n in self.SECTORS[1:]:
             if n < prev:
                 ils.append(n)
             prev = n
-        self.signature = ','.join(
+        self.signature = '_'.join(
             [
             self.name,
             str(self.SECTOR_SIZE),
             str(self.BLOCK_SIZE),
-            str(self.N_DIRENT),
             "0x%x" % self.EXTENT_MASK,
-            "<".join(str(x) for x in ils),
-            "%d:%d-%d:%d" % (*self.TRACKS[0], *self.TRACKS[-1]),
+            str(self.N_DIRENT),
+            "*%d+" % (self.SECTORS[1] - self.SECTORS[0]) + "+".join(str(x) for x in ils),
+            "%d:%d" % self.TRACKS[0],
+            "%d:%d" % self.TRACKS[-1],
             ]
         )
 
