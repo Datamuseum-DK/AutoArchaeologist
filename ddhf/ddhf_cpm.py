@@ -24,6 +24,8 @@ class Cpm(cpm_exc.DdhfExcavationCpm):
         "RC/RC750",
         "RC/RC759",
         "RC/RC850/CPM",
+        "RC/RC850/SW",
+        "RC/RC850",
         "RC/RC890",
         "CR/CR7",
         "CR/CR8",
