@@ -45,9 +45,15 @@ class ProbeDirEnt(ov.Struct):
         )
         self.fname = "%02x:" % self[0] + "".join("%c" % (self[x]&0x7f) for x in range(1,12))
         self.ignore = len(self.name.txt.strip()) == 0
+        self.used = 0
 
     def __repr__(self):
         return "<DE »" + self.name.txt + "«>"
+
+    def __lt__(self, other):
+        if self.name.txt != other.name.txt:
+            return self.name.txt < other.name.txt
+        return self.xh * 32 + self.xl < other.xh * 32 + other.xl
 
     def looks_sane(self):
         ''' Does this dirent look sane ? '''
@@ -122,6 +128,83 @@ class ProbeDirSec(ov.Struct):
             return
         self.credible += 1
 
+class ProbeBlockSize():
+    '''
+       Probe a potential block size
+    '''
+
+    def __init__(self, block_size, block_nos):
+        self.block_size = block_size
+        self.block_nos = block_nos
+        self.max_extent = block_nos * block_size
+        if self.max_extent > 1<<14:
+            self.extent_mask = ((self.max_extent >> 7) - 0x80) >> 7
+        else:
+            self.extent_mask = 0
+        self.shift = 0
+        while self.extent_mask >> self.shift:
+            self.shift += 1
+        self.pro = 0
+        self.contra = 0
+
+    def __str__(self):
+        return "<PBS " + self.render() + ">"
+
+    def render(self):
+        return "%5d 0x%02x +%d -%d" % (self.block_size, self.extent_mask, self.pro, self.contra)
+
+    def __lt__(self, other):
+        return self.pro - self.contra > other.pro - other.contra
+
+    def add_file(self, dirents):
+
+        if sum(x.rc for x in dirents) == 0:
+            return
+
+        if self.extent_mask == 0 or len(dirents) == 1:
+            for n, dent in enumerate(dirents):
+                if self.extent_mask:
+                    # Only extent zero, anything in xl is rc contribution
+                    rc = dent.rc + (dent.xl << 7)
+                    nn = 0
+                else:
+                    # No rc contribution in xl
+                    rc = dent.rc
+                    nn = dent.xh * 32 + dent.xl
+                span = dent.used * self.block_size
+                if nn != n:
+                    self.contra += 1
+                elif rc == 0:
+                    pass
+                elif rc << 7 > span:
+                    # Would have used more block numbers
+                    self.contra += 1
+                elif rc << 7 <= span - self.block_size:
+                    # Used too many block numbers
+                    self.contra += 1
+                else:
+                    self.pro += 1
+        else:
+            contra = 0
+
+            if dirents[0].rc != 0x80 or self.extent_mask != dirents[0].xl:
+                # We have multiple extents, so the first must be full
+                contra += 1
+
+            for n, dent in enumerate(dirents):
+                if dent.rc == 0x80 and (self.extent_mask & dent.xl) != self.extent_mask:
+                    # All full extents must have the mask set
+                    contra += 1
+
+            for n, dent in enumerate(dirents):
+                if dent.xh * 32 + (dent.xl >> self.shift) != n:
+                    contra += 1
+
+            if contra:
+                self.contra += len(dirents)
+            else:
+                self.pro += len(dirents)
+
 class ProbeCpmFileSystem(ov.OctetView):
 
     '''
@@ -195,8 +278,14 @@ class ProbeCpmFileSystem(ov.OctetView):
                 file.write(i)
 
     def find_block_size(self):
-        self.log.write("\n")
-        bsize = 0
+        ''' ... '''
+
+        if self.bnw == 8:
+            bnos = 16
+        else:
+            bnos = 8
+        bs = list(ProbeBlockSize(1<<n, bnos) for n in range(7,17))
+
         files = {}
         for dent in self.iter_dirents():
             if dent.status > 0xf or dent.ignore:
@@ -204,42 +293,24 @@ class ProbeCpmFileSystem(ov.OctetView):
             if dent.fname not in files:
                 files[dent.fname] = []
             files[dent.fname].append(dent)
-
-        def is_cont(x):
-            for n, i in enumerate(x):
-                if i != n:
-                    return False
-            return True
-
-        for fk, dl in files.items():
-            el = list(sorted((x.xh << 5) | x.xl for x in dl))
-            while el and el[-1] == 0:
-                el.pop(-1)
-            if is_cont(el):
-                continue
-            self.extent_mask = 1
-
-        for dent in self.iter_dirents():
-            if dent.status > 0xf or dent.ignore:
-                continue
-            rc = dent.rc + ((dent.xl & self.extent_mask) << 7)
             l = list(self.block_nos(dent))
             if 0 in l:
-                c = l.index(0)
+                dent.used = l.index(0)
             else:
-                c = len(l)
+                dent.used = len(l)
 
-            self.log.write(dent.fname + " rc=0x%03x" % rc)
-            self.log.write(" c=0x%03x" % c + " " + str(dent) + "\n")
-            if c > 0:
-                bsize = max(bsize, (rc << 7) / c)
-        i = 1
-        while i < bsize:
-            i += i
-        self.log.write("Block Size %.2f %d extent_mask = 0x%x\n" % (bsize, i, self.extent_mask))
-        # print(self.this, "Block Size %.2f %d\n" % (bsize, i))
-        self.block_size = i
+        for dents in files.values():
+            dents.sort()
+            for pbs in bs:
+                pbs.add_file(dents)
 
+        self.log.write("\n")
+        self.log.write("Block Sizes:\n")
+        bs.sort()
+        for pbs in bs:
+            self.log.write("   " + pbs.render() + "\n")
+        self.block_size = bs[0].block_size
+        self.extent_mask = bs[0].extent_mask
 
     def report_dir_tracks(self):
         self.log.write("\n")
@@ -452,7 +523,6 @@ class ProbeCpmFileSystem(ov.OctetView):
         for dirsect in self.order_dir(self.best_interleave):
             if dirsect.credible > 0:
                 file.write("  0x%07x %s\n" % (dirsect.lo, str(dirsect.rec.key)))
-                #file.write("  0x%07x %s cred=%d\n" % (dirsect.lo, str(dirsect.rec.key), dirsect.credible))
                 for de in dirsect.dirents:
                     if de.status <= 0x20:
                         file.write("    " + str(de) + "\n")
