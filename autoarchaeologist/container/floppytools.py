@@ -17,43 +17,51 @@ class CHS():
     def __repr__(self):
         return str(self.chs)
 
+class Sector():
+    ''' ... '''
+
+    def __init__(self, line):
+        flds = line.split()
+        self.src = flds[1]
+        self.offset = int(flds[2])
+        self.phys_chs = CHS(flds[3])
+        self.am_chs = CHS(flds[4])
+        self.data = bytes.fromhex(flds[5])
+        self.flags = flds[6:]
+
 class FloppyToolsContainer(artifact.ArtifactFragmented):
     ''' ... '''
 
     def __init__(self, top, filename):
         super().__init__(top)
-        sects = {}
+        psects = {}
+        asects = {}
         for line in open(filename):
-            flds = line.split()
-            if not flds or flds[0] != "sector":
+            if line[:7] != "sector ":
                 continue
-            chs = CHS(flds[2])
-            b = bytes.fromhex(flds[3])
-            sects[chs.chs] = b
-        if not sects:
+            sec = Sector(line)
+            asects[sec.am_chs.chs] = sec
+            osec = psects.get(sec.phys_chs.chs)
+            if osec is None:
+                psects[sec.phys_chs.chs] = sec
+            else:
+                assert osec.data == sec.data
+        if not psects:
             raise EOFError
-        hasbad = False
-        if False:
-            for cyl in range(0, 77):
-                for sect in range(1, 27):
-                    chs = (cyl, 0, sect)
-                    if chs in sects:
-                        continue
-                    sects[chs] = b'_UNREAD_' * 16
-                    print("UNREAD", chs, filename)
-                    hasbad = True
+        if len(psects) == len(asects):
+            order = asects
+        else:
+            order = psects
         offset = 0
-        for chs, octets in sorted(sects.items()):
-            # print(chs, offset, octets)
+        for chs, sect in sorted(order.items()):
             self.add_fragment(
                 artifact.Record(
                     low=offset,
-                    frag=octets,
+                    frag=sect.data,
                     key=chs,
                 )
             )
-            offset += len(octets)
-        if hasbad:
-            self.add_note("BADSECTs")
+            offset += len(sect.data)
         self.completed()
-        print("SELF", self)
+        if order == psects:
+            self.add_note("Using phyical address_marks")
