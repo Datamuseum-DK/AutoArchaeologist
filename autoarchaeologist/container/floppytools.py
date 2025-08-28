@@ -63,5 +63,5 @@ class FloppyToolsContainer(artifact.ArtifactFragmented):
             )
             offset += len(sect.data)
         self.completed()
-        if order == psects:
-            self.add_note("Using phyical address_marks")
+        if len(psects) != len(asects):
+            self.add_note("Using phyical address_marks (p#%d,a#%d)" % (len(psects), len(asects)))
