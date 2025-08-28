@@ -74,3 +74,5 @@ class UnixStat():
         else:
             txt += "-"
         return txt
+
+stat = UnixStat()
