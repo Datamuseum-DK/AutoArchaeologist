@@ -147,29 +147,29 @@ class TarEntry(ov.Struct):
         mode = self.mode.val
         if self.magic.txt != "ustar":
             if self.name.txt[-1] == '/':
-                mode |= self.tree.stat.S_IFDIR
+                mode |= unix_stat.stat.S_IFDIR
             else:
-                mode |= self.tree.stat.S_IFREG
+                mode |= unix_stat.stat.S_IFREG
             return [
-                self.tree.stat.mode_bits(mode),
+                unix_stat.stat.mode_bits(mode),
                 "0",
                 self.uid.val,
                 self.gid.val,
                 self.size.val,
-                self.tree.stat.timestamp(self.mtime.val),
+                unix_stat.stat.timestamp(self.mtime.val),
             ]
 
         if self.flag.txt == "0":
-            mode |= self.tree.stat.S_IFREG
+            mode |= unix_stat.stat.S_IFREG
         elif self.flag.txt == "5":
-            mode |= self.tree.stat.S_IFDIR
+            mode |= unix_stat.stat.S_IFDIR
         return [
-            self.tree.stat.mode_bits(mode),
+            unix_stat.stat.mode_bits(mode),
             "0",
             self.uname.txt,
             self.gname.txt,
             self.size.val,
-            self.tree.stat.timestamp(self.mtime.val),
+            unix_stat.stat.timestamp(self.mtime.val),
         ]
 
     def get_that(self):
@@ -208,7 +208,6 @@ class TarFile(ov.OctetView):
             return
         super().__init__(this)
         ptr = 0
-        self.stat = unix_stat.UnixStat()
         self.namespace = NameSpace(name = "", separator = "", root = this)
         try:
             y = TarEntry(self, ptr).insert()
