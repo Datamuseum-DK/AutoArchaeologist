@@ -41,10 +41,10 @@ class NameSpace():
     '''
 
     KIND = "Namespace"
-    TABLE = (
+    TABLE = [
         ("l", "name"),
         ("l", "artifact"),
-    )
+    ]
 
     def __init__(
         self,
@@ -54,6 +54,7 @@ class NameSpace():
         separator = "/",	# The path separator for children of this node
         root = None,		# The artifact in which the name-space lives.
         priv = None,		# The artifact in which the name-space lives.
+        flds = None,		# iterable yielding fields
     ):
         self.ns_children = []
         self.ns_name = name
@@ -62,6 +63,7 @@ class NameSpace():
         self.ns_this = None
         self.ns_root = None
         self.ns_priv = priv
+        self.ns_flds = flds
         if root:
             self.ns_set_root(root)
         if parent:
@@ -114,13 +116,15 @@ class NameSpace():
 
     def ns_render(self):
         ''' Return path and summary for interpretation table '''
+        if self.ns_flds:
+            flds = self.ns_flds
+        else:
+            flds = []
+
         path = self.ns_path()
         if self.ns_this:
-            return [
-                html.escape(path),
-                self.ns_this,
-                ]
-        return [ path, None ]
+            return flds + [html.escape(path), self.ns_this]
+        return flds + [ path, None ]
 
     def ns_add_child(self, child):
         ''' Add an child under this node'''
