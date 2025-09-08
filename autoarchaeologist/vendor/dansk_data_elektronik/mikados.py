@@ -14,6 +14,8 @@
 from ...base import octetview as ov
 from ...base import namespace
 
+from . import mikados_r
+
 class MikadosTextFile():
     '''
        [30005441] section 5.4.1
@@ -54,7 +56,9 @@ class DiskAdr(ov.Struct):
             f01_=ov.Octet,
             **kwargs,
         )
-        self.lba = (self.f00.val * self.tree.mult) + self.f01.val
+
+    def lba(self):
+        return (self.f00.val * self.tree.mult) + (self.f01.val + self.tree.add)
 
     def __lt__(self, other):
         if self.f00.val < other.f00.val:
@@ -62,7 +66,7 @@ class DiskAdr(ov.Struct):
         return self.f01.val < other.f01.val
 
     def render(self):
-        yield "{DA %04x,%02x (0x%06x)}" % (self.f00.val, self.f01.val, self.lba*256)
+        yield "{DA %04x,%02x (0x%06x)}" % (self.f00.val, self.f01.val, self.lba()*256)
 
 class DiskLabel(ov.Struct):
     ''' [30005441] section 5.3.1 '''
@@ -115,6 +119,14 @@ class DirEnt(ov.Struct):
             self.pname = '░' + self.name.txt[1:].rstrip()
         else:
             self.pname = self.name.txt.rstrip()
+
+        self.ext = None
+
+    def guess_mult(self):
+        return ((self.ext.lo - (self.seg0.f01.val << 8)) // self.seg0.f00.val)>>8
+
+    def guess_add(self):
+        return (self.ext.lo>>8) - (self.tree.mult * self.seg0.f00.val + self.seg0.f01.val)
 
     def render(self):
         if self.unused:
@@ -209,6 +221,8 @@ class Mikados(ov.OctetView):
 class NameSpace(namespace.NameSpace):
     ''' ... '''
 
+    KIND = "Mikados PLADELAGER"
+
     TABLE = (
         ("l", "f04"),
         ("l", "f09"),
@@ -266,6 +280,8 @@ class MikadosDisk(ov.OctetView):
                 77 * 2 * 26 * 256: 26,	# B - 8" 1Mb DDE format
             }.get(len(this), 32)
 
+        print(this, "MULT", hex(self.mult))
+
         y = DiskLabel(self, 0x0).insert()
 
         self.namespace = NameSpace(name = '', root = this, separator = "")
@@ -277,7 +293,12 @@ class MikadosDisk(ov.OctetView):
         self.deleted = {}
         # This loop is based on the hypothesis that some dirent, active or deleted
         # will describe the first extent.
+        trig = {}
         while adr < low:
+            z = bytes(this[adr:adr+10])
+            if z in trig:
+                print(this, "HIT TRIG", hex(adr))
+                break
             y = DirSect(self, adr)
             if y.nok == 0:
                 break
@@ -288,19 +309,44 @@ class MikadosDisk(ov.OctetView):
                 if de.bogus:
                     break
                 if de.valid:
+                    z = bytes(this[de.lo:de.lo+10])
+                    trig[z] = de
                     self.dirents[(de.name.txt, de.typ.txt)] = de
                 if de.deleted:
                     self.deleted[(de.name.txt, de.typ.txt)] = de
-                if de.seg0.f01.val:
-                    low = min(low, de.seg0.lba << 8)
+                #if de.seg0.f01.val:
+                #    low = min(low, de.seg0.lba() << 8)
             adr += 0x100
+
         if not self.dirents and not self.deleted:
             return
 
-        print(this, "MikadosDisk", "mult:", self.mult)
+        howmany = 0
+        self.add = 0
+        mults = []
+        for rec in this.iter_rec():
+            if rec.lo < adr:
+                continue
+            z = bytes(rec.frag[:10])
+            if z in trig:
+                de = trig[z]
+                de.ext = rec
+                mults.append(de.guess_mult())
+                howmany += 1
+                print("Q", " ".join(de.render()), rec, de.guess_mult())
+
+        mults.sort()
+
+        if howmany:
+            self.mult = mults[len(mults)//2]
+            self.add = min(de.guess_add() for de in self.dirents.values() if de.ext is not None)
+        else:
+            self.add = 0
+
+        #print(this, "MikadosDisk", "adr", hex(adr), "any:", any, "mult:", self.mult, "add:", self.add)
 
         for de in self.dirents.values():
-            ptr = de.seg0.lba << 8
+            ptr = de.seg0.lba() << 8
             if ptr and not self.attempt_extents(ptr, de):
                 print(self.this, "Mangled dirent", de)
                 NameSpace(
@@ -320,17 +366,17 @@ class MikadosDisk(ov.OctetView):
 
     def spelunk(self):
         for de in self.deleted.values():
-            ptr = de.seg0.lba << 8
-            self.attempt_extents(ptr, de)
+            ptr = de.seg0.lba() << 8
+            self.attempt_extents(ptr, de, state="deleted")
 
         for lo, hi in list(self.gaps()):
             lo += 0xff
             lo &= ~0xff
             while lo < hi:
-                self.attempt_extents(lo)
+                self.attempt_extents(lo, state="really_deleted")
                 lo += 0x100
 
-    def attempt_extents(self, lo, dirent=None):
+    def attempt_extents(self, lo, dirent=None, state=None):
         ''' Attempt to instantiate a chain of extents at ``lo`` '''
         hdrs = []
         bodies = []
@@ -353,16 +399,18 @@ class MikadosDisk(ov.OctetView):
             bodies.append(Extent(self, lo + 32, width=length))
             if len(hdrs) == hdrs[0].next.val + 1:
                 break
-            lo = hdrs[-1].nextext.lba << 8
+            lo = hdrs[-1].nextext.lba() << 8
         for i, j in zip(hdrs, bodies):
             i.insert()
             j.insert()
         z = self.this.create(records = [y.octets() for y in bodies])
         z.add_note("Mikados_" + hdrs[0].typ.txt)
+        if state:
+            z.add_note(state)
         if dirent:
             pname = dirent.pname
         else:
-            pname = hdrs[0].pname
+            pname = hdrs[0].pname + "*" + state
         NameSpace(
             pname,
             parent = self.namespace,
@@ -376,4 +424,5 @@ examiners = (
     Mikados,
     MikadosDisk,
     MikadosTextFile,
+    mikados_r.MikadosR,
 )
