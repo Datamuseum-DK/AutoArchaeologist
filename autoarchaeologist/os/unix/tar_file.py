@@ -49,23 +49,26 @@ class TarEntry(ov.Struct):
     ''' One tar(1) file entry '''
 
     def __init__(self, tree, lo):
+        if tree.this[lo] == 0:
+            raise End()
+
         csf = tree.this[lo+148:lo+156]
-        if csf[-1] != 0x20:
+        if csf[-1] not in (0x00, 0x20):
             if sum(tree.this[lo:lo+0x200]) == 0:
                 raise End()
-            raise Invalid("Checksum[-1] non-space")
-        if csf[-2] != 0x00:
-            raise Invalid("Checksum[-2] non-zero")
+            raise Invalid("Checksum[-1] non-space (0x%02x)" % csf[-1])
+        if csf[-2] not in (0x00, 0x20):
+            raise Invalid("Checksum[-2] non-zero (0x%02x)" % csf[-1])
 
         for i in csf:
             if i not in b'01234567 \x00':
-                raise Invalid("Checksum not valid %s" % str(csf))
+                raise Invalid("Checksum not valid (0x%02x) %s" % (i, str(csf)))
 
         csf = bytes(csf[:-2]).lstrip(b'\x20')
         try:
             rsum = int(csf, 8)
         except ValueError:
-            raise Invalid("Checksum not valid %s" % str(csf))
+            raise Invalid("Checksum not octal %s" % str(csf))
 
         csum = 0
         for i in range(0x200):
@@ -131,7 +134,7 @@ class TarEntry(ov.Struct):
         ):
             fld.txt = fld.txt.strip()
 
-        if self.prefix.txt:
+        if 0 and self.prefix.txt:
             print(self.tree.this, "HAS TAR-PREFIX", self)
         self.name.txt = self.filename
         self.namespace = tree.namespace.ns_find(
@@ -174,6 +177,7 @@ class TarEntry(ov.Struct):
 
     def get_that(self):
         ''' ... '''
+        trunc = False
         if self.flag.txt not in ('', '0'):
             self.that = None
             return self.hi
@@ -181,10 +185,11 @@ class TarEntry(ov.Struct):
             self.that = None
             return self.hi
         if self.hi + self.size.val > len(self.tree.this):
-            print(self.this, "TAR past end", self)
-            self.that = None
-            return self.hi
-        self.that = ov.This(self.tree, lo=self.hi, width = self.size.val).insert()
+            print(self.this, "TAR truncated", self)
+            self.that = ov.This(self.tree, lo=self.hi, hi=len(self.tree.this)).insert()
+            self.that.that.add_note("Tarfile:Truncated")
+        else:
+            self.that = ov.This(self.tree, lo=self.hi, width = self.size.val).insert()
         if self.namespace.ns_this is None:
             self.namespace.ns_set_this(self.that.that)
         else:
@@ -214,7 +219,7 @@ class TarFile(ov.OctetView):
             ptr = y.get_that()
         except End:
             return
-        except Invalid:
+        except Invalid as err:
             return
         this.add_type("Tarfile")
         this.add_note("Tarfile")
@@ -222,13 +227,16 @@ class TarFile(ov.OctetView):
             try:
                 y = TarEntry(self, ptr).insert()
                 ptr = y.get_that()
+                if y.that is False:
+                    break
             except End:
                 y = EndOfArchive(self, ptr, width = 512).insert()
                 ptr = y.hi
                 break
             except Invalid as err:
                 print(this, "ERR", err)
-                y = ov.Dump(self, ptr, ptr + 512).insert()
+                #print(this, bytes(this[ptr:ptr+512]).hex())
+                y = ov.Dump(self, lo=ptr, hi=ptr + 512).insert()
                 ptr = y.hi
                 break
         if ptr < len(this):
