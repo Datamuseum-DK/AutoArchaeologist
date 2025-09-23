@@ -13,6 +13,8 @@ from autoarchaeologist.base import type_case
 
 from autoarchaeologist.os.unix import unix_fs
 from autoarchaeologist.os.unix import compress
+from autoarchaeologist.os.unix import tar_file
+from autoarchaeologist.os.unix import cpio_file
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
 
@@ -46,6 +48,8 @@ class RC900(ddhf.DDHFExcavation):
 
         self.add_examiner(unix_fs.FindUnixFs)
         self.add_examiner(compress.Compress)
+        self.add_examiner(tar_file.TarFile)
+        self.add_examiner(cpio_file.CpioFile)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
 
