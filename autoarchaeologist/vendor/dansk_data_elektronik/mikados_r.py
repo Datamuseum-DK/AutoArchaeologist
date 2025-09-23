@@ -100,4 +100,4 @@ class MikadosR(ov.OctetView):
         if adr + 4 < len(this):
             ov.Opaque(self, lo=adr + 4, hi=len(this)).insert()
 
-        self.add_interpretation(more=False)
+        self.add_interpretation(more=False, title="Mikados Reloc File")
