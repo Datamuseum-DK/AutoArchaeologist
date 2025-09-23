@@ -45,12 +45,60 @@ class CpioOldBeEnt(ov.Struct):
                 self.add_field("namepad", 1)
         self.done()
 
+class CpioNewPosix(ov.Struct):
+    ''' ... '''
+
+    MAGIC = b'070707'
+    NAME = "CPIO.POSIX"
+
+    bad = False
+
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            h_magic_=ov.Text(6),
+            h_dev_=ov.Text(6),
+            h_ino_=ov.Text(6),
+            h_mode_=ov.Text(6),
+            h_uid_=ov.Text(6),
+            h_gid_=ov.Text(6),
+            h_nlink_=ov.Text(6),
+            h_rdev_=ov.Text(6),
+            h_mtime_=ov.Text(11),
+            h_namesize_=ov.Text(6),
+            h_filesize_=ov.Text(11),
+            more=True,
+        )
+        if self.h_magic.txt != "070707":
+            self.bad = True
+        else:
+            for v in (
+                self.h_magic,
+                self.h_dev,
+                self.h_ino,
+                self.h_mode,
+                self.h_uid,
+                self.h_gid,
+                self.h_nlink,
+                self.h_rdev,
+                self.h_mtime,
+                self.h_namesize,
+                self.h_filesize,
+            ):
+                v.val = int(v.txt, 8)
+            self.add_field("h_filename", ov.Text(self.h_namesize.val))
+        self.done()
+
 class CpioFile(ov.OctetView):
 
     ''' A UNIX cpio(1) file '''
 
-    FORMATS = {
+    FORMATS_SHORT = {
         CpioOldBeEnt.MAGIC: CpioOldBeEnt,
+    }
+    FORMATS_TEXT = {
+        CpioNewPosix.MAGIC: CpioNewPosix,
     }
 
     def __init__(self, this):
@@ -59,7 +107,9 @@ class CpioFile(ov.OctetView):
 
         magic = (this[0] << 8) | this[1]
 
-        entcls = self.FORMATS.get(magic)
+        entcls = self.FORMATS_SHORT.get(magic)
+        if entcls is None:
+            entcls = self.FORMATS_TEXT.get(this[0:6])
         if entcls is None:
             return
 
@@ -67,17 +117,16 @@ class CpioFile(ov.OctetView):
 
         ptr = 0
         entries = []
-        final = False
-        while ptr < len(this):
+        final = True
+        while ptr < len(this) and ptr < (1<<20):
             y = entcls(self, ptr).insert()
-            #print(hex(ptr), y)
             if y.bad:
                 return
             ptr = y.hi
             if y.h_filesize.val > 0:
                 z = ov.Opaque(self, ptr, width=y.h_filesize.val).insert()
                 ptr = z.hi
-                if y.h_filesize.val & 1:
+                if 0 and y.h_filesize.val & 1:
                     w = ov.Opaque(self, ptr, width=1).insert()
                     ptr = w.hi
             else:
@@ -89,10 +138,11 @@ class CpioFile(ov.OctetView):
 
         if not final:
             return
+
         this.add_type(entcls.NAME)
 
         print(this, "TAIL", hex(len(this) - ptr))
-        ov.Opaque(self, lo=ptr, hi=len(this)).insert()
+        ov.Opaque(self, lo=ptr + 0x100, hi=len(this)).insert()
 
         namespace = uns.NameSpace(name = "", separator = "", root = this)
 
