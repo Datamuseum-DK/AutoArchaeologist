@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # See LICENSE file for full text of license
+#
+# XXX: sparse files has blockno==0
+# XXX: linked files causes multiple inode entries
 
 '''
    UNIX Filesystem
@@ -20,7 +23,6 @@
 
    The Superblock must provide the following fields:
 
-       .fs_nindir       Number of blockno in an indirect block
        .fs_imax         Highest inode number
        .fs_bmax         Highest block number
 
@@ -58,6 +60,9 @@ from ...base import octetview as ov
 
 class NotCredible(Exception):
     ''' dont trust this '''
+
+class Tail(ov.Opaque):
+    ''' ... '''
 
 class NameSpace(namespace.NameSpace):
     ''' Unix NameSpace '''
@@ -127,6 +132,7 @@ class Inode(ov.Struct):
         self.di_mtime = 0
         self.that = None
         self.badblocks = 0
+        self.inserted = False
 
         super().__init__(*args, **kwargs)
 
@@ -136,6 +142,8 @@ class Inode(ov.Struct):
 
         self.di_type = self.di_mode & self.S_ISFMT
         self.fix_di_addr()
+        if self.di_size > 0:
+            print(self.tree.this, "INDIR", self.di_inum, self.di_size, self.di_ib)
 
     def __iter__(self):
         if self.di_type not in (0, self.S_IFDIR, self.S_IFREG):
@@ -143,18 +151,20 @@ class Inode(ov.Struct):
         block_no = 0
         yet = self.di_size
         while yet:
-            #print("Ino", self.di_inum, "bno", block_no)
             b = self.get_block(block_no)
             if b is None or len(b) == 0:
                 return
-            b.insert()
-            #b.rendered = "Inode " + str(self.di_inum) + " block " + str(block_no)
-            b.rendered = "Inode " + str(self.di_inum) + " datablock"
             if len(b) > yet:
+                if not self.inserted:
+                    Tail(b.tree, lo=b.lo + yet, hi=b.hi).insert()
                 b = ov.Opaque(b.tree, lo=b.lo, width=yet)
+            if self.di_type != self.S_IFDIR and not self.inserted:
+                b.insert()
+                b.rendered = "Inode " + str(self.di_inum) + " data"
             yield b
             yet -= len(b)
             block_no += 1
+        self.inserted = True
 
     def __str__(self):
         return " ".join(str(x) for x in self.ls())
@@ -178,17 +188,15 @@ class Inode(ov.Struct):
         if self.bogus:
             txt = "bogus"
         elif typ is None:
-            txt = "%10o" % mode
-        elif not mode & self.S_IXUSR and mode & self.S_ISUID:
-            txt = "%10o" % mode
-        elif not mode & self.S_IXGRP and mode & self.S_ISGID:
-            txt = "%10o" % mode
+            txt = "x%10o" % mode
         else:
             txt = typ
             txt += "r" if mode & self.S_IRUSR else '-'
             txt += "w" if mode & self.S_IWUSR else '-'
             if mode & self.S_IXUSR and mode & self.S_ISUID:
                 txt += "s"
+            elif mode & self.S_ISUID:
+                txt += "S"
             elif mode & self.S_IXUSR:
                 txt += "x"
             else:
@@ -197,6 +205,8 @@ class Inode(ov.Struct):
             txt += "w" if mode & self.S_IWGRP else '-'
             if mode & self.S_IXGRP and mode & self.S_ISGID:
                 txt += "s"
+            elif mode & self.S_ISGID:
+                txt += "S"
             elif mode & self.S_IXUSR:
                 txt += "x"
             else:
@@ -246,24 +256,20 @@ class Inode(ov.Struct):
 
         block_no -= len(self.di_db)
 
-        nindir = self.ufs.sblock.fs_nindir
-        #nindir = 512 // 4
+        nindir = self.ufs.nindir
 
         if block_no < nindir:
             iblk = self.ufs.get_block(self.di_ib[0])
-            #print(iblk.octets()[:64].hex())
             return self.indir_get(iblk, block_no)
 
         block_no -= nindir
         if block_no < nindir * nindir:
-            # print("Really big 1", "0x%05x" % block_no, hex(nindir), hex(nindir*nindir), self.bogus, self)
             iiblk = self.ufs.get_block(self.di_ib[1])
             iblk = self.indir_get(iiblk, block_no // nindir)
             if not iblk:
                 return iblk
             return self.indir_get(iblk, block_no % nindir)
 
-        # print("Really big 2", hex(block_no), hex(nindir), hex(nindir*nindir), self)
         block_no -= nindir * nindir
 
         iiiblk = self.ufs.get_block(self.di_ib[2])
@@ -287,9 +293,12 @@ class Inode(ov.Struct):
         if not self.di_size:
             return None
 
-        l = list()
-        for y in self:
-            l.append(y)
+        try:
+            l = list()
+            for y in self:
+                l.append(y)
+        except NotCredible:
+            return None
         if len(l) == 0:
             # Diagnostic ?
             return None
@@ -322,12 +331,15 @@ class DirEnt():
         self.inode = inode
         self.directory = None
         self.artifact = None
-        self.sanity_check()
 
     def sanity_check(self):
         if self.inode.di_type in (self.inode.S_IFREG, self.inode.S_IFDIR):
-            for _y in self.inode:
-                continue
+            try:
+                for _y in self.inode:
+                    continue
+                yield 0
+            except NotCredible:
+                yield 1
 
     def __lt__(self, other):
         return self.path < other.path
@@ -382,6 +394,12 @@ class Directory():
 
     def __str__(self):
         return "<DIR %d " % self.inode.di_inum + str(self.inode) + ">"
+
+    def sanity_check(self):
+        for de in self.dirents:
+            yield from de.sanity_check()
+            if de.directory:
+                yield from de.directory.sanity_check()
 
     def recurse(self):
         ''' Recursively read tree under this directory '''
@@ -466,6 +484,12 @@ class UnixFileSystem(ov.OctetView):
         )
         if self.VERBOSE:
             print("\tGot RootDir", self.rootdir)
+
+        l = list(self.rootdir.sanity_check())
+        if sum(l) * 10 > len(l):
+            raise NotCredible("Too many bad inodes (%d/%d)" % (sum(l), len(l)))
+        elif sum(l):
+            print("Total inodes", len(l), "bad inodes", sum(l))
 
     def commit(self):
         self.this.add_interpretation(self, self.rootdir.namespace.ns_html_plain)
@@ -738,6 +762,7 @@ class UnixFs(UnixFileSystem):
         self.fsname = up.__class__.__name__
         self.byte_order = byte_order
         self.block_size = block_size
+        self.nindir = block_size // 4
         self.block_offset = block_offset
         self.inode2_offset = up.root_inode.lo
         self.short = up.SHORT
@@ -777,6 +802,7 @@ class UnixFs(UnixFileSystem):
 
     def get_inode(self, inum):
         ''' Get inode number inum '''
+
         lo = self.inode2_offset + (inum - 2) * self.inode_class.SIZE
         if lo + self.inode_class.SIZE > len(self.this):
             raise NotCredible("Inode past this ", hex(inum))
@@ -796,6 +822,18 @@ class UnixFs(UnixFileSystem):
             )
 
         if ino.ifmt in (ino.S_IFDIR, ino.S_IFREG):
+
+            if sum(ino.di_ib) and self.block_size > 512 and self.nindir > 512 // 4:
+                # Some attempts to change the UNIX filesystem to larger blocksizes,
+                # for instance DDE/SuperMax, still used only the first 512 bytes of
+                # indirect blocks for block numbers
+                nblk = (ino.di_size + self.block_size - 1) // self.block_size
+                niblk = nblk - len(ino.di_db)
+                if 512 // 4 < niblk <= self.block_size // 4:
+                    if sum(ino.di_ib[1:]) > 0:
+                        print("Reduce n-indir", "inum", inum)
+                        self.nindir = 512 // 4
+
             # Block numbers must be credible
             for blockno in ino.di_db + ino.di_ib:
                 if blockno:
@@ -821,10 +859,11 @@ class UnixFs(UnixFileSystem):
                     raise NotCredible(
                         "Inode has too many direct blocks " + str(inum) + " " + str(ino)
                     )
-            elif 0 and hasblocks:
-                raise NotCredible(
-                    "Inode has no size but has blocks " + str(inum) + " " + str(ino)
-                )
+        elif ino.ifmt in (ino.S_IFBLK, ino.S_IFCHR):
+            if max(ino.vdi_addr.octets()[2:]) > 0:
+                print(self.this, "unexpected dev blocknos", ino.di_db, ino.di_ib, self, ino, ino.vdi_addr)
+        elif sum(ino.di_db) + sum(ino.di_ib):
+            print(self.this, "unexpected blocknos", ino.di_db, ino.di_ib, self, ino)
 
         ino.insert()
         return ino
@@ -832,8 +871,6 @@ class UnixFs(UnixFileSystem):
     def get_superblock(self):
         # Interface with unix_fs until that is redone
         self.sblock = UnixFsSblock()
-        self.sblock.fs_nindir = self.block_size // 4
-        #self.sblock.fs_nindir = 512 // 4
 
     def get_block(self, blockno):
         ''' Get a logical disk block '''
@@ -841,7 +878,10 @@ class UnixFs(UnixFileSystem):
         lo = self.block_offset + blockno * self.block_size
         hi = lo + self.block_size
         if hi > len(self.this):
+            print("Block_no past this", hex(blockno))
+            # assert False
             raise NotCredible("Block_no past this " + str(self) + " " +hex(blockno))
+            return None
         return ov.Opaque(self, lo=lo, hi=hi)
 
     def parse_directory(self, inode):
