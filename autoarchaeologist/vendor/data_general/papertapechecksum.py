@@ -39,52 +39,67 @@ class PaperTapeCheckSum():
             if this[pos:pos+8].tobytes() != b'\xaa\x55\xaa\x55\xaa\x55\xaa\x55':
                 continue
 
-            tail = list(x for x in this[pos+8:pos+12]) + [0, 0, 0, 0]
+            last = min(len(this), pos + 12)
+            while last < len(this) and this[last]:
+                 last += 1
+
+            ty = bytes(x for x in this[pos:last+2])
+            tx = bytes(x & 0x7f for x in ty)
+            tail_p = tx.find(b'\r\n')
+            if tail_p == -1:
+                tail_p = 8
+                txt = ""
+            else:
+                txt = tx[8:tail_p]
+                tail_p += 2
+            tail = ty[tail_p:tail_p+4] + b'\x00\x00\x00\x00'
+            tail = tail[:4]
+
             tcsum = tail[0] | (tail[1] <<8)
             tcount = tail[2] | (tail[3] <<8)
-            rcsum = sum(this[max(0, pos + 8 - tcount):pos+8])
+
+            if tcount > 0:
+                rcsum = sum(this[max(0, pos + 8 - tcount):pos+8])
+            else:
+                rcsum = sum(this[0:pos + tail_p])
             rcsum += rcsum >> 16
             rcsum &= 0xffff
             rcount = pos + 8
-            # print(this, "DGC", hex(rcount), hex(rcsum), hex(tcount), hex(tcsum))
-            for last in range(pos, min(pos + 30, len(this))):
-                if this[last] == 0:
-                    break
-            if this[last]:
-                if last < len(this) - 1:
-                    continue
-                last += 1
-            p0 = pos + 8 - tcount
-            if p0 > 0 and sum(this[:p0]) == 0:
-                if p0 != 0x80:
-                    print(this, "DGC extra zero leader", hex(p0))
-                rcount = tcount
-            elif p0 != 0 and 0:
+
+            if tcsum != rcsum or len(txt) > 0:
                 print(
                     this,
-                    "DGC bad len",
-                    "p0",
-                    hex(p0),
-                    "pos+8",
-                    hex(pos+8),
-                    "tcount",
-                    hex(tcount),
-                    "len(this)",
-                    hex(len(this))
-                )
+                    "DHCK",
+                    len(ty),
+                    "%04x" % rcsum,
+                    "%04x" % (rcsum + len(this)),
+                    tail.hex(),
+                    txt,
+                    ty.hex(),
+                    hex(len(this)),
+               )
+
+            p0 = rcount - tcount
+            if p0 > 0 and sum(this[:p0]) == 0:
+                rcount = tcount
+            elif p0 > 0:
+                this.add_note("DGC-PaperTapeCheckSum: Check starts at 0x%x" % p0)
+            elif p0 < 0 and rcsum != tcsum:	# Changed spacing of two parts ?
+                this.add_note("DGC-PaperTapeCheckSum: Check starts at -0x%x" % -p0)
+
             that = this.create(start=pos, stop=last)
             that.add_type("DGC-PaperTapeCheckSum")
             if rcsum == tcsum and rcount == tcount:
-                this.add_type("DGC-PaperTapeCheck_OK")
+                this.add_type("DGC-PaperTapeCheck_Len_OK_Sum_OK")
             elif rcsum != tcsum and rcount == tcount:
-                this.add_type("DGC-PaperTapeCheck_Len_OK")
+                this.add_type("DGC-PaperTapeCheck_Len_OK_Sum_BAD")
             elif rcsum == tcsum and rcount != tcount:
-                this.add_type("DGC-PaperTapeCheck_Sum_OK")
+                this.add_type("DGC-PaperTapeCheck_Len_BAD_Sum_OK")
             else:
-                this.add_type("DGC-PaperTapeCheck_BAD")
+                this.add_type("DGC-PaperTapeCheck_Len_BAD_Sum_BAD")
             npos = last
 
-            if last - pos > 0xc:
+            if last - pos > 12:
                 b = this[pos+8:last].tobytes().split(b'\x8d\n')
                 if len(b) > 1:
                     if evenpar_ascii is None:
