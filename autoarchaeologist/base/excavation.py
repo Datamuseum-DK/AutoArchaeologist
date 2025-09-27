@@ -77,6 +77,9 @@ class Excavation(result_page.ResultPage):
     # How much to hexdump of unexplored artifacts
     MAX_LINES = 200
 
+    # How many octets per line in unexplored artifacts
+    LINE_LENGTH = 0x20
+
     def __init__(
         self,
         digest_prefix=9,           # SHA256 length in links/filenames
@@ -308,3 +311,11 @@ class Excavation(result_page.ResultPage):
         path = os.path.join(self.cache_dir, subdir)
         os.makedirs(path, exist_ok=True)
         return path
+
+    def get_by_class_dict(self, who):
+        ''' Get a per-excavation-per-class dictionary '''
+        retval = self.by_class.get(who.__class__.__name__)
+        if retval is None:
+            retval = {}
+            self.by_class[who.__class__.__name__] = retval
+        return retval
