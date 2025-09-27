@@ -24,7 +24,11 @@ def argv_file(excavation, fn):
         if ext[1] in (".tap", ".TAP", ".9trk",):
             this = simh_tap_file.SimhTapContainer(excavation, filename = fn)
         elif ext[1] in (".imd", ".IMD",):
-            this = imd_file.ImdContainer(excavation, filename = fn)
+            try:
+                this = imd_file.ImdContainer(excavation, filename = fn)
+            except imd_file.BadIMDFile as err:
+                print("Bad IMD file", err)
+                raise EOFError
         elif ext[1] in (".d64", ".D64",):
             this = d64_file.D64Container(excavation, filename = fn)
         elif ext[1] in (".cache",):
