@@ -526,10 +526,12 @@ class Artifact(result_page.ResultPage):
         if max_lines is None:
             max_lines = self.top.MAX_LINES
         if line_length is None:
+            line_length = self.top.LINE_LENGTH
+        if line_length is None:
             line_length = 0x20
-        file.write("<H3>Hex Dump</H3>\n")
+        file.write("<H3>Default Hex Dump</H3>\n")
         file.write("<pre>\n")
-        tmp = ov.OctetView(this)
+        tmp = ov.OctetView(this, line_length=line_length)
         if len(self._keys) > max_lines:
             file.write("Dumping the first 0x%x bytes of each record\n" % line_length)
             for rec in sorted(self._keys.values()):
