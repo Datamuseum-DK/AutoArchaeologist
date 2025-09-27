@@ -92,6 +92,11 @@ class TypeCase():
         ''' define a slug '''
         self.slugs[nbr] = Slug(short, *args, **kwargs)
 
+    def dump(self):
+        print("Typecase", self)
+        for n, sl in enumerate(self.slugs):
+            print("  0x%02x" % n, "0x%02x" % sl.flags, [ sl.short, sl.long ])
+
 class WellKnown(TypeCase):
     '''
        Use pythons built in decoder to do the job
