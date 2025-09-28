@@ -139,6 +139,7 @@ class ObjectDeck(ov.OctetView):
         if this[0] != 0x02:
             return
 
+        this.add_type("ObjectDeck")
         super().__init__(this)
         for ptr in range(0, len(this), 80):
             t = this.type_case.decode(this[ptr+1:ptr+4])
