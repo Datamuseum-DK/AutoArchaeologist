@@ -16,7 +16,20 @@ from ...generic import disk
 C_VOL1 = "VOL1".encode('cp037')
 C_HDR1 = "HDR1".encode('cp037')
 
-class MVNamespace(namespace.NameSpace):
+class VolSetNS(namespace.NameSpace):
+    ''' ... '''
+
+    TABLE = (
+        ("l", "name"),
+        ("l", "artifact"),
+    )
+
+    def ns_render(self):
+        vol, ds = self.ns_priv
+        return [
+        ] + super().ns_render()
+
+class DataSetNS(namespace.NameSpace):
     ''' ... '''
 
     TABLE = (
@@ -33,7 +46,7 @@ class MVNamespace(namespace.NameSpace):
         #("l", "volume_sequence_number"),
         ("l", "creation_date"),
         ("l", "record_length"),
-        ("l", "offset_to_next_record_space"),
+        #("l", "offset_to_next_record_space"),
         #("l", "res63"),
         ("l", "expiration_date"),
         #("l", "verify_copy_indicator"),
@@ -62,7 +75,7 @@ class MVNamespace(namespace.NameSpace):
             #hdr.volume_sequence_number.txt,
             hdr.creation_date.txt,
             hdr.record_length.txt,
-            hdr.offset_to_next_record_space.txt,
+            #hdr.offset_to_next_record_space.txt,
             #hdr.res63.txt,
             hdr.expiration_date.txt,
             #hdr.verify_copy_indicator.txt,
@@ -71,102 +84,85 @@ class MVNamespace(namespace.NameSpace):
             #hdr.pad81.txt,
         ] + super().ns_render()
 
-class MVolFile():
+
+class DataSet():
     ''' ... '''
 
-    def __init__(self, volset):
-        self.volset = volset
-        self.frags = {}
-        self.that = None
+    def __init__(self, ds):
+        self.ds = ds
+        self.ident = ds.user_name.txt
+        self.parts = {}
+        self.last = "99"
+        self.ns = None
 
-    def add_frag(self, frag):
-        if self.that is not None:
-            print("MVF already done", self, frag)
-            return
-        assert self.that is None
-        assert frag.seq not in self.frags
-        self.frags[frag.seq.strip()] = frag
-        self.process()
+    def __lt__(self, other):
+        return self.ident < other.ident
 
-    def process(self):
-        last = self.frags.get("")
-        if last is not None:
-            self.commit_file(last, last.recs)
-            # print("COMPLETE S", last.user_name.txt)
+    def add_component(self, vol, data_set, recs):
+        seq = data_set.volume_sequence_number.txt
+        ind = data_set.multi_volume_indicator.txt
+        assert seq not in self.parts
+        self.parts[seq] = recs
+        if ind == "L":
+            self.last = seq
+        elif ind == " ":
+            self.last = "01"
+        else:
+            assert ind == "C"
+
+        if len(self.parts) != int(self.last):
             return
-        last_vol = max(self.frags)
-        last = self.frags.get(last_vol)
-        if last.multi_volume_indicator.txt != "L":
-            return
-        if len(self.frags) != int(last_vol):
-            return
-        #print("COMPLETE M", last.user_name.txt)
+
         recs = []
-        for seq, frag in sorted((int(x.seq), x) for x in self.frags.values()):
-            # print("  No", seq, frag.tree.this)
-            recs += frag.recs
-        self.commit_file(last, recs)
+        for x, y in sorted(self.parts.items()):
+            recs += y
+        that = data_set.tree.this.create(records=recs)
+        self.ns.ns_set_this(that)
+        that.add_name(self.ident.strip())
+        that.ga21_9128 = self.ds
+        print("DS complete", self.ident, list(self.parts), self.last, that, self.ident)
 
-    def commit_file(self, last, recs):
-        self.that = last.tree.this.create(records=recs)
-        if b'_UNREAD__UNREAD_' in self.that.tobytes():
-            self.that.add_note("BADSECT")
-        self.that.ga21_9128 = last
-        ns = MVNamespace(
-            name = last.user_name.txt.strip(),
-            parent = self.volset.namespace,
-            this = self.that,
-            priv = last,
-        )
-
-    def dump(self, file):
-        for nbr, frag in sorted(self.frags.items()):
-            file.write("  " + frag.seq + " " + str(frag) + "\n")
-
-class MultiVol():
+class VolSet():
     ''' ... '''
 
     def __init__(self, top, name):
         self.top = top
         self.name = name
-        self.volumes = []
-        self.files = {}
-        self.namespace = MVNamespace(name='', root=top)
-        self.namespace.KIND = "IBM S34 Floppy Multi Volume Set »" + name + "«"
-        #top.add_interpretation(self, self.namespace.ns_html_plain)
-        #top.add_interpretation(self, self.html_interpretation)
+        self.volumes = {}
+        self.data_sets = {}
+        self.vol_namespace = VolSetNS(name='', root=top)
+        self.ds_namespace = DataSetNS(name='', root=top)
+        top.add_interpretation(self, self.html_interpretation)
 
-    def add_volume(self, vol, this):
-        if not self.volumes:
-            self.top.add_interpretation(self, self.html_interpretation)
-        self.volumes.append((vol, this))
+    def add_component(self, vol, data_set, recs):
+        if vol.tree.this not in self.volumes:
+            self.volumes[vol.tree.this] = vol
+            VolSetNS(
+                name = vol.volname,
+                parent = self.vol_namespace,
+                priv = (vol, data_set,),
+                this = vol.tree.this,
+            )
 
-    def add_part(self, that, frag):
-        mvolfile = self.files.setdefault(
-            frag.user_name.txt,
-            MVolFile(self),
-        )
-        mvolfile.add_frag(frag)
+        dsid = data_set.user_name.txt
+        ds = self.data_sets.get(dsid)
+        if ds is None:
+            ds = DataSet(data_set)
+            self.data_sets[dsid] = ds
+            ds.ns = DataSetNS(
+                name = data_set.user_name.txt.strip(),
+                parent = self.ds_namespace,
+                priv = data_set,
+            )
+
+        ds.add_component(vol, data_set, recs)
 
     def html_interpretation(self, file, this):
-        self.namespace.ns_html_plain(file, this)
-        file.write("<pre>\n")
-        file.write("Component Volumes:\n")
-        for i, j in self.volumes:
-            file.write("  (" + i.owner_identifier.txt.strip() + ")")
-            file.write("  " + j.summary() + "\n")
-        incomplete = False
-        for i, j in sorted(self.files.items()):
-            if j.that is None:
-                incomplete = True
-        if incomplete:
-            file.write("Incomplete Data Sets:\n")
-            for i, j in sorted(self.files.items()):
-                if j.that is not None:
-                    continue
-                file.write("  " + i + "\n")
-                j.dump(file)
-        file.write("</pre>\n")
+        file.write('<h3>IBM GA21-9182 Floppy Multi Volume Set »' + self.name + '«</h3>\n')
+        file.write('<h4>Data Sets</h4>\n')
+        self.ds_namespace.ns_html_plain_noheader(file, this)
+        file.write('<h4>Volumes</h4>\n')
+        self.vol_namespace.ns_html_plain_noheader(file, this)
 
 class Vol1Sector(ov.Struct):
 
@@ -194,6 +190,13 @@ class Vol1Sector(ov.Struct):
             **kwargs,
         )
         self.insert()
+        self.volid = self.volume_identifier.txt.strip()
+        self.volid += "("
+        self.volid += self.owner_identifier.txt.strip()
+        self.volname = self.volid + ")"
+        while self.volid[-1].isdigit():
+            self.volid = self.volid[:-1]
+        self.volid += ")"
 
 class Hdr1Sector(ov.Struct):
 
@@ -253,45 +256,51 @@ class Ga21_9182(disk.Disk):
         if volsec.frag[:len(C_VOL1)] != C_VOL1:
             return
 
-        print(this, "Ga21_9182")
-
         super().__init__(
             this,
             [],
         )
+        this.add_note("GA21-9182")
         self.volhead = Vol1Sector(self, volsec.lo, vertical=True)
 
-        volid = self.volhead.volume_identifier.txt.strip()
-        volid += "("
-        volid += self.volhead.owner_identifier.txt.strip()
-        while volid[-1].isdigit():
-            volid = volid[:-1]
-        volid += ")"
-        print(this, "VOLID", volid)
+        volid = self.volhead.volid
+        print(this, "Ga21_9182", "VOLID", volid)
+        this.add_name(volid)
 
-        multivol = this.top.multivol.get(volid)
-        if multivol is None:
-            multivol = MultiVol(this.top, volid)
-            this.top.multivol[volid] = multivol
+        data_sets = []
 
-        multivol.add_volume(self.volhead, this)
-
-        self.data_sets = []
-
+        multivol = False
         for sec in range(8, 27):
             hdrsec = this.get_rec((0, 0, sec))
             if hdrsec.frag[:len(C_HDR1)] != C_HDR1:
                 break
-            y = Hdr1Sector(self, hdrsec.lo, vertical=True)
-            self.data_sets.append(y)
+            ds = Hdr1Sector(self, hdrsec.lo, vertical=True)
+            data_sets.append(ds)
+            if ds.multi_volume_indicator.txt != ' ':
+                multivol = True
 
-        for data_set in self.data_sets:
-            self.commit_data_set(data_set, multivol)
+        for data_set in data_sets:
+            recs = self.commit_data_set(data_set)
+            if not recs:
+                print("NOREC", data_set)
+                continue
+            if not multivol:
+                y = this.create(records=recs)
+                y.add_name(data_set.user_name.txt.strip())
+                y.ga21_9128 = data_set
+            else:
+                volset_dict = this.top.get_by_class_dict(self)
+                volset = volset_dict.get(volid)
+                if volset is None:
+                    volset = VolSet(this.top, volid)
+                    volset_dict[volid] = volset
+                volset.add_component(self.volhead, data_set, recs)
 
-        self.this.add_interpretation(self, this.html_interpretation_children)
+        if not multivol:
+            self.this.add_interpretation(self, this.html_interpretation_children)
         self.add_interpretation(more=False)
 
-    def commit_data_set(self, data_set, multivol):
+    def commit_data_set(self, data_set):
         start = data_set.start_chs()
         end = data_set.end_chs()
         recs = []
@@ -309,4 +318,4 @@ class Ga21_9182(disk.Disk):
             rendered="Segment " + data_set.user_name.txt,
         )
         y.insert()
-        multivol.add_part(self.this, data_set)
+        return list(x.frag for x in recs)
