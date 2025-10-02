@@ -39,6 +39,8 @@ REC_MAX_LEN = {
     11: -15,
     12: -15,
     13: -15,
+    14: -15,
+    15: -15,
 }
 
 REC_SYMBOLS = {
@@ -206,7 +208,7 @@ class RelBin(ov.OctetView):
             return
 
         if ptr != len(this):
-            print(this, "OD", hex(ptr), hex(len(this)), hex(this[ptr]))
+            #print(this, "OD", hex(ptr), hex(len(this)), hex(this[ptr]))
             # Other data follows.
             # Snip out the reloc records, which we will get back to.
             this.create(start=rbs[0].lo, stop=rbs[-1].hi)
