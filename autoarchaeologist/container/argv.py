@@ -12,6 +12,7 @@ from . import plain_file
 from . import imd_file
 from . import d64_file
 from . import simh_tap_file
+from . import simh_crd_file
 from . import floppytools
 
 def argv_file(excavation, fn):
@@ -31,10 +32,17 @@ def argv_file(excavation, fn):
                 raise EOFError
         elif ext[1] in (".d64", ".D64",):
             this = d64_file.D64Container(excavation, filename = fn)
+        elif ext[1] in (".crd", ".CRD",):
+            try:
+                this = simh_crd_file.SimhCrdContainer(excavation, filename = fn)
+            except simh_crd_file.BadCRDFile as err:
+                print("Bad CRD file", err)
+                raise EOFError
         elif ext[1] in (".cache",):
             this = floppytools.FloppyToolsContainer(excavation, filename = fn)
         else:
             this = plain_file.PlainFileArtifact(fn)
-        return excavation.add_top_artifact(this, description=fn, dup_ok=True)
+        that = excavation.add_top_artifact(this, description=fn, dup_ok=True)
+        print("Loaded", fn, that)
     except EOFError:
         print(fn, "produced no artifact")
