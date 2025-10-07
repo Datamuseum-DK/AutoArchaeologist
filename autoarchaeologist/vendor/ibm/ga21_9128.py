@@ -13,9 +13,6 @@ from ...base import octetview as ov
 from ...base import namespace
 from ...generic import disk
 
-C_VOL1 = "VOL1".encode('cp037')
-C_HDR1 = "HDR1".encode('cp037')
-
 class VolSetNS(namespace.NameSpace):
     ''' ... '''
 
@@ -253,26 +250,27 @@ class Ga21_9182(disk.Disk):
             volsec = this.get_rec((0,0,7))
         except KeyError:
             return
-        if volsec.frag[:len(C_VOL1)] != C_VOL1:
+        if this.type_case.decode(volsec.frag[:4]) != "VOL1":
             return
 
         super().__init__(
             this,
             [],
         )
-        this.add_note("GA21-9182")
         self.volhead = Vol1Sector(self, volsec.lo, vertical=True)
 
         volid = self.volhead.volid
         print(this, "Ga21_9182", "VOLID", volid)
         this.add_name(volid)
 
+        this.add_note("GA21-9182", volid, volhead=self.volhead)
+
         data_sets = []
 
         multivol = False
         for sec in range(8, 27):
             hdrsec = this.get_rec((0, 0, sec))
-            if hdrsec.frag[:len(C_HDR1)] != C_HDR1:
+            if this.type_case.decode(hdrsec.frag[:4]) != "HDR1":
                 break
             ds = Hdr1Sector(self, hdrsec.lo, vertical=True)
             data_sets.append(ds)
