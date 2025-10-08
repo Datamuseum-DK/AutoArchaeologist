@@ -27,7 +27,7 @@ class Q1Text():
         l = []
         for n, i in enumerate(histo[:32]):
             if i:
-                 l.append(n)
+                l.append(n)
         if histo[127]:
             l.append(127)
         if text:
