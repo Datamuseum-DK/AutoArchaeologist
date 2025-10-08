@@ -8,7 +8,7 @@
    IBM Series/1 libraries
 '''
 
-from ...base import octetview as ov
+from ....base import octetview as ov
 
 class DirHdr(ov.Struct):
     def __init__(self, tree, lo):
@@ -43,15 +43,20 @@ class DirEnt(ov.Struct):
 class S1EdxLib(ov.OctetView):
 
     def __init__(self, this):
-        if not this.has_name("EDXLIB"):
+        if 0 and not this.has_name("EDXLIB"):
             return
         super().__init__(this)
         print(this, "EDXLIB")
 
         hdr = DirHdr(self, 0).insert()
+        if hdr.f06.txt != 'EDXEDX  ':
+            return
+
+        this.add_note("edxlib")
 
         ptr = hdr.hi
-        while this[ptr] > 0:
+        #while this[ptr] > 0:
+        for n in range(hdr.f02.val):
             y = DirEnt(self, ptr).insert()
             print(this, y.name.txt)
             z = ov.This(
