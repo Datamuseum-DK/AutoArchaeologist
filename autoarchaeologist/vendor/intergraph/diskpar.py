@@ -61,9 +61,11 @@ class DiskPar(ov.OctetView):
             separator = "",
         )
 
+        parts = []
         adr = 0
         while adr < len(this):
             y = Hdr(self, adr)
+            parts.append(y)
             if y.magic != 0x656e6173:
                 break
             if y.size == 0:
@@ -85,3 +87,8 @@ class DiskPar(ov.OctetView):
             )
         if adr > 0:
             this.add_interpretation(self, self.namespace.ns_html_plain)
+
+        with this.add_utf8_interpretation("Partition Headers") as file:
+            for p in parts:
+                for i in p.render():
+                    file.write('0x%08x ' % p.lo + i + "\n")
