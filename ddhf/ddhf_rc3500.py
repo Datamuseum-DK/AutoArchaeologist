@@ -17,6 +17,7 @@ from autoarchaeologist.generic import tapefiles
 from autoarchaeologist.vendor.regnecentralen import rc489k_tape
 from autoarchaeologist.vendor.regnecentralen import rc489k_binout
 from autoarchaeologist.vendor.regnecentralen import rcsl
+from autoarchaeologist.vendor.regnecentralen import rc3500_fs
 from autoarchaeologist.generic import ansi_tape_labels
 
 import ddhf
@@ -66,6 +67,7 @@ class Rc489k(ddhf.DDHFExcavation):
         self.add_examiner(*rc489k_tape.examiners)
         self.add_examiner(*rc489k_binout.examiners)
         self.add_examiner(tapefiles.UnlovedTapes)
+        self.add_examiner(rc3500_fs.Rc3500Filesystem)
         self.add_examiner(rcsl.RCSL)
         self.add_examiner(textfiles.TextFileVerbose)
         self.add_examiner(TextFileEvenParity)
