@@ -150,4 +150,3 @@ class SegNameSpace(ns.NameSpace):
             hex(seg.npg.val),
             ofld,
         ] + super().ns_render()
-

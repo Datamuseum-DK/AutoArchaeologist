@@ -227,7 +227,7 @@ class SegmentDesc(bv.Struct):
         that.add_note("tag_%03x" % self.user_data.val)
         seg = Segment(self.vpid.val, self.kind.val, self.segid.val, self.generation.val, that)
         r1ksys.add_segment(seg)
-        
+
         self.namespace = SegNameSpace(
             parent = ovtree.namespace,
             name = seg.name + "(0x%x)" % self.generation.val,
@@ -235,10 +235,9 @@ class SegmentDesc(bv.Struct):
             this = that,
         )
 
-
     def doc(self, that):
         with that.add_utf8_interpretation("Segment") as file:
-             self.vertical=True
-             for i in self.render():
-                 file.write(i + "\n")
-             self.vertical=False
+            self.vertical=True
+            for i in self.render():
+                file.write(i + "\n")
+            self.vertical=False

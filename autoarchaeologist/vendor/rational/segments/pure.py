@@ -44,7 +44,6 @@ class UX01(bv.Struct):
                 self.txt = "***OVERFLOW***"
             except ValueError:
                 self.txt = "***VALUE***"
-                 
         else:
             self.txt = None
         self.done()

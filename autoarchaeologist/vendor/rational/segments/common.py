@@ -13,7 +13,7 @@ import time
 
 from ....base import bitview as bv
 from ....base import dot_graph
-from .. import r1k_defs 
+from .. import r1k_defs
 from . import pure
 
 OBJECTS = r1k_defs.OBJECT_MANAGERS
