@@ -16,6 +16,9 @@
 
 import struct
 
+from ...base import octetview as ov
+from ...base import namespace
+
 SIGNATURE_RAW = bytes.fromhex('''
     54 49 4d 45 20 4f 55 54 20 44 49 53 43 00
     42 0e 0c 02
@@ -30,7 +33,21 @@ SIGNATURE_INTERLEAVE = bytes.fromhex('''
     54 45 3a 20 00
 ''')
 
-class RC3600_FD_Tape():
+print(SIGNATURE_RAW)
+print(SIGNATURE_INTERLEAVE)
+
+class NameSpace(namespace.NameSpace):
+    ''' ... '''
+
+class Filedata(ov.Opaque):
+    ''' ... '''
+
+    def __init__(self, tree, lo, fn):
+        super().__init__(tree, lo, width=1<<7)
+        #self.rendered = "Filedata(%s, 0x%d)" % (fn, nbr)
+        self.rendered = "Filedata(%s)" % (fn)
+
+class Rc3600FdTape(ov.OctetView):
     ''' RCSL 43-GL-7420 '''
     def __init__(self, this):
         if not this.top in this.parents:
@@ -49,81 +66,63 @@ class RC3600_FD_Tape():
         else:
             return
 
-        self.index = []
-        words = struct.unpack(">64H", this[0xb80:0xc00])
-        for tour in range(2):
-            if tour:
-                this.add_interpretation(self, self.html_as_virtual_tape)
-                this.add_type("RC3600_FD_Tape")
-                this.taken = self
-            last_offset = 26 << 7
-            for word_idx, i in enumerate(words):
-                offset = i << 7
-                if not offset or offset > len(this):
-                    return
+        super().__init__(this)
 
-                if words[word_idx + 1] & 0x8000:
-                    break
+        idx = ov.Array(64, ov.Be16, vertical=True)(self, 0xb80).insert()
 
-                if offset < last_offset:
-                    return
-                last_offset = offset
+        prev_offset = 26 << 7
+        objs = []
+        for n, v in enumerate(idx[:-1]):
+            if idx[n+1].val & 0x8000:
+                break
+            this_offset = v.val << 7
+            if this_offset == 0 or this_offset > len(this):
+                continue
+            if this_offset < prev_offset:
+                break
+            next_offset = idx[n+1].val << 7
+            objs.append((idx[n].val, idx[n+1].val))
+            prev_offset = this_offset
 
-                if not tour:
-                    continue
-                label = this.create(octets=self[i])
-                label.add_type("Namelabel")
-                name = None
-                b = label.tobytes().rstrip(b'\x00')
-                if b:
-                    try:
-                        name = b.decode('ASCII')
-                    except UnicodeDecodeError:
-                        name = None
-                    if name:
-                        label.add_note(name)
-                body = bytes()
-                for j in range(i + 1, words[word_idx + 1]):
-                    body = body + self[j]
-                body = this.create(octets=body)
-                body.add_type("VirtualTapeFile")
-                if name:
-                    body.add_note(name)
-                self.index.append((name, i, label, body))
+        if len(objs) == 0:
+            return
 
-    def __getitem__(self, n):
+        this.add_note("Rc3600FdTape")
+
+        ns = NameSpace(
+            name="",
+            root=this,
+        )
+
+        for n, w in enumerate(objs):
+            fm, to = w
+            p = self.xlat(fm)
+            yn = ov.Text(128)(self, p).insert()
+            nm = yn.txt.strip()
+            if nm == "":
+                nm="#%02d" % n
+            frags = []
+            for b in range(fm + 1, to):
+                p = self.xlat(b)
+                frags.append(self.this[p:p+0x80])
+                Filedata(self, p, nm).insert()
+            y = this.create(records=frags)
+            y.add_name(nm)
+            NameSpace(
+                parent=ns,
+                name=nm,
+                this=y,
+            )
+
+        this.add_interpretation(self, ns.ns_html_plain)
+        self.add_interpretation(more=True, title="Rc3600FdTape")
+
+
+    def xlat(self, n):
         if not self.interleave:
-            return self.this[n << 7:(n + 1) << 7]
+            return n << 7
         cyl = n // 26
         sect = n % 26
         isect = (sect * 7) % 26
         phys = cyl * 26 + isect
-        b = self.this[phys << 7:(phys + 1) << 7]
-        return b
-
-    def html_as_virtual_tape(self, fo, _this):
-        ''' Render as table '''
-        fo.write("<H3>Virtual Tape</H3>\n")
-        fo.write('<table style="font-size: 80%;">\n')
-        for name, secno, head, body in self.index:
-            fo.write("<tr>\n")
-
-
-            fo.write("<td>\n")
-            fo.write("0x%04x" % secno)
-            fo.write("</td>\n")
-
-            fo.write('<td style="padding-left: 10px;">\n')
-            if name:
-                fo.write(name)
-            fo.write("</td>\n")
-
-            fo.write('<td style="padding-left: 10px;">\n')
-            fo.write(self.this.top.html_link_to(head))
-            fo.write("</td>\n")
-
-            fo.write('<td style="padding-left: 10px;">\n')
-            fo.write(body.summary())
-            fo.write("</td>\n")
-            fo.write("</tr>\n")
-        fo.write("</table>\n")
+        return phys << 7
