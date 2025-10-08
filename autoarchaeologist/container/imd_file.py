@@ -107,7 +107,7 @@ class ImdContainer(artifact.ArtifactFragmented):
                 ptr = y.hi
                 mode = y[0]
                 if mode > 8:
-                    raise BadIMDFile("Sector mode %d > 8" % mode)
+                    raise BadIMDFile("Sector mode %d > 8 (%s)" % (mode, str(chs)))
                 if mode == 0:
                     continue
                 if mode & 1:
@@ -123,9 +123,16 @@ class ImdContainer(artifact.ArtifactFragmented):
                     continue
                 recs.append((chs, data, mode > 2))
 
+        if not recs:
+            raise BadIMDFile("No records")
+
         for key, data, deleted in sorted(recs):
             rec = artifact.Record(len(self), frag=data, key=key)
-            self.add_fragment(rec)
+            try:
+                self.add_fragment(rec)
+            except Exception as err:
+                print("Not happy", err)
+                raise BadIMDFile("Not Happy")
             rec.deleted = deleted
             if deleted:
                 self.separators.append((rec.lo, "@c%d,h%d,s%d (deleted)" % key))
