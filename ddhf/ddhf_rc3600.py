@@ -76,6 +76,7 @@ class Rc3600(ddhf.DDHFExcavation):
         "RC/RC3600/LOADER",
         "RC/RC3600/MUSIL",
         "RC/RC3600/PAPERTAPE",
+        "RC/RC3600/TEST",
     )
 
     def __init__(self, **kwargs):
