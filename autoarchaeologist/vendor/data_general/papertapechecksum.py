@@ -41,7 +41,7 @@ class PaperTapeCheckSum():
 
             last = min(len(this), pos + 12)
             while last < len(this) and this[last]:
-                 last += 1
+                last += 1
 
             ty = bytes(x for x in this[pos:last+2])
             tx = bytes(x & 0x7f for x in ty)
@@ -66,37 +66,28 @@ class PaperTapeCheckSum():
             rcsum &= 0xffff
             rcount = pos + 8
 
-            if tcsum != rcsum or len(txt) > 0:
-                print(
-                    this,
-                    "DHCK",
-                    len(ty),
-                    "%04x" % rcsum,
-                    "%04x" % (rcsum + len(this)),
-                    tail.hex(),
-                    txt,
-                    ty.hex(),
-                    hex(len(this)),
-               )
-
-            p0 = rcount - tcount
-            if p0 > 0 and sum(this[:p0]) == 0:
-                rcount = tcount
-            elif p0 > 0:
-                this.add_note("DGC-PaperTapeCheckSum: Check starts at 0x%x" % p0)
-            elif p0 < 0 and rcsum != tcsum:	# Changed spacing of two parts ?
-                this.add_note("DGC-PaperTapeCheckSum: Check starts at -0x%x" % -p0)
-
             that = this.create(start=pos, stop=last)
             that.add_type("DGC-PaperTapeCheckSum")
-            if rcsum == tcsum and rcount == tcount:
-                this.add_type("DGC-PaperTapeCheck_Len_OK_Sum_OK")
-            elif rcsum != tcsum and rcount == tcount:
-                this.add_type("DGC-PaperTapeCheck_Len_OK_Sum_BAD")
-            elif rcsum == tcsum and rcount != tcount:
-                this.add_type("DGC-PaperTapeCheck_Len_BAD_Sum_OK")
+
+            nn = []
+
+            if rcsum == tcsum:
+                nn.append("Sum=OK")
             else:
-                this.add_type("DGC-PaperTapeCheck_Len_BAD_Sum_BAD")
+                nn.append("Sum=BAD")
+
+            p0 = rcount - tcount
+            if p0 >= 0 and sum(this[:p0]) == 0:
+                rcount = tcount
+                nn.append("Len=OK")
+            elif p0 > 0:
+                nn.append("Len=BAD")
+                this.add_comment("DGC-PaperTapeCheckSum starts at 0x%x" % p0)
+            elif p0 < 0 and rcsum != tcsum:	# Changed spacing of two parts ?
+                nn.append("Len=BAD")
+                this.add_comment("DGC-PaperTapeCheckSum starts at -0x%x" % -p0)
+
+            this.add_note("DGC-PaperTapeCheckSum", ",".join(nn))
             npos = last
 
             if last - pos > 12:
