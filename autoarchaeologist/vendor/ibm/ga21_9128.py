@@ -188,12 +188,14 @@ class Vol1Sector(ov.Struct):
         )
         self.insert()
         self.volid = self.volume_identifier.txt.strip()
-        self.volid += "("
-        self.volid += self.owner_identifier.txt.strip()
-        self.volname = self.volid + ")"
-        while self.volid[-1].isdigit():
-            self.volid = self.volid[:-1]
-        self.volid += ")"
+        oi = self.owner_identifier.txt.strip()
+        if oi:
+            self.volid += "("
+            self.volid += oi
+            self.volname = self.volid + ")"
+            while self.volid[-1].isdigit():
+                self.volid = self.volid[:-1]
+            self.volid += ")"
 
 class Hdr1Sector(ov.Struct):
 
