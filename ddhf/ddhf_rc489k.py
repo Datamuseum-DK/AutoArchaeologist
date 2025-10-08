@@ -15,8 +15,11 @@ from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.vendor.regnecentralen import rc489k_tape
 from autoarchaeologist.vendor.regnecentralen import rc489k_binout
+from autoarchaeologist.vendor.regnecentralen import rc489k_flxcat
 from autoarchaeologist.vendor.regnecentralen import rcsl
 from autoarchaeologist.vendor.regnecentralen import gier_text
+
+from autoarchaeologist.vendor.ibm import ga21_9128
 
 import ddhf
 
@@ -51,6 +54,7 @@ class Rc489k(ddhf.DDHFExcavation):
         "RC/RC8000/DISK",
         "RC/RC8000/PAPERTAPE",
         "RC/RC8000/TAPE",
+        "RC/RC8000/SW",
         "RC/RC4000/SW",
         "RC/RC4000/TAPE",
         "RC/RC4000/TEST",
@@ -66,6 +70,8 @@ class Rc489k(ddhf.DDHFExcavation):
 
         self.type_case = Rc489kTypeCase()
 
+        self.add_examiner(ga21_9128.Ga21_9182)
+        self.add_examiner(rc489k_flxcat.FlxCat)
         self.add_examiner(*rc489k_tape.examiners)
         self.add_examiner(*rc489k_binout.examiners)
         self.add_examiner(rcsl.RCSL)
