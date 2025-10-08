@@ -78,7 +78,7 @@ class FlxCat(ov.OctetView):
             return
 
         vol = list(this.parents)[0]
-        self.volhead = vol.has_note("GA21-9182")["volhead"]
+        self.volhead = list(vol.iter_note("GA21-9182"))[0][1]["volhead"]
         self.volid = self.volhead.volume_identifier.txt
 
         volset_dict = this.top.get_by_class_dict(self)
