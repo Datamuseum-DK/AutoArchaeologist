@@ -378,9 +378,9 @@ class BasicFileDesc(ov.Struct):
             lo = sect << L_SECTOR_SHIFT
             hi = lo + (1 << L_SECTOR_SHIFT)
             if hi > len(self.tree.this):
-                 print("CRFS2", self.tree.this, "Illegal sector", hex(sect), self)
-                 bits = []
-                 break
+                print("CRFS2", self.tree.this, "Illegal sector", hex(sect), self)
+                bits = []
+                break
             y = DataSector(self.tree, lo=lo, bfdno = self.nbr)
             is_unread |= y.is_unread
             bits.append(self.tree.this[lo:hi])
