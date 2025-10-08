@@ -20,26 +20,20 @@ from . import datastruct
 class Octets(bintree.BinTreeLeaf):
     ''' Base class, just some random octets '''
 
-    def __init__(self, tree, lo, width=None, hi=None, maxlines=None, line_length=32):
+    def __init__(self, tree, lo, width=None, hi=None, maxlines=None, line_length=None):
         if hi is None:
             assert width is not None
             hi = lo + width
-        assert hi > lo
         if width is not None:
             if lo + width != hi:
                 print("BAD WIDTH", tree.this, hex(lo), hex(width), hex(hi))
             assert lo + width == hi
+        super().__init__(lo, hi)
         self.tree = tree
         self.this = tree.this
+        self.width = len(self)
         self.maxlines = maxlines
-        super().__init__(lo, hi)
-        if width is None:
-            width = len(self)
-        self.width = width
         self.line_length = line_length
-
-    def __len__(self):
-        return self.hi - self.lo
 
     def __getitem__(self, idx):
         return self.this[self.lo + idx]
@@ -75,12 +69,14 @@ class Octets(bintree.BinTreeLeaf):
 
     def insert(self):
         ''' Insert in tree (NB: You dont have to do this) '''
-        self.tree.insert(self)
-        return self
+        return self.tree.insert(self)
 
     def render(self):
         ''' Render hexdumped + text-column '''
-        hd = self.this.hexdump(lo=self.lo, hi=self.hi, line_length=self.line_length)
+        ll = self.line_length
+        if ll is None:
+            ll = self.tree.this.top.LINE_LENGTH
+        hd = self.this.hexdump(lo=self.lo, hi=self.hi, line_length=ll)
         hd = list(hd)
         if self.maxlines is None:
             yield from hd
@@ -497,8 +493,10 @@ class OctetView(bintree.BinTree):
             self.separators_width = 0
         yield from super().render(line_length=self.line_length)
 
-    def add_interpretation(self, title="OctetView", more=False, **kwargs):
+    def add_interpretation(self, title=None, more=False, **kwargs):
         ''' Render via UTF-8 file '''
+        if title is None:
+            title="OctetView - " + self.__class__.__name__
         with self.this.add_utf8_interpretation(title, more=more) as file:
             for line in self.render(**kwargs):
                 file.write(line + '\n')
