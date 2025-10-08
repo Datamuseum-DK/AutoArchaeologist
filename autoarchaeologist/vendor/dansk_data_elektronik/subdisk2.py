@@ -73,7 +73,7 @@ class SubDisk2(ov.OctetView):
             print(this, n, hex(offset), hex(length), hex(end), hex(len(this)))
             if end <= len(this):
                 y = this.create(start=offset, stop=end)
-                y.add_type("DDE:Subdisk2:0x%x" % n)
+                y.add_note("DDE:Subdisk2", "0x%x" % n)
                 self.helper(y)
             else:
                 print(this, "Subdisk2 ran out of disk")
