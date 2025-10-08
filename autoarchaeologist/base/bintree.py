@@ -33,6 +33,9 @@ class BinTreeLeaf():
         self.lo = lo
         self.hi = hi
 
+    def __len__(self):
+        return self.hi - self.lo
+
     def __repr__(self):
         return "<Leaf 0x%x-0x%x>" % (self.lo, self.hi)
 
@@ -40,7 +43,6 @@ class BinTreeLeaf():
         if self.lo != other.lo:
             return self.lo < other.lo
         return self.hi < other.hi
-
 
     def __eq__(self, other):
         if other is None:
@@ -67,7 +69,7 @@ class BinTreeBranch():
     # Tuning: Do not create branches smaller than this.
     LOWER_LIMIT = 1<<16
 
-    def __init__(self, lo, hi, leaf=None):
+    def __init__(self, lo, hi):
         self.lo = lo
         self.mid = (lo + hi) // 2
         self.hi = hi
@@ -85,16 +87,17 @@ class BinTreeBranch():
         assert leaf.lo < leaf.hi
         if not self.isbranch:
             self.cuts.append(leaf)
-        elif leaf.hi <= self.mid:
+            return leaf
+        if leaf.hi <= self.mid:
             if self.less is None:
                 self.less = BinTreeBranch(self.lo, self.mid)
-            self.less.insert(leaf)
-        elif leaf.lo >= self.mid:
+            return self.less.insert(leaf)
+        if leaf.lo >= self.mid:
             if self.more is None:
                 self.more = BinTreeBranch(self.mid, self.hi)
-            self.more.insert(leaf)
-        else:
-            self.cuts.append(leaf)
+            return self.more.insert(leaf)
+        self.cuts.append(leaf)
+        return leaf
 
     def find(self, lo=None, hi=None):
         ''' Find leaves between lo and hi '''
@@ -116,16 +119,12 @@ class BinTreeBranch():
         stk = [self]
         lst = []
 
-        def tree_order(i):
-            # local comparator to not occupy __lt__
-            return (i.lo, i.hi)
-
         while stk:
             cur = stk.pop()
             while lst and lst[0].lo < cur.lo:
                 yield lst.pop(0)
             lst.extend(cur.cuts)
-            lst.sort(key=tree_order)
+            lst.sort(key=lambda i: (i.lo, i.hi))
             if cur.more:
                 stk.append(cur.more)
             if cur.less:
@@ -162,6 +161,7 @@ class BinTree(BinTreeBranch):
 
     def pad_from_to(self, lo, hi, pad_width=5):
         ''' yield padding lines '''
+
         while hi > lo:
             i = lo + pad_width
             i -= i % pad_width
@@ -174,6 +174,7 @@ class BinTree(BinTreeBranch):
 
     def iter_padded(self, pad_width=16):
         ''' Render the tree with optional padding'''
+
         ptr = 0
         for leaf in self:
             if pad_width:
@@ -184,6 +185,8 @@ class BinTree(BinTreeBranch):
             yield from self.pad_from_to(ptr, self.hi, pad_width)
 
     def prefix(self, lo, hi):
+        ''' The address range on the rendered line '''
+
         if self.separators_width == 0:
             return "0x" + self.adrfmt % lo + "…" + self.adrfmt % hi
         while self.separators and self.separators[0][0] < lo:
@@ -196,9 +199,11 @@ class BinTree(BinTreeBranch):
 
     def render(self, line_length=32):
         ''' Rendering iterator with padding '''
+
         prev_line = None
         repeat_line = 0
         pending = None
+        pfx = "placeholder"
         for leaf in self.iter_padded(pad_width=line_length):
             if isinstance(leaf, self.leaf_class):
                 for line in leaf.render():
@@ -207,22 +212,25 @@ class BinTree(BinTreeBranch):
                         pending = None
                         continue
                     if repeat_line > 0:
-                        yield " " * (self.adrwidth + 4)  + "[…0x%x…]" % repeat_line
+                        yield " " * len(pfx) + "[…0x%x…]" % repeat_line
                     if pending:
                         yield pending
                     pending = None
                     repeat_line = 0
                     prev_line = line
-                    yield self.prefix(leaf.lo, leaf.hi) + " " + line
+                    pfx = self.prefix(leaf.lo, leaf.hi) + " "
+                    yield pfx + line
             else:
                 print("BTP", type(leaf), [leaf])
                 pending = "  " + leaf
         if repeat_line > 0:
-            yield " " * (self.adrwidth + 4)  + "[…0x%x…]" % repeat_line
+            yield " " * len(pfx) + "[…0x%x…]" % repeat_line
 
     def points_to(self, lo, cls):
-        for i in self.find(lo, lo + 1):
-            return i
+        ''' Used by pointer-like leaves to propagate without stack overflow '''
+
+        for _i in self.find(lo, lo + 1):
+            return
         first = len(self.todo) == 0
         self.todo.append((lo, cls))
         if not first:
