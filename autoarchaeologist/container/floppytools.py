@@ -44,8 +44,14 @@ class FloppyToolsContainer(artifact.ArtifactFragmented):
             osec = psects.get(sec.phys_chs.chs)
             if osec is None:
                 psects[sec.phys_chs.chs] = sec
-            else:
-                assert osec.data == sec.data
+                continue
+            if osec.data == sec.data:
+                continue
+            print("SEC", sec.phys_chs, sec.am_chs)
+            print("  O", len(osec.data), osec.data.hex())
+            print("  N", len(sec.data), sec.data.hex())
+            print("  X", len(sec.data), bytes(x ^ y for x,y in zip(osec.data, sec.data)).hex())
+            continue
         if not psects:
             raise EOFError
         if len(psects) == len(asects):
