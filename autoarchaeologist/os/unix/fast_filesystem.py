@@ -329,6 +329,7 @@ class FFS(ufs.UnixFileSystem):
             self.sblock.fs_imax = self.sblock.fs_ncg * self.sblock.fs_ipg
             self.sblock.fs_bmax = self.sblock.fs_ncg * self.sblock.fs_fpg
             self.cylgroup = [self.cgget(ncg) for ncg in range(self.sblock.fs_ncg)]
+            self.nindir = self.sblock.fs_bsize // 4
 
     def try_sblock(self, offset):
         ''' Try to read SuperBlock at this offset '''
