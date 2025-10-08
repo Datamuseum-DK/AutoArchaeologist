@@ -27,6 +27,7 @@ from autoarchaeologist.vendor.data_general import papertapechecksum
 from autoarchaeologist.vendor.regnecentralen import rcsl
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
+from autoarchaeologist.generic import punched_card
 
 import ddhf
 
@@ -84,7 +85,7 @@ class Rc3600(ddhf.DDHFExcavation):
 
         self.add_examiner(domus_fs.Domus_Filesystem)
         self.add_examiner(rc3600_tape.RC3600Tape)
-        self.add_examiner(rc3600_fdtape.RC3600_FD_Tape)
+        self.add_examiner(rc3600_fdtape.Rc3600FdTape)
 
         self.add_examiner(rc3600_fcopy.Domus_FCOPY)
         self.add_examiner(rc3600_ldfs.LdFs)
@@ -100,13 +101,25 @@ class Rc3600(ddhf.DDHFExcavation):
         self.add_examiner(TextFile)
         self.add_examiner(TextFileEven)
         self.add_examiner(TextFileOdd)
+        self.add_examiner(punched_card.PunchedCard)
         self.add_examiner(samesame.SameSame)
 
 
-if __name__ == "__main__":
+def main():
     ddhf.main(
         Rc3600,
         html_subdir="rc3600",
         ddhf_topic = "RegneCentralen RC3600/RC7000",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/RC/RC7000',
     )
+
+if __name__ == "__main__":
+    if False:
+        import cProfile, pstats
+        p = cProfile.Profile()
+        p.run("main()")
+        st = pstats.Stats(p)
+        st.print_stats()
+        st.print_callers()
+        st.print_callees()
+    main()
