@@ -421,8 +421,8 @@ class FatFs(ov.OctetView):
             print("FatFs TBL", this, geometry, self)
 
         if geometry is None or geometry.cyl == 0:
-            this.add_note("NotFat")
-            this.add_note("BadFatGeom")
+            #this.add_note("NotFat")
+            #this.add_note("BadFatGeom")
             return
 
         print(this, "FatFS", geometry)

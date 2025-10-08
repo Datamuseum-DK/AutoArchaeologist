@@ -35,3 +35,5 @@ class UnlovedTapes():
                 recs.append(rec)
         #this.create(records = recs)
         this.create(start=start.lo, stop=len(this))
+        this.add_interpretation(self, this.html_interpretation_children)
+        this.taken = True

@@ -11,7 +11,7 @@
 
 import struct
 
-from . import unix.unix_fs as ufs
+import .unix.unix_fs as ufs
 
 # from fx.h
 SUPERBLOCK = (

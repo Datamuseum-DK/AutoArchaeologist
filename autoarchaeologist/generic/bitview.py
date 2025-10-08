@@ -12,7 +12,7 @@
 '''
 
 from ..generic.ascii import Str2Html
-import ..base import bintree
+from ..base import bintree
 
 class Bits(bintree.BinTreeLeaf):
     ''' ... '''
