@@ -363,7 +363,7 @@ class CpmFileSystem(ov.OctetView):
             self.this.add_interpretation(self, self.interpretation_html)
         self.add_interpretation(title="OctetView - " + self.name, more=True)
         self.this.add_type(self.name)
-        self.this.add_note(self.signature)
+        self.this.add_note("CP/M-fs", self.signature)
 
     def build_signature(self):
         ''' Build a compact signature describing the filesystem layout '''
@@ -375,7 +375,6 @@ class CpmFileSystem(ov.OctetView):
             prev = n
         self.signature = '_'.join(
             [
-            self.name,
             str(self.SECTOR_SIZE),
             str(self.BLOCK_SIZE),
             "0x%x" % self.EXTENT_MASK,
