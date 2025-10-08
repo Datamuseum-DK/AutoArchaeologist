@@ -268,13 +268,13 @@ class Artifact(result_page.ResultPage):
         return True
 
     def add_type(self, typ):
-        ''' Add type designation (also as note) '''
+        ''' Add type designation '''
         assert len(typ) > 0
         self.types.add(typ)
 
-    def has_type(self, note):
+    def has_type(self, typ):
         ''' Check if not already exists '''
-        return note in self.types
+        return typ in self.types
 
     def add_description(self, desc):
         ''' Add a description '''
@@ -287,13 +287,24 @@ class Artifact(result_page.ResultPage):
         self.comments.append(comment)
         self.add_note("Has Comment")
 
-    def add_note(self, note, info=True):
+    def add_note(self, note, msg=None, **kwargs):
         ''' Add a note '''
         assert len(note) > 0
-        self.notes[note] = info
+        i = self.notes.get(note)
+        if i is None:
+            i = []
+            self.notes[note] = i
+        i.append((msg, kwargs))
+
+    def iter_note(self, note):
+        ''' Get a notes payload '''
+        t =  self.notes.get(note, None)
+        if t is None:
+            return t
+        yield from t
 
     def has_note(self, note):
-        ''' Check if not already exists '''
+        ''' Check if note already exists '''
         return self.notes.get(note, None)
 
     def iter_all_children(self):
@@ -320,7 +331,8 @@ class Artifact(result_page.ResultPage):
 
     def iter_notes(self, recursive=False):
         ''' Return all notes that apply to this artifact '''
-        yield from [(self, i, j) for i,j in self.notes.items()]
+        for n, l in self.notes.items():
+            yield from ((n, x) for x,y in l)
         if recursive:
             for child in self.children:
                 assert child != self, (child, self)
@@ -416,7 +428,7 @@ class Artifact(result_page.ResultPage):
                     txt.append(i)
                     j.add(i)
         if notes:
-            txt += self.top.dotdotdot(sorted({y for _x, y, _z in self.iter_notes(True)}))
+            txt += self.top.dotdotdot(sorted({y for y, _z in self.iter_notes(True)}))
         return nam + ", ".join(txt)
 
     def html_page_head(self, file):
@@ -431,7 +443,16 @@ class Artifact(result_page.ResultPage):
             file.write(", ".join(sorted(self.types)) + "\n")
         if self.notes:
             file.write("    Notes: ")
-            file.write(", ".join(sorted({y for _x, y, _z in self.iter_notes(True)}))+ "\n")
+            l = []
+            seen = set()
+            for i, j in sorted(self.iter_notes(True)):
+                if (i, j) in seen:
+                    continue
+                seen.add((i, j))
+                l.append(i)
+                if j:
+                    l[-1] += "(" + str(j) + ")"
+            file.write(", ".join(l) + "\n")
         if self.names:
             file.write("    Names: ")
             file.write(", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
