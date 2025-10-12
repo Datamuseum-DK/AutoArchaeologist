@@ -23,6 +23,7 @@ class AbsBinRec():
     '''
 
     def __init__(self, this, i):
+        self.this = this
         self.padlen = 0
         while i < len(this) and not this[i]:
             self.padlen += 1
@@ -53,41 +54,41 @@ class AbsBinRec():
         ''' Source length of record incl padding '''
         return self.padlen + 2 * len(self.words)
 
-    def ascii(self, endian, pfx):
-        t = ""
-        t += pfx * (20 - len(self.words))
-        t += "|"
+    def octets(self, endian):
+        ''' Allow for valid even parity '''
         for i in self.words[3:]:
             for j in endian(i):
-                if j == 0x26:
-                    t += "&amp;"
-                elif j == 0x3c:
-                    t += "&lt;"
-                elif 32 < j < 126:
-                    t += "%c" % j
+                if j < 0x80:
+                    yield j
+                elif bin(j)[2:].count('1') & 1:
+                    # Odd parity
+                    yield j
                 else:
-                    t += " "
-        t += "|"
-        return t
+                    # Even parity
+                    yield j & 0x7f
 
-    def html_as_interpretation(self, fo):
+    def text(self, endian):
+        ''' Render as text with given endianess '''
+        return self.this.type_case.decode(self.octets(endian))
+
+    def render(self):
         ''' Render as hex words '''
         t = "    "
         if self.padlen:
             t += "(%3d) " % self.padlen
         else:
             t += "      "
-        t += " ".join(["%04x" % j for j in self.words])
+        t += (" ".join(["%04x" % j for j in self.words])).ljust(5*19)
         def big_endian(i):
             yield i >> 8
             yield i & 0xff
         def little_endian(i):
             yield i & 0xff
             yield i >> 8
-        t += self.ascii(big_endian, "     ")
-        t += self.ascii(little_endian, "  ")
+        t += " ┊" + self.text(big_endian).ljust(2*16)
+        t += "┊" + self.text(little_endian).ljust(2*16) + "┊"
 
-        fo.write(t + '\n')
+        return t
 
 class AbsBin():
     '''
@@ -125,17 +126,9 @@ class AbsBin():
         if len(records) < 2:
             return
 
-        this = this.create(start=pfx, stop=idx)
-        if not this.has_type("AbsBin"):
-            this.add_type("AbsBin")
-            self.this = this
-            self.records = records
-            self.this.add_interpretation(self, self.html_as_interpretation)
-
-    def html_as_interpretation(self, fo, _this):
-        ''' Let the records render themselves '''
-        fo.write("<H3>AbsBin</H3>\n")
-        fo.write("<pre>\n")
-        for i in self.records:
-            i.html_as_interpretation(fo)
-        fo.write("</pre>\n")
+        that = this.create(start=pfx, stop=idx)
+        if not that.has_type("AbsBin"):
+            that.add_type("AbsBin")
+            with that.add_utf8_interpretation("AbsBin") as file:
+                for i in records:
+                    file.write(i.render() + "\n")
