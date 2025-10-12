@@ -322,6 +322,23 @@ class Be24(Octets):
     def render(self):
         yield "0x%06x" % self.val
 
+class Bs24(Octets):
+    ''' Three bytes Big Endian '''
+
+    def __init__(self, tree, lo, **kwargs):
+        super().__init__(tree, lo, width=3, **kwargs)
+        self.val = self.this[lo] << 16
+        self.val |= self.this[lo + 1] << 8
+        self.val |= self.this[lo + 2]
+        if self.val & (1<<23):
+            self.val -= 1<<24
+
+    def render(self):
+        if self.val < 0:
+            yield "-0x%06x" % -self.val
+        else:
+            yield "0x%06x" % self.val
+
 class Be32(Octets):
     ''' Four bytes Big Endian '''
 
