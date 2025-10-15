@@ -44,7 +44,7 @@ class Record():
     def __lt__(self, other):
         return self.lo < other.lo
 
-    def __str__(self):
+    def __repr__(self):
         return "<R 0x%x…0x%x=0x%x %s>" % (self.lo, self.hi, self.hi - self.lo, str(self.key))
 
     def __len__(self):
@@ -300,7 +300,7 @@ class Artifact(result_page.ResultPage):
         ''' Get a notes payload '''
         t =  self.notes.get(note, None)
         if t is None:
-            return t
+            return
         yield from t
 
     def has_note(self, note):
@@ -552,11 +552,25 @@ class Artifact(result_page.ResultPage):
             line_length = 0x20
         file.write("<H3>Default Hex Dump</H3>\n")
         file.write("<pre>\n")
-        tmp = ov.OctetView(this, line_length=line_length)
-        if len(self._keys) > max_lines:
-            file.write("Dumping the first 0x%x bytes of each record\n" % line_length)
-            for rec in sorted(self._keys.values()):
+
+        if len(self._keys) > 0:
+            # We have records, dump them individually
+            # reduce line-length to longest record
+
+            widest_record = max(len(x) for x in self._keys.values())
+            line_length = min(line_length, widest_record)
+
+            tmp = ov.OctetView(this, line_length=line_length)
+
+            if widest_record > line_length:
+                file.write("Dumping the first 0x%x bytes of each record\n" % line_length)
+
+            for rec in sorted(self._keys.values())[:max_lines]:
                 ov.Octets(tmp, lo = rec.lo, hi=rec.hi, line_length=line_length, maxlines=1).insert()
+        else:
+            # unstructured
+            tmp = ov.OctetView(this, line_length=line_length)
+
         for cnt, line in enumerate(tmp.render(**kwargs)):
             if max_lines and cnt > max_lines:
                 file.write("[…truncated at %d lines…]\n" % max_lines)
