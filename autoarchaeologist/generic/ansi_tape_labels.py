@@ -132,6 +132,8 @@ class TapeFile():
             that = self.segmented()
         elif self.hdrs["HDR2"].rec_fmt.txt == "U":
             that = self.undefined()
+        elif self.hdrs["HDR2"].rec_fmt.txt == "F":
+            that = self.fixed()
         else:
             print(self.tree.this, "Unknown ANSI record format", self.hdrs["HDR2"].rec_fmt.txt)
             return
@@ -142,6 +144,16 @@ class TapeFile():
                 parent = self.tree.namespace,
                 priv = self,
             )
+
+    def fixed(self):
+        ''' A tape with fixed blocking '''
+        l = []
+        w = int(self.hdrs["HDR2"].rec_len.txt)
+        for r in self.recs:
+            for p in range(0, len(r), w):
+                l.append(self.tree.this[r.lo+p:r.lo+p+w])
+        that = self.tree.this.create(records=l)
+        return that
 
     def undefined(self):
         ''' A tape with undefined blocking '''
