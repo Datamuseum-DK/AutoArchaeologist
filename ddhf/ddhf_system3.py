@@ -32,9 +32,9 @@ class System3(ddhf.DDHFExcavation):
 
         self.add_examiner(ga21_9128.Ga21_9182)
         self.add_examiner(samesame.SameSame)
-        self.add_examiner(s3x.S3X)
-        self.add_examiner(s3x.S3Y)
-        self.add_examiner(s3x.S3Z)
+        self.add_examiner(system3.S3X)
+        self.add_examiner(system3.S3Y)
+        self.add_examiner(system3.S3Z)
 
         self.type_case = type_case.WellKnown("cp037")
 
