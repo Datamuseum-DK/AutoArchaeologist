@@ -153,6 +153,7 @@ class TapeFile():
             for p in range(0, len(r), w):
                 l.append(self.tree.this[r.lo+p:r.lo+p+w])
         that = self.tree.this.create(records=l)
+        that.add_note("Ansi-tape:Fixed")
         return that
 
     def undefined(self):
@@ -160,6 +161,7 @@ class TapeFile():
         that = self.tree.this.create(
             records = (self.tree.this[x.lo:x.hi] for x in self.recs)
         )
+        that.add_note("Ansi-tape:Undefined")
         return that
 
     def segmented(self):
@@ -199,6 +201,7 @@ class TapeFile():
                     frag = frag,
                 )
             )
+        that.add_note("Ansi-tape:Segmented")
         return that
 
     def interpretation(self, file):
