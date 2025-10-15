@@ -190,9 +190,9 @@ def Text(width, rstrip=False):
 
 class String(Octets):
 
-    def __init__(self, tree, lo, **kwargs):
+    def __init__(self, tree, lo, terminator=0x00, **kwargs):
         hi = lo
-        while tree.this[hi] != 0x00:
+        while tree.this[hi] != terminator:
             hi += 1
         super().__init__(tree, lo=lo, hi=hi + 1)
         type_case = self.this.type_case
