@@ -15,7 +15,7 @@ from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.container import argv
 from autoarchaeologist.vendor.ibm import ga21_9128
-from autoarchaeologist.vendor.ibm.midrange import s3x
+from autoarchaeologist.vendor.ibm.midrange import system3
 
 import ddhf
 
