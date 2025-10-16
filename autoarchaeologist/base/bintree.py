@@ -49,6 +49,9 @@ class BinTreeLeaf():
             return False
         return self.lo == other.lo and self.hi == other.hi
 
+    def __hash__(self):
+        return super().__hash__()
+
     def __contains__(self, adr):
         return self.lo <= adr < self.hi
 
