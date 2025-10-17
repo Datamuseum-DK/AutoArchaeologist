@@ -13,45 +13,53 @@
 import html
 
 from ...base import octetview as ov
+from ...base import namespace
 from .rc489k_utils import DWord, ShortClock
+
+class NameSpace(namespace.NameSpace):
+    ''' ... '''
 
 #################################################
 #
 # A file can be a subdirectory if it has key=10
 
-class Foo00(ov.Struct):
+class FlxHdr(ov.Struct):
     def __init__(self, tree, lo):
         super().__init__(
             tree,
             lo,
             w000_=DWord,
-            name_=ov.Text(6),
-            w020_=ov.Text(12),
+            magic_=ov.Text(6),
+            w011_=ov.Text(12),
+            #w012_=ov.Be24,
+            #w013_=ov.Be24,
             nent_=ov.Be24,
             nrec_=ov.Be24,
-            w022_=ShortClock,
+            tstamp_=ShortClock,
             w024_=ov.Be24,
             w026_=ov.Be24,
             w028_=ov.Be24,
-            w030_=ov.Text(6),
-            w040_=ov.Be24,
-            w045_=ov.Text(6),
-            w050_=ov.Text(6),
+            flxset_=ov.Text(6),
+            flxno_=ov.Be24,
+            firstvol_=ov.Text(6),
+            nextvol_=ov.Text(6),
             # vertical=True,
         )
+        self.nextvid = self.nextvol.txt.strip().lower
+        self.next = None
 
-class Foo01(ov.Struct):
+class FlxDirSec(ov.Struct):
     def __init__(self, tree, lo):
         super().__init__(
             tree,
             lo,
             w00_=DWord,
-            w01_=Foo02,
-            w02_=Foo02,
+            w01_=FlxDirEnt,
+            w02_=FlxDirEnt,
             vertical=True,
         )
 
-class Foo02(ov.Struct):
+class FlxDirEnt(ov.Struct):
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -59,77 +67,302 @@ class Foo02(ov.Struct):
             name_=ov.Text(18),
             w02_=ov.Be24,
             w03_=ov.Be24,
-            w04_=ov.Be24,
-            w05_=ov.Be24,
+            range_=Range,
             w6_=ov.Be24,
             w07_=ov.Text(12),
-            #w08_=ov.Be24,
-            #w09_=ov.Text(3),
-            w10_=ov.Be24,
+            w10_=ShortClock,
             w11_=ov.Be24,
             w12_=ov.Be24,
             w13_=ov.Be24,
             w14_=ov.Be24,
         )
 
+    def top_list(self):
+        if self.substantial():
+            yield str(self)
+
+    def substantial(self):
+        x = self.range
+        if x.start is None:
+            return False
+        if x.start.val == 0 and x.end.val == 0:
+            return False
+        if x.start.val > 0 and x.end.val > 0 and x.start.val > x.end.val:
+            return False
+        return True
+
+class Range(ov.Struct):
+
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            more=True,
+        )
+        if 0x00 < tree.this[lo] < 0xff:
+            self.add_field("ref", ov.Text(6))
+            self.start = None
+            self.end = None
+        else:
+            self.add_field("start", ov.Bs24)
+            self.add_field("end", ov.Bs24)
+            self.ref = None
+        self.done()
+
+    def render(self):
+        if self.ref:
+            yield "@" + self.ref.txt
+        else:
+            yield "[%#06x…%#06x]" % (self.start.val, self.end.val)
+
+class FlxContrib():
+    def __init__(self, vol, cat, contrib):
+        self.vol = vol
+        self.cat = cat
+        self.contrib = contrib
+        self.range = contrib.range
+        self.firstvol = cat.hdr.firstvol.txt.strip()
+        self.nextvol = cat.hdr.nextvol.txt.strip()
+        self.thisvol = vol.lower().strip()
+
+    def __lt__(self, other):
+        if self.range.start.val > 0:
+            return True
+        if self.thisvol == self.nextvol:
+            return False
+        return self.thisvol < other.thisvol
+
+    def __repr__(self):
+        return "CC{" + self.thisvol + " " + str(self.range) + " " + self.nextvol + "}"
+
+class FlxFile():
+    def __init__(self, sect, fname):
+        self.sect = sect
+        self.fname = fname
+        self.state = "incomplete"
+        self.contrib = []
+        self.that = None
+
+    def add_contrib(self, volid, cat, contrib):
+        rg = contrib.range
+        if rg.start is None:
+            return
+        if rg.start.val == 0 and rg.end.val == 0:
+            return
+        if rg.end.val > 0 and rg.start.val > rg.end.val:
+            self.state = "cancelled"
+            return
+        self.contrib.append(FlxContrib(volid, cat, contrib))
+        if rg.start.val > 0 and rg.end.val > rg.start.val:
+            self.instantiate(self.contrib[-1:])
+            return
+        if self.state != "incomplete":
+            return
+
+        self.contrib.sort()
+        l = []
+        cur = self.contrib[0]
+        if cur.range.start.val < 0:
+            return
+        l.append(cur)
+        print("FIRST", self.fname, l)
+        for c in self.contrib[1:]:
+            if cur.nextvol == c.thisvol:
+                cur = c
+                l.append(cur)
+                if cur.nextvol == cur.thisvol:
+                    cur = None
+                    break
+        if not cur:
+            self.instantiate(l)
+        else:
+            print("still INCOMPLETE", l)
+
+    def instantiate(self, parts):
+        l = []
+        for part in parts:
+            b = part.range.start.val
+            if b < 0:
+                b = -b
+            e = part.range.end.val
+            if e < 0:
+                e = -e
+            for i in range(b, e + 1):
+                l.append(part.cat.get_block(i))
+        print("COMPLETE", parts, len(l))
+        self.state = "complete"
+        self.that = parts[0].cat.this.create(records = l)
+        self.that.add_note("flxfile")
+        self.that.add_name(self.fname)
+        NameSpace(
+            name = self.fname,
+            parent = self.sect.grp.ns,
+            this = self.that
+        )
+
+    def topint(self, file):
+        file.write("      file " + self.fname + " " + self.state + " " + str(self.that) + "\n")
+        if not self.contrib:
+            return
+        file.write("        Contribs:\n")
+        for contrib in sorted(self.contrib):
+            file.write("          " + html.escape(str(contrib)) + "\n")
+
+class FlxSect():
+    def __init__(self, grp, sectid):
+        self.grp = grp
+        self.sectid = sectid
+        self.cats = set()
+        self.files = {}
+
+    def add_cat(self, cat, volid):
+        self.cats.add((volid, cat))
+        for ent in cat.entries:
+            ff = self.files.get(ent.name.txt)
+            if ff is None:
+                ff = FlxFile(self, ent.name.txt)
+                self.files[ent.name.txt] = ff
+            ff.add_contrib(volid, cat, ent)
+
+    def topint(self, file):
+        file.write("  Sect " + self.sectid + "\n")
+        file.write("    Cats:\n")
+        for volid, cat in sorted(self.cats):
+            file.write("      " + html.escape(volid + " " + str(cat)) + "\n")
+            for ent in cat.entries:
+                file.write("        " + html.escape(str(ent)) + "\n")
+        file.write("    Files:\n")
+        for _name, ff in sorted(self.files.items()):
+            ff.topint(file)
+
+class FlxGrp():
+    def __init__(self, this, tstamp, flxset):
+        self.vols = set()
+        self.cats = set()
+        self.sects = {}
+        self.tstamp = tstamp
+        self.flxset = flxset
+        this.top.add_interpretation(self, self.topint)
+        self.ns = namespace.NameSpace(
+            name="",
+            root=this,
+            separator="",
+        )
+
+    def add_vol(self, vol):
+        self.vols.add(vol)
+
+    def add_cat(self, cat, volid):
+        self.cats.add((cat, volid))
+        sectid = cat.hdr.flxset.txt.strip() + ":" + str(cat.hdr.flxno.val)
+        sect = self.sects.get(sectid)
+        if not sect:
+            sect = FlxSect(self, sectid)
+            self.sects[sectid] = sect
+        sect.add_cat(cat, volid)
+
+    def topint(self, file, this):
+        file.write("<H3>FlxGrp %s %d</H3>\n" % (self.flxset, self.tstamp))
+        self.ns.ns_html_plain_noheader(file, None)
+        file.write("<PRE>\n")
+        file.write("Vols\n")
+        for i in sorted(self.vols):
+            file.write("  " + html.escape(str(i)) + "\n")
+        file.write("Sects\n")
+        for _j,i in sorted(self.sects.items()):
+            i.topint(file)
+        file.write("</PRE>\n")
+
 class FlxCat(ov.OctetView):
     def __init__(self, this):
         if this[6:12] != b'flxcat':
             return
 
-        vol = list(this.parents)[0]
-        self.volhead = list(vol.iter_note("GA21-9182"))[0][1]["volhead"]
-        self.volid = self.volhead.volume_identifier.txt
+        self.ga21f = this.has_note("GA21-9182-File")
+        if not self.ga21f:
+            return
 
-        volset_dict = this.top.get_by_class_dict(self)
-        if len(volset_dict) == 0:
-            this.top.add_interpretation(self, self.topall)
+        this.add_interpretation(self, this.html_interpretation_children)
 
         this.add_type("flxcat")
         super().__init__(this)
+
         recs = []
         for r in this.iter_rec():
             n = len(r) // 126
             for i in range(n):
                 recs.append(r.lo + i * 126)
+
         self.entries = []
+        self.blocks = {}
         for o in recs:
             y = DWord(self, o)
+            self.blocks[y.w1.val] = y.hi
             if y.w0.val == 1:
-                self.hdr = Foo00(self, o).insert()
+                self.hdr = FlxHdr(self, o).insert()
             elif y.w0.val == 2:
-                y = Foo01(self, o).insert()
+                y = FlxDirSec(self, o).insert()
                 self.entries.append(y.w01)
                 self.entries.append(y.w02)
             else:
                 y.insert()
 
-        self.group = self.hdr.w030.txt
-        gl = volset_dict.get(self.group)
-        if not gl:
-            gl = []
-            volset_dict[self.group] = gl
-        gl.append(self)
+        self.entries = self.entries[:self.hdr.nent.val]
+
+        volset_dict = this.top.get_by_class_dict(self)
+
+        def find_grp(vol):
+            grp = volset_dict.get(vol.tree.this)
+            if grp:
+                return grp
+            for grp in volset_dict.values():
+                if grp.flxset != self.hdr.flxset.txt:
+                    continue
+                if (grp.tstamp ^ self.hdr.tstamp.val) & ~0x1f:
+                    continue
+                volset_dict[vol.tree.this] = grp
+                return grp
+            grp = FlxGrp(this, self.hdr.tstamp.val, self.hdr.flxset.txt)
+            volset_dict[vol.tree.this] = grp
+            return grp
+
+        for identity in self.ga21f:
+            # print("FLX-id", identity)
+            vol = identity["vol"]
+            grp = find_grp(vol)
+            grp.add_vol(vol)
+            grp.add_cat(self, vol.volume_identifier.txt.strip())
 
         self.add_interpretation(more=False)
 
-    def __lt__(self, other):
-        if self.hdr.w022.val != other.hdr.w022.val:
-            return self.hdr.w022.val < other.hdr.w022.val
-        if self.hdr.w040.val != other.hdr.w040.val:
-            return self.hdr.w040.val < other.hdr.w040.val
-        return self.volid < other.volid
+    def get_block(self, n):
+        p = self.blocks[n]
+        return self.this[p:p+120]
 
-    def topall(self, file, this):
-        volset_dict = this.top.get_by_class_dict(self)
-        file.write("<H3>TOPALL</H3>\n")
-        file.write("<PRE>\n")
-        for i, j in sorted(volset_dict.items()):
-            file.write(html.escape(str(i)) + "\n")
-            for gm in sorted(j):
-                file.write("  " + str(gm.this) + " " + gm.volid)
-                file.write("  " + html.escape(" ".join(gm.hdr.render())))
-                file.write("  " + str(gm.hdr.w022.val))
-                file.write("  " + html.escape(str(list(gm.this.parents))))
-                file.write("\n")
-        file.write("</PRE>\n")
+    def volptrs(self):
+        return self.hdr.firstvol.txt.strip(), self.hdr.nextvol.txt.strip()
+
+    def __str__(self):
+        return "".join(
+            (
+            "FlxCat(",
+            self.hdr.flxset.txt,
+            ":",
+            str(self.hdr.flxno.val),
+            " ",
+            "".join(self.hdr.tstamp.render()),
+            " {",
+            self.hdr.firstvol.txt.strip(),
+            "…",
+            self.hdr.nextvol.txt.strip(),
+            "}",
+            ")"
+            )
+        )
+
+    def __lt__(self, other):
+        if self.hdr.flxset.txt != other.hdr.flxset.txt:
+            return self.hdr.flxset.txt < other.hdr.flxset.txt
+        if self.hdr.flxno.val != other.hdr.flxno.val:
+            return self.hdr.flxno.val < other.hdr.flxno.val
+        return self.hdr.tstamp.val < other.hdr.tstamp.val
