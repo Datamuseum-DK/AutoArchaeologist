@@ -19,6 +19,18 @@ from .rc489k_utils import DWord, ShortClock
 class NameSpace(namespace.NameSpace):
     ''' ... '''
 
+    TABLE = (
+        ("l", "state"),
+        ("l", "name"),
+        ("l", "artifact"),
+    )
+
+    def ns_render(self):
+        ''' ... '''
+        return [
+            self.ns_priv.state
+        ] + super().ns_render()
+
 #################################################
 #
 # A file can be a subdirectory if it has key=10
@@ -132,8 +144,19 @@ class FlxContrib():
             return False
         return self.thisvol < other.thisvol
 
-    def __repr__(self):
-        return "CC{" + self.thisvol + " " + str(self.range) + " " + self.nextvol + "}"
+    def topint(self, file):
+        file.write(
+            html.escape(
+                "    " + " ".join(
+                    (
+                    self.thisvol + ":",
+                    str(self.range),
+                    "[" + self.firstvol + "…" + self.nextvol + "]"
+                    )
+                ) + "\n"
+            )
+        )
+
 
 class FlxFile():
     def __init__(self, sect, fname):
@@ -142,6 +165,11 @@ class FlxFile():
         self.state = "incomplete"
         self.contrib = []
         self.that = None
+        self.ns = NameSpace(
+            name = sect.sectid + "." + self.fname,
+            parent = sect.grp.ns,
+            priv = self
+        )
 
     def add_contrib(self, volid, cat, contrib):
         rg = contrib.range
@@ -165,7 +193,6 @@ class FlxFile():
         if cur.range.start.val < 0:
             return
         l.append(cur)
-        print("FIRST", self.fname, l)
         for c in self.contrib[1:]:
             if cur.nextvol == c.thisvol:
                 cur = c
@@ -175,8 +202,6 @@ class FlxFile():
                     break
         if not cur:
             self.instantiate(l)
-        else:
-            print("still INCOMPLETE", l)
 
     def instantiate(self, parts):
         l = []
@@ -189,24 +214,18 @@ class FlxFile():
                 e = -e
             for i in range(b, e + 1):
                 l.append(part.cat.get_block(i))
-        print("COMPLETE", parts, len(l))
         self.state = "complete"
         self.that = parts[0].cat.this.create(records = l)
         self.that.add_note("flxfile")
         self.that.add_name(self.fname)
-        NameSpace(
-            name = self.fname,
-            parent = self.sect.grp.ns,
-            this = self.that
-        )
+        self.ns.ns_set_this(self.that)
 
     def topint(self, file):
-        file.write("      file " + self.fname + " " + self.state + " " + str(self.that) + "\n")
+        file.write(html.escape("  »" + self.fname + "«\n"))
         if not self.contrib:
             return
-        file.write("        Contribs:\n")
         for contrib in sorted(self.contrib):
-            file.write("          " + html.escape(str(contrib)) + "\n")
+            contrib.topint(file)
 
 class FlxSect():
     def __init__(self, grp, sectid):
@@ -225,15 +244,13 @@ class FlxSect():
             ff.add_contrib(volid, cat, ent)
 
     def topint(self, file):
-        file.write("  Sect " + self.sectid + "\n")
-        file.write("    Cats:\n")
-        for volid, cat in sorted(self.cats):
-            file.write("      " + html.escape(volid + " " + str(cat)) + "\n")
-            for ent in cat.entries:
-                file.write("        " + html.escape(str(ent)) + "\n")
-        file.write("    Files:\n")
+        s = set(f.state for f in self.files.values())
+        if "incomplete" not in s:
+            return
+        file.write("»" + html.escape(self.sectid) + "« incomplete files:\n")
         for _name, ff in sorted(self.files.items()):
-            ff.topint(file)
+            if ff.state == "incomplete":
+                ff.topint(file)
 
 class FlxGrp():
     def __init__(self, this, tstamp, flxset):
@@ -249,8 +266,8 @@ class FlxGrp():
             separator="",
         )
 
-    def add_vol(self, vol):
-        self.vols.add(vol)
+    def add_vol(self, that, vol):
+        self.vols.add((that, vol))
 
     def add_cat(self, cat, volid):
         self.cats.add((cat, volid))
@@ -261,14 +278,22 @@ class FlxGrp():
             self.sects[sectid] = sect
         sect.add_cat(cat, volid)
 
-    def topint(self, file, this):
-        file.write("<H3>FlxGrp %s %d</H3>\n" % (self.flxset, self.tstamp))
-        self.ns.ns_html_plain_noheader(file, None)
+    def topint(self, file, _this):
+        file.write("<HR/><H2>FlxGrp »")
+        file.write(html.escape(self.flxset))
+        file.write("« " +  "".join(self.tstamp.render()) + "</H2>\n")
         file.write("<PRE>\n")
-        file.write("Vols\n")
-        for i in sorted(self.vols):
-            file.write("  " + html.escape(str(i)) + "\n")
-        file.write("Sects\n")
+        for that, _vol in sorted(self.vols):
+            that.html_derivation(file, False)
+        file.write("</PRE>\n")
+        file.write("<P>\n")
+        for that, _vol in sorted(self.vols):
+            file.write(file.str_link_to_that(that) + "  ")
+            file.write(html.escape(that.summary(notes=True, names=True)) + "<br/>\n")
+        file.write("<P>\n")
+        if not self.ns.ns_isempty():
+            self.ns.ns_html_plain_noheader(file, None)
+        file.write("<PRE>\n")
         for _j,i in sorted(self.sects.items()):
             i.topint(file)
         file.write("</PRE>\n")
@@ -318,11 +343,11 @@ class FlxCat(ov.OctetView):
             for grp in volset_dict.values():
                 if grp.flxset != self.hdr.flxset.txt:
                     continue
-                if (grp.tstamp ^ self.hdr.tstamp.val) & ~0x1f:
+                if (grp.tstamp.val ^ self.hdr.tstamp.val) & ~0x1f:
                     continue
                 volset_dict[vol.tree.this] = grp
                 return grp
-            grp = FlxGrp(this, self.hdr.tstamp.val, self.hdr.flxset.txt)
+            grp = FlxGrp(this, self.hdr.tstamp, self.hdr.flxset.txt)
             volset_dict[vol.tree.this] = grp
             return grp
 
@@ -330,7 +355,7 @@ class FlxCat(ov.OctetView):
             # print("FLX-id", identity)
             vol = identity["vol"]
             grp = find_grp(vol)
-            grp.add_vol(vol)
+            grp.add_vol(this, vol)
             grp.add_cat(self, vol.volume_identifier.txt.strip())
 
         self.add_interpretation(more=False)
