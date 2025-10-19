@@ -81,6 +81,10 @@ class NameSpace():
     def __iter__(self):
         yield from self.ns_children
 
+    def ns_isempty(self):
+        ''' ... '''
+        return len(self.ns_children) == 0
+
     def ns_set_root(self, root):
         ''' Set the root artifact '''
         if self.ns_root == root:
@@ -152,8 +156,12 @@ class NameSpace():
 
     def ns_html_plain_noheader(self, file, _this):
         ''' Render recursively - just the substance '''
-        file.write("<div>")
 
+        if self.ns_isempty():
+            file.write("<P>(Empty namespace)</P>\n")
+            return
+
+        file.write("<div>")
         tbl = [x.ns_render() for y, x in self.ns_recurse() if y > 0]
         for i in tbl:
             this = i[-1]
