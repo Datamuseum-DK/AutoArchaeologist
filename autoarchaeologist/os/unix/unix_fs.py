@@ -434,7 +434,7 @@ class UnixFileSystem(ov.OctetView):
 
     DIRECTORY = Directory
 
-    VERBOSE = True
+    VERBOSE = False
 
     def __init__(self, this):
         if len(this) < 20480:
@@ -749,7 +749,7 @@ class UnusedBlock(ov.Opaque):
 class UnixFs(UnixFileSystem):
     ''' Parameterized UNIX filesystem '''
 
-    VERBOSE = True
+    VERBOSE = False
 
     def __init__(
         self,
@@ -773,7 +773,8 @@ class UnixFs(UnixFileSystem):
             print(this, str(self), "?")
         super().__init__(this)
         if not self.good:
-            print(this, "no good")
+            if self.VERBOSE:
+                print(this, "no good")
             return
         self.rootdir.namespace.KIND = str(self)
         if self.VERBOSE:
@@ -860,9 +861,12 @@ class UnixFs(UnixFileSystem):
                         "Inode has too many direct blocks " + str(inum) + " " + str(ino)
                     )
         elif ino.ifmt in (ino.S_IFBLK, ino.S_IFCHR):
-            if max(ino.vdi_addr.octets()[2:]) > 0:
-                print(self.this, "unexpected dev blocknos", ino.di_db, ino.di_ib, self, ino, ino.vdi_addr)
-        elif sum(ino.di_db) + sum(ino.di_ib):
+            if max(ino.vdi_addr.octets()[2:]) > 0 and self.VERBOSE:
+                # CBM900 ⟦5ec4c54f2⟧
+                print(
+                    "dev-node has block-nos " + str(inum) + " " + str(ino.vdi_addr)
+                )
+        elif sum(ino.di_db) + sum(ino.di_ib) and self.VERBOSE:
             print(self.this, "unexpected blocknos", ino.di_db, ino.di_ib, self, ino)
 
         ino.insert()
@@ -894,10 +898,8 @@ class UnixFs(UnixFileSystem):
             db = self.params.DIR_CLASS(self, b.lo, b.hi, self.short).insert()
             for inum, fnam in db:
                 if n == 0 and fnam != ".":
-                    print(db)
                     raise NotCredible("First dirent not '.' " + str(inode))
                 if n == 1 and fnam != "..":
-                    print(db)
                     raise NotCredible("Second dirent not '..' " + str(inode))
                 n += 1
                 yield inum, fnam
@@ -931,7 +933,7 @@ class UnixFsLittleEndian(ov.OctetView):
                 continue
             # print("\tByte order could be", byte_order, bnos)
             for bsize, offset in self.find_rootdir(bnos):
-                print("\tBootblocks could be", hex(offset), "with block size", hex(bsize))
+                # print("\tBootblocks could be", hex(offset), "with block size", hex(bsize))
                 UnixFs(
                     self,
                     byte_order,
