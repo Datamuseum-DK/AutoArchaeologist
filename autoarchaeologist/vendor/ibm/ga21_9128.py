@@ -116,7 +116,7 @@ class DataSet():
         that = data_set.tree.this.create(records=recs)
         self.ns.ns_set_this(that)
         that.add_name(self.ident.strip())
-        that.ga21_9128 = self.ds
+        that.add_note("GA21-9182-File", args=data_set.user_name.txt.strip(), vol=vol, file=data_set)
         print("DS complete", self.ident, list(self.parts), self.last, that, self.ident)
 
 class VolSet():
@@ -265,7 +265,7 @@ class Ga21_9182(disk.Disk):
         print(this, "Ga21_9182", "VOLID", volid)
         this.add_name(volid)
 
-        this.add_note("GA21-9182", volid, volhead=self.volhead)
+        this.add_note("GA21-9182-Volume", args=volid, vol=self.volhead)
 
         data_sets = []
 
@@ -287,7 +287,7 @@ class Ga21_9182(disk.Disk):
             if not multivol:
                 y = this.create(records=recs)
                 y.add_name(data_set.user_name.txt.strip())
-                y.ga21_9128 = data_set
+                y.add_note("GA21-9182-File", args=data_set.user_name.txt.strip(), vol=self.volhead, file=data_set)
             else:
                 volset_dict = this.top.get_by_class_dict(self)
                 volset = volset_dict.get(volid)

@@ -87,7 +87,7 @@ class PaperTapeCheckSum():
                 nn.append("Len=BAD")
                 this.add_comment("DGC-PaperTapeCheckSum starts at -0x%x" % -p0)
 
-            this.add_note("DGC-PaperTapeCheckSum", ",".join(nn))
+            this.add_note("DGC-PaperTapeCheckSum", args=",".join(nn))
             npos = last
 
             if last - pos > 12:

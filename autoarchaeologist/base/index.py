@@ -231,10 +231,12 @@ class Index():
         for i in this.iter_types():
             self.add_entry(i, this, "type")
         for note, val in this.iter_notes():
-            if val:
-                self.add_entry(note + ", " + str(val), this, "note")
-            else:
-                self.add_entry(note, this, "note")
+            for args in val:
+                arg = args.get("args")
+                if arg:
+                    self.add_entry(note + ", " + str(arg), this, "note")
+                else:
+                    self.add_entry(note, this, "note")
         for i in this.children:
             if i not in self.seen:
                 self.collect(i)

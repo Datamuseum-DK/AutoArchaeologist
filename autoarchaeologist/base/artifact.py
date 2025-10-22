@@ -287,21 +287,20 @@ class Artifact(result_page.ResultPage):
         self.comments.append(comment)
         self.add_note("Has Comment")
 
-    def add_note(self, note, msg=None, **kwargs):
+    def add_note(self, note, **kwargs):
         ''' Add a note '''
         assert len(note) > 0
         i = self.notes.get(note)
         if i is None:
             i = []
             self.notes[note] = i
-        i.append((msg, kwargs))
+        i.append(kwargs)
 
     def iter_note(self, note):
         ''' Get a notes payload '''
         t =  self.notes.get(note, None)
-        if t is None:
-            return
-        yield from t
+        if t is not None:
+            yield from t
 
     def has_note(self, note):
         ''' Check if note already exists '''
@@ -331,8 +330,9 @@ class Artifact(result_page.ResultPage):
 
     def iter_notes(self, recursive=False):
         ''' Return all notes that apply to this artifact '''
-        for n, l in self.notes.items():
-            yield from ((n, x) for x,y in l)
+        yield from self.notes.items()
+        #for n, l in self.notes.items():
+        #    yield from ((n, x) for x,y in l)
         if recursive:
             for child in self.children:
                 assert child != self, (child, self)
@@ -443,16 +443,15 @@ class Artifact(result_page.ResultPage):
             file.write(", ".join(sorted(self.types)) + "\n")
         if self.notes:
             file.write("    Notes: ")
-            l = []
-            seen = set()
-            for i, j in sorted(self.iter_notes(True)):
-                if (i, j) in seen:
-                    continue
-                seen.add((i, j))
-                l.append(i)
-                if j:
-                    l[-1] += "(" + str(j) + ")"
-            file.write(", ".join(l) + "\n")
+            ll = set()
+            for i, j in sorted(self.iter_notes(False)):
+                for e in j:
+                    a = e.get("args")
+                    if a:
+                        ll.add(i + "(" + a + ")")
+                    else:
+                        ll.add(i)
+            file.write(", ".join(sorted(ll)) + "\n")
         if self.names:
             file.write("    Names: ")
             file.write(", ".join('»' + x + '«' for x in sorted(self.names))+ "\n")
@@ -553,7 +552,7 @@ class Artifact(result_page.ResultPage):
         file.write("<H3>Default Hex Dump</H3>\n")
         file.write("<pre>\n")
 
-        if len(self._keys) > 0:
+        if len(self._keys) > 0 and len(this) > max_lines * line_length:
             # We have records, dump them individually
             # reduce line-length to longest record
 
