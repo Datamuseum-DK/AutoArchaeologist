@@ -312,7 +312,7 @@ class Inode(ov.Struct):
                 if not self.badblocks:
                     print(self.tree.this, self, "Badblock file", hex(x.lo))
                 self.badblocks += 1
-        self.that = self.ufs.this.create(records=ll)
+        self.that = self.ufs.this.create(records=ll, define_records=False)
         self.that.add_note("UNIX file")
         if self.badblocks:
             self.that.add_note("Bad_blocks")

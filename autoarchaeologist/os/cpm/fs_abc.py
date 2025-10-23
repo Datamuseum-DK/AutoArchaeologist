@@ -200,7 +200,7 @@ class CpmFile():
             self.make_frags()
 
         if self.frags:
-            y = self.tree.this.create(records=self.frags)
+            y = self.tree.this.create(records=self.frags, define_records=False)
             if self.unreads:
                 y.add_note("Unread_Sectors")
             CpmNameSpace(
