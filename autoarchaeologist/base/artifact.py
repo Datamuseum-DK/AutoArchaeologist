@@ -552,7 +552,7 @@ class Artifact(result_page.ResultPage):
         file.write("<H3>Default Hex Dump</H3>\n")
         file.write("<pre>\n")
 
-        if len(self._keys) > 0 and len(this) > max_lines * line_length:
+        if len(self._keys) > max_lines and len(this) > max_lines * line_length:
             # We have records, dump them individually
             # reduce line-length to longest record
 
