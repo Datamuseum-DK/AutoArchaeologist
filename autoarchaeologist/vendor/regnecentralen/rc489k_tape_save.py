@@ -121,7 +121,7 @@ class Rc489kSaveDirExt(ov.Struct):
         #print(self.tree.this, "Y", "0x%x-0x%x" % (y.lo, y.hi), y)
         #if y.hi < self.parts[-1].hi:
         #    z = ov.Opaque(self.tree, lo= y.hi, hi= self.parts[-1].hi).insert()
-        self.that = self.tree.this.create(records = self.parts)
+        self.that = self.tree.this.create(records = self.parts, define_records=False)
         return True
 
     def ns_render(self):

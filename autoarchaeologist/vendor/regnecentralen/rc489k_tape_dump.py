@@ -211,7 +211,8 @@ class Rc489kDumpTapeFile(ov.OctetView):
         fname = recs[0].entry_name.txt.strip()
         if len(recs) > 1:
             that = self.this.create(
-                records = [x.payload_.octets() for x in recs[1:]]
+                records = [x.payload_.octets() for x in recs[1:]],
+                define_records = False,
             )
             that.add_name(fname)
             tns = Rc489kNameSpace(

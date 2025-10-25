@@ -215,7 +215,7 @@ class FlxFile():
             for i in range(b, e + 1):
                 l.append(part.cat.get_block(i))
         self.state = "complete"
-        self.that = parts[0].cat.this.create(records = l)
+        self.that = parts[0].cat.this.create(records=l, define_records=False)
         self.that.add_note("flxfile")
         self.that.add_name(self.fname)
         self.ns.ns_set_this(self.that)

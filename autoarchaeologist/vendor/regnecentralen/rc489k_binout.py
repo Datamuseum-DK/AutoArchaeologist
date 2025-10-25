@@ -5,7 +5,7 @@
 '''
 
 from ...base import octetview as ov
-from .rc489k_utils import *
+from . import rc489k_utils as util
 
 def parity(x):
     ''' calculate parity '''
@@ -13,6 +13,8 @@ def parity(x):
     x ^= x >> 2
     x ^= x >> 1
     return x & 1
+
+PARITY = bytes(parity(x) for x in range(256))
 
 #########################
 
@@ -33,7 +35,7 @@ class Rc489kBinOutCreate(ov.Struct):
             lo,
             cmd__=ov.Text(6),
             name_=ov.Text(12),
-            entry_tail_=Rc489kEntryTail,
+            entry_tail_=util.Rc489kEntryTail,
         )
 
 class Rc489kBinOutPerman(ov.Struct):
@@ -72,7 +74,7 @@ class Rc489kBinOutEntry(ov.Struct):
                 if self.namespace:
                     break
                 self.add_field("create", Rc489kBinOutCreate)
-                self.namespace = Rc489kNameSpace(
+                self.namespace = util.Rc489kNameSpace(
                     name = self.create.name.txt.rstrip(),
                     parent = self.tree.namespace,
                     priv = self,
@@ -89,12 +91,13 @@ class Rc489kBinOutEntry(ov.Struct):
                 self.add_field("end", ov.Text(3))
                 break
             else:
-                print(up.this, self.__class__.__name__, "???", hex(self.hi), i)
+                # print(up.this, self.__class__.__name__, "???", hex(self.hi), i)
                 self.add_field("huh", ov.Text(6))
                 break
         self.done()
 
     def ns_render(self):
+        ''' ... '''
         return ["?"] + self.create.entry_tail.ns_render()
 
     def commit(self):
@@ -102,24 +105,28 @@ class Rc489kBinOutEntry(ov.Struct):
         if self.namespace and self.parts:
             that = self.tree.this.create(
                 records = (x.octets() for x in self.parts),
+                define_records = False,
             )
             self.namespace.ns_set_this(that)
+            return True
+        return False
 
 class Rc489kBinOut(ov.OctetView):
     ''' A binout tape file '''
 
     def __init__(self, this):
-        if not this.has_type("Rc489k_binout_segments"):
+        if not this.has_note("Rc489k_binout"):
             return
         super().__init__(this)
 
-        self.namespace = Rc489kNameSpace(
+        self.namespace = util.Rc489kNameSpace(
             name='',
             separator='',
             root=this,
         )
 
         l = list(this.iter_rec())
+        cnt = 0
         while l:
             seg = l.pop(0)
             y = Rc489kBinOutEntry(self, seg)
@@ -127,11 +134,13 @@ class Rc489kBinOut(ov.OctetView):
                 seg = l.pop(0)
                 z = ov.Opaque(self, lo=seg.lo, hi=seg.hi).insert()
                 y.parts.append(z)
-            y.insert()
-            y.commit()
+            if y.commit():
+                y.insert()
+                cnt += 1
 
-        this.add_interpretation(self, self.namespace.ns_html_plain)
-        self.add_interpretation(more=True)
+        if cnt > 0:
+            this.add_interpretation(self, self.namespace.ns_html_plain)
+            self.add_interpretation(more=True)
 
 #########################
 
@@ -141,17 +150,17 @@ class Rc489kBinOutSegment(ov.Opaque):
     def octets(self):
         ''' Convert to octets '''
         for i in range(0, len(self), 4):
-            yield ((self[i] << 2) & 0xfc) | ((self[i+1] & 0x3f) >> 4)
-            yield ((self[i+1] << 4) & 0xf0) | ((self[i+2] & 0x3f)>> 2)
+            yield ((self[i+0] << 2) & 0xfc) | ((self[i+1] & 0x3f) >> 4)
+            yield ((self[i+1] << 4) & 0xf0) | ((self[i+2] & 0x3f) >> 2)
             yield ((self[i+2] << 6) & 0xc0) | (self[i+3] & 0x3f)
 
 class Rc489kBinOutSegmentChecksum(ov.Opaque):
     ''' ... '''
 
-class Rc489kBinOutEnd(ov.Opaque):
+class Rc489kBinOutEnd(ov.Dump):
     ''' ... '''
 
-class Rc489kBinOutTapeFile(ov.OctetView):
+class Rc489kDataSet(ov.OctetView):
     '''
        From BINOUT (RCSL 31-D244):
 
@@ -166,20 +175,19 @@ class Rc489kBinOutTapeFile(ov.OctetView):
     '''
 
     def __init__(self, this):
-        if not parity(this[0]):
-            return
         super().__init__(this)
         segments = []
         l = []
         lo = 0
         for n, i in enumerate(this):
+            if not i and not segments:
+                lo = n + 1
+                continue
             if not i:
-                if not segments:
-                    return
                 y = Rc489kBinOutEnd(self, n, width=1).insert()
                 y = ov.Opaque(self, n+1, hi=len(this)).insert()
                 break
-            if not parity(i):
+            if not PARITY[i]:
                 if segments:
                     print(this, self.__class__.__name__, "Bail(parity) at", n)
                 return
@@ -199,17 +207,19 @@ class Rc489kBinOutTapeFile(ov.OctetView):
                 l = []
             else:
                 l.append(i & 0x7f)
+        if not segments:
+            return
         r = []
         for seg in segments:
             r.append(bytes(seg.octets()))
 
         that = this.create(records = r)
-        this.add_type("Rc489k_binout_tape_file")
-        that.add_type("Rc489k_binout_segments")
+        this.add_note("Rc489k_data_set")
+        that.add_note("Rc489k_binout")
         self.this.add_interpretation(self, this.html_interpretation_children)
         self.add_interpretation(more=True)
 
 examiners = (
-    Rc489kBinOutTapeFile,
+    Rc489kDataSet,
     Rc489kBinOut,
 )
