@@ -153,6 +153,15 @@ class Opaque(Octets):
         else:
             yield self.rendered
 
+class Elided(Octets):
+    ''' Hide some octets '''
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def render(self):
+        yield "[…elided…]"
+
 class HexOctets(Octets):
     ''' Octets rendered without text column '''
 
@@ -475,8 +484,20 @@ class OctetView(bintree.BinTree):
             leaf = Octets,
         )
 
+    def elide(self, size):
+        ''' Elide the middle of large gaps '''
+
+        l = []
+        for lo, hi in self.gaps():
+            if hi - lo >= size * 3:
+                l.append((lo + size, hi - size))
+        for lo, hi in l:
+            if len(set(x for x in self.this[lo:hi])) > 1:
+                Elided(self, lo, hi=hi).insert()
+
     def render(self):
         ''' Rendering iterator with padding '''
+
         self.separators = [
             (x.lo, " " + str(x.key)) for x in self.this.iter_rec() if x.key is not None
         ]
@@ -510,8 +531,10 @@ class OctetView(bintree.BinTree):
             self.separators_width = 0
         yield from super().render(line_length=self.line_length)
 
-    def add_interpretation(self, title=None, more=False, **kwargs):
+    def add_interpretation(self, title=None, more=False, elide=4096, **kwargs):
         ''' Render via UTF-8 file '''
+        if elide > 0:
+            self.elide(elide)
         if title is None:
             title="OctetView - " + self.__class__.__name__
         with self.this.add_utf8_interpretation(title, more=more) as file:
