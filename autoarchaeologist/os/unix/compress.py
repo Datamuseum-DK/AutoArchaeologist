@@ -36,11 +36,4 @@ class Compress():
         self.that.add_note("Uncompressed file")
         if s.stderr:
             self.that.add_note("Uncompression error: " + s.stderr.decode('utf-8'))
-        this.add_interpretation(self, self.render)
-
-    def render(self, fo, _this):
-        ''' ... '''
-        fo.write("<H3>Compress(1)'ed file</H3>\n")
-        fo.write("<pre>\n")
-        fo.write(self.that.summary())
-        fo.write("</pre>\n")
+        this.add_interpretation(self, this.html_interpretation_children)
