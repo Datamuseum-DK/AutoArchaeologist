@@ -20,6 +20,7 @@ from ddhf_bitstore_metadata.sections import media
 
 from ..base import artifact
 from ..base import excavation
+from ..container import simh_crd_file
 from ..container import simh_tap_file
 from ..container import imd_file
 
@@ -42,6 +43,7 @@ BITSTORE_FORMATS = {
     "MP4": False,
     "BAGIT": True,
     "TAR": True,
+    "SIMH-CRD": simh_crd_file.SimhCrdContainer,
     "SIMH-TAP": simh_tap_file.SimhTapContainer,
     "ASCII": True,
     "ASCII_EVEN": True,
