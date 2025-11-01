@@ -17,7 +17,31 @@ from ...base import namespace
 from ...base import octetview as ov
 
 # Size of sectors
-SEC_SIZE = (1 << 9)
+SEC_SIZE = 1 << 9
+
+class SecNo(ov.Struct):
+    ''' A sector number '''
+
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            sno_=ov.Be16,
+        )
+        self.val = self.sno.val
+
+    def render(self):
+        if self.val == 0:
+            yield "SecNo {0}"
+            return
+        yield " ".join(
+            (
+                 "SecNo {",
+                 "sector=0x%04x," % self.val,
+                 "at=0x%06x," % ((self.val - 1) * SEC_SIZE),
+                 "}",
+            )
+        )
 
 class Kit(ov.Struct):
     '''
@@ -36,23 +60,24 @@ class Kit(ov.Struct):
             slice_size_=ov.Be16,
             sectors_on_unit_=ov.Be16,
             free_sectors_=ov.Be16,
-            first_data_sector_=ov.Be16,
-            top_data_sector_=ov.Be16,
+            first_data_sector_=SecNo,
+            top_data_sector_=SecNo,
+            vertical=True,
             more=True,
         )
         self.done(SEC_SIZE)
 
 class Slice(ov.Struct):
     '''
-        Index block (cf. RCSL-43-GL-7915 p.5)
-        -------------------------------------
+        Slice (cf. RCSL-43-GL-7915 p.5)
+        -------------------------------
     '''
     def __init__(self, tree, lo):
         super().__init__(
             tree,
             lo,
             count_=ov.Be16,
-            sector_=ov.Be16,
+            sector_=SecNo
         )
 
 class Index(ov.Struct):
@@ -67,18 +92,24 @@ class Index(ov.Struct):
             count_=ov.Be16,
             more=True,
         )
-        self.slices = []
         if self.count.val <= 127:
-            for i in range(self.count.val):
-                self.addfield("a%03d" % i, Slice)
-                self.slices.append(getattr(self, "a%03d" % i))
-        self.done(SEC_SIZE)
+            self.vertical = self.count.val > 1
+            self.add_field("slices", ov.Array(self.count.val, Slice, vertical=self.vertical))
+            self.done(SEC_SIZE)
+        else:
+            tree.this.add_note("domus_fs_slice_fail", args="@0x%x" % self.lo)
+            self.add_field("slicefail", ov.Array(1, Slice))
+            self.done(SEC_SIZE)
         self.tree.set_picture('I', lo=lo, width=SEC_SIZE)
 
     def __iter__(self):
-        for slice in self.slices:
-            for i in range(slice.count.val):
-                yield slice.sector.val + i
+        if self.count.val > 127:
+            return
+        for sl in self.slices:
+            yield from range(sl.sector.val, sl.sector.val + sl.count.val)
+
+class MapIndex(Index):
+    ''' ... '''
 
 class NameSpace(namespace.NameSpace):
     ''' ... '''
@@ -136,7 +167,7 @@ class CatEnt(ov.Struct):
             w5_=ov.Be16,
             attrib_=ov.Be16,
             length_=ov.Be16,
-            idxblk_=ov.Be16,
+            idxblk_=SecNo,
             alloc_=ov.Be16,
             w10_=ov.Be16,
             w11_=ov.Be16,
@@ -146,7 +177,7 @@ class CatEnt(ov.Struct):
             w15_=ov.Be16,
             more=True,
         )
-        self.name.txt = self.name.txt.rstrip()
+        self.name.txt = self.name.txt
         self.done(32)
         self.namespace = None
         self.subcat = None
@@ -184,9 +215,15 @@ class CatEnt(ov.Struct):
     def attr(self, n):
         return (self.attrib.val >> (15-n)) & 1
 
+    def render(self):
+        if sum(self.tree.this[self.lo:self.hi]) == 0:
+            yield "CatEnt { 0 }"
+        else:
+            yield from super().render()
+
     def commit(self, pnamespace):
         self.namespace = NameSpace(
-            name = self.name.txt,
+            name = self.name.txt.rstrip(),
             parent = pnamespace,
             priv = self,
             separator = ".",
@@ -210,7 +247,7 @@ class CatEnt(ov.Struct):
         l = []
         for i in self.idx:
             off = self.tree.offset + i * SEC_SIZE
-            d = disk.DataSector(
+            disk.DataSector(
                 self.tree,
                 lo=off,
                 hi=off+SEC_SIZE,
@@ -277,10 +314,18 @@ class Cat():
             try:
                 catent.subcat = Cat(self.tree, catent.namespace, catent.idxblk.val)
                 catent.subcat.commit()
-            except:
-                print("SUBCAT FAIL", catent)
+            except Exception as err:
+                print("SUBCAT FAIL", catent, err)
 
-class Domus_Filesystem(disk.Disk):
+class DomusFilesystem(disk.Disk):
+    '''
+       RC3600 DOMUS filesystems
+       ~~~~~~~~~~~~~~~~~~~~~~~~
+       In all the filesystems we have seen so far, the CatEnt for
+       "MAP" has:
+           idxblk=SecNo { sector=0x0008, at=0x000e00, }
+       which is wrong, it should have been sector#7.
+    '''
 
     def __init__(self, this):
 
@@ -336,7 +381,7 @@ class Domus_Filesystem(disk.Disk):
 
         self.kit.insert()
         self.set_picture('K', lo=self.kit.lo, width=SEC_SIZE)
-        mapidx = Index(self, self.offset + 7 * SEC_SIZE).insert()
+        MapIndex(self, self.offset + 7 * SEC_SIZE).insert()
 
         self.namespace = NameSpace(
             name="",

@@ -84,7 +84,7 @@ class Rc3600(ddhf.DDHFExcavation):
 
         self.type_case = DomusDS2089()
 
-        self.add_examiner(domus_fs.Domus_Filesystem)
+        self.add_examiner(domus_fs.DomusFilesystem)
         self.add_examiner(rc3600_tape.RC3600Tape)
         self.add_examiner(rc3600_fdtape.Rc3600FdTape)
 
