@@ -139,16 +139,7 @@ class XenixBust(ov.OctetView):
 
         hdr = Hdr(self, 0).insert()
 
-        if this[0] == 0x64:
-            nsec = ov.Le32(self, 0x44).insert()
-            secs = ov.Array(nsec.val, Section, vertical=True)(self, 0x48).insert()
-            sdir = secs[0]
-            sfil = secs[1]
-            self.base = (secs[4].sec0.val + secs[4].f01.val) << 10
-            ov.Array(3, Part64, vertical=True)(self, 0x8c).insert()
-            fcls = FilCatFile64
-
-        elif this[0] == 0x61:
+        if this[0] == 0x61:
             nsec = ov.Le16(self, 0x76).insert()
             secs = ov.Array(nsec.val, Section, vertical=True)(self, 0x78).insert()
             sdir = secs[0]
@@ -157,9 +148,31 @@ class XenixBust(ov.OctetView):
             fcls = FilCatFile61
             secs2 = ov.Array(2, Section, vertical=True)(self, 0x2ae).insert()
             self.base = (secs2[1].sec0.val + secs2[1].f01.val) << 10
+        elif this[0] == 0x63:
+            nsec = ov.Le32(self, 0x44).insert()
+            secs = ov.Array(nsec.val + 1, Section, vertical=True)(self, 0x48).insert()
+            sdir = secs[0]
+            sfil = secs[1]
+            ba = ov.Array(4, ov.Le32)(self, 0x1e8).insert()
+            bb = ov.Array(4, ov.Le32)(self, 0x228).insert()
+            self.base = bb[0].val << 10
+            ov.Array(3, Part64, vertical=True)(self, 0x8c).insert()
+            fcls = FilCatFile64
+        elif this[0] == 0x64:
+            nsec = ov.Le32(self, 0x44).insert()
+            secs = ov.Array(nsec.val, Section, vertical=True)(self, 0x48).insert()
+            sdir = secs[0]
+            sfil = secs[1]
+            ba = ov.Array(4, ov.Le32)(self, 0x1e8).insert()
+            bb = ov.Array(4, ov.Le32)(self, 0x2dc).insert()
+            self.base = bb[0].val << 10
+            ov.Array(3, Part64, vertical=True)(self, 0x8c).insert()
+            fcls = FilCatFile64
+
         else:
             return
 
+        print(this, "BASE", hex(self.base))
         self.ns = NameSpace(name="", root=this, separator="/")
         nl = 0
         for ptr in range(0x400, 0x1800, 2):
@@ -177,8 +190,9 @@ class XenixBust(ov.OctetView):
         for n, dcf in enumerate(y):
             if n == 0:
                 continue
-            print("DCF", dcf)
+            print(this, "DCF", dcf)
             if dcf.name[0] == 0:
+                print(this, "D0", n, dcf)
                 self.dirs[n] = self.dirs[0]
                 continue
             self.dirs[n] = NameSpace(
@@ -189,12 +203,27 @@ class XenixBust(ov.OctetView):
         if True:
             y = ov.Array(sfil.nrec.val + 1, fcls, vertical=True)(self, sfil.sec0.val<<10).insert()
             for n, fcf in enumerate(y):
+                that = None
                 b = self.base + (fcf.blkno.val<<10)
-                if fcf.hlink.val == 0 and fcf.size.val > 0 and b + fcf.size.val <= len(this):
-                    print("FCF", fcf, hex(b))
-                    that = this.create(start = b, stop = b + fcf.size.val)
+                if fcf.mode.val & 0xf000 == 0x2000:
+                    print(this, "CHR", hex(n), "%6o" % fcf.mode.val, fcf)
+                elif fcf.mode.val & 0xf000 == 0x6000:
+                    print(this, "BLK", hex(n), "%6o" % fcf.mode.val, fcf)
+                elif fcf.mode.val & 0xf000 != 0x8000:
+                    print(this, "MODE", hex(n), "%6o" % fcf.mode.val, fcf)
+                elif fcf.size.val == 0:
+                    print(this, "SZ", hex(n), "%6o" % fcf.mode.val, fcf)
+                elif fcf.hlink.val != 0:
+                    print(this, "HL", hex(n), "%6o" % fcf.mode.val, fcf)
+                elif b + fcf.size.val > len(this):
+                    print(this, "PAST", hex(n), hex(b), hex(b + fcf.size.val), "%6o" % fcf.mode.val, fcf)
                 else:
-                    that = None
+                    if fcf.blkno.val == 0:
+                        print(this, "B0", hex(n), "%6o" % fcf.mode.val, fcf)
+                    # w = ov.This(self, lo=b, width=fcf.size.val).insert()
+                    that = this.create(start=b, stop=b+fcf.size.val)
+                    print(this, "FCF", hex(n), fcf, hex(b), that)
+                    that = that
                 NameSpace(
                     name = fcf.name.txt.rstrip(),
                     parent = self.dirs[fcf.dirno.val],
