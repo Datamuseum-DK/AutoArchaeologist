@@ -11,8 +11,6 @@
 
 import collections
 
-#from ...generic import disk
-from ...base import type_case
 from ...base import namespace
 from ...base import octetview as ov
 
@@ -77,7 +75,6 @@ def match_geometry(this, fat0):
         # HP 150 ?
         return Geometry(66, 1, 16, 256, 1, 2, 4, 128, 3)
     if fat0 not in GEOMETRIES:
-        print(this, "NoGeom?", hex(fat0), len(this))
         return None
     for geometry in GEOMETRIES.get(fat0):
         size = geometry.cyl * geometry.hd * geometry.sect * geometry.bps
@@ -87,19 +84,6 @@ def match_geometry(this, fat0):
         size = geometry.cyl * geometry.hd * geometry.sect * geometry.bps
         print(this, "NoGeom?", hex(fat0), geometry, len(this), size)
     return None
-
-class MsDosTypeCase(type_case.WellKnown):
-    ''' ... '''
-
-    def __init__(self):
-        super().__init__("cp850")
-        self.set_slug(0x0d, ' ', '')
-        self.set_slug(0x0f, ' ', '«si»')
-        self.set_slug(0x10, ' ', '«dle»')
-        self.set_slug(0x11, ' ', '«dc1»')
-        self.set_slug(0x1a, ' ', '«eof»', self.EOF)
-
-msdostypecase = MsDosTypeCase()
 
 class BiosParamBlock(ov.Struct):
     ''' ... '''
@@ -210,7 +194,10 @@ class DirEnt(ov.Struct):
         self.deleted = self[0] == 0xe5
         self.unused = self[0] == 0x00
         self.valid = not (self.deleted or self.unused)
+        if self.name.txt == "_UNREAD__UN":
+            self.valid = False
         self.subdir = None
+        self.committed = False
         i = self.name.txt[:8].rstrip()
         j = self.name.txt[8:].rstrip()
         if j:
@@ -227,9 +214,13 @@ class DirEnt(ov.Struct):
 
     def commit(self):
         ''' ... '''
+        if self.committed:
+            print(self.tree.this, self, "recursive commit")
+            return
+        self.committed = True
         if not self.valid:
             return
-        if self.name[0] == 0x00:
+        if self.name[0] == 0x00 or self.name.txt == "_UNREAD__UN":
             return
         if (self.attr.val & 0x18) == 0:
             size = self.length.val
@@ -243,13 +234,12 @@ class DirEnt(ov.Struct):
                 bite = i[:want]
                 if len(bite) > 0:
                     j.append(bite)
-                #else:
-                #    print(self.this, "Missing Chunk", size, hex(_lo), i, self.name)
+                elif 0:
+                    print(self.this, "Missing Chunk", size, hex(_lo), i, self.name)
                 size -= want
             if j:
-                that = self.tree.this.create(records=j)
+                that = self.tree.this.create(records=j, define_records=False)
                 self.namespace.ns_set_this(that)
-                # print("TT", de.length.val, len(that), that)
         if self.attr.val & 0x10:
             self.subdir = Directory(self.tree, self.namespace)
             for low, cluster in self.tree.get_chain(self, self.cluster.val):
@@ -305,11 +295,13 @@ class FAT16(ov.Struct):
             yield first
             self.owner[first] = owner
             first = self.fat[first].val
-            if first >= 0xff0:
+            if first >= 0xfff0:
                 return
 
 class NameSpace(namespace.NameSpace):
     ''' ... '''
+
+    KIND = "FatFS"
 
     TABLE = (
         ("r", "attr"),
@@ -378,6 +370,7 @@ class Directory():
     def __init__(self, tree, nsp):
         self.tree = tree
         self.namespace = nsp
+        self.committed = False
         self.dirents = []
 
     def add_dirent(self, dirent):
@@ -386,6 +379,10 @@ class Directory():
 
     def commit(self):
         ''' Recurse '''
+        if self.committed:
+            print(self.tree.this, "recursive dir commit", self)
+            return
+        self.committed = True
         for dirent in self.dirents:
             dirent.commit()
 
@@ -409,13 +406,19 @@ class FatFs(ov.OctetView):
         super().__init__(this)
 
         fat0 = ov.Le24(self, 0x200)
+        if not 0xfffff0 <= fat0.val < 0xffffff:
+            return
+
         bpb = BiosParamBlock(self, 0)
+        ssz = bpb.bsBytesPerSec.val
+        if ssz == 0 or ssz & (ssz-1):
+            return
 
         if bpb.geom:
             bpb.insert()
             geometry = bpb.geom
-            print(this, "FatFs BPB")
-            print("\n".join(bpb.render()))
+            #print(this, "FatFs BPB")
+            #print("\n".join(bpb.render()))
         else:
             geometry = match_geometry(this, fat0.val)
             print("FatFs TBL", this, geometry, self)
@@ -426,7 +429,6 @@ class FatFs(ov.OctetView):
             return
 
         print(this, "FatFS", geometry)
-        this.type_case = msdostypecase
         this.add_note("FatFS")
 
         self.clustersize = geometry.bps * geometry.spcl
@@ -472,7 +474,7 @@ class FatFs(ov.OctetView):
 
         this.add_interpretation(self, self.namespace.ns_html_plain)
 
-        self.add_interpretation(more=True)
+        self.add_interpretation(more=True, title="FatFS")
 
     def get_chain(self, owner, cluster):
         ''' Get contents of a chain '''
