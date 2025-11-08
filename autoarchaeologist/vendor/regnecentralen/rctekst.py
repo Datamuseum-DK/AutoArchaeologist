@@ -12,6 +12,8 @@ class Params(ov.Dump):
 class RcTekst(ov.OctetView):
 
     def __init__(self, this):
+        if len(this) < 0x80:
+            return
         if this[0x7e] != 0xff:
             return
         if this[0x7f] != 0x04:
