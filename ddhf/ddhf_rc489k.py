@@ -18,6 +18,7 @@ from autoarchaeologist.vendor.regnecentralen import rc489k_binout
 from autoarchaeologist.vendor.regnecentralen import rc489k_flxcat
 from autoarchaeologist.vendor.regnecentralen import rcsl
 from autoarchaeologist.vendor.regnecentralen import gier_text
+from autoarchaeologist.os.msdos import fatfs
 
 from autoarchaeologist.vendor.ibm import ga21_9128
 
@@ -50,6 +51,8 @@ class Rc489k(ddhf.DDHFExcavation):
 
     ''' All RC4000, RC8000 and RC9000 artifacts '''
 
+    LINE_LENGTH = 48
+
     BITSTORE = (
         "RC/RC8000/DISK",
         "RC/RC8000/PAPERTAPE",
@@ -74,6 +77,7 @@ class Rc489k(ddhf.DDHFExcavation):
         self.add_examiner(rc489k_flxcat.FlxCat)
         self.add_examiner(*rc489k_tape.examiners)
         self.add_examiner(*rc489k_binout.examiners)
+        self.add_examiner(fatfs.FatFs)
         self.add_examiner(rcsl.RCSL)
         self.add_examiner(TextFile)
         self.add_examiner(TextFileEvenParity)

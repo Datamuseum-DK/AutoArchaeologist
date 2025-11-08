@@ -14,6 +14,7 @@ from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.os.cpm import fs_auto
 from autoarchaeologist.vendor.regnecentralen import rctekst
+from autoarchaeologist.os.msdos import fatfs
 
 from . import DDHFExcavation
 
@@ -34,6 +35,7 @@ class DdhfExcavationCpm(DDHFExcavation):
         super().__init__(**kwargs)
         self.type_case = CpmDS2089()
         self.add_examiner(fs_auto.ProbeCpmFileSystem)
+        self.add_examiner(fatfs.FatFs)
         self.add_examiner(rctekst.RcTekst)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)

@@ -17,6 +17,7 @@ from autoarchaeologist.os.unix import tar_file
 from autoarchaeologist.os.unix import cpio_file
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
+from autoarchaeologist.os.msdos import fatfs
 
 import ddhf
 
@@ -47,6 +48,7 @@ class RC900(ddhf.DDHFExcavation):
         self.type_case = type_case.WellKnown("iso8859-1")
 
         self.add_examiner(unix_fs.FindUnixFs)
+        self.add_examiner(fatfs.FatFs)
         self.add_examiner(compress.Compress)
         self.add_examiner(tar_file.TarFile)
         self.add_examiner(cpio_file.CpioFile)
