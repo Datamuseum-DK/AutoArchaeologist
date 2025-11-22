@@ -4,9 +4,8 @@
 #
 # See LICENSE file for full text of license
 
-''' ... '''
+''' Commodore C=64 aka CBM1541/CBM4040 Filesystem '''
 
-from ....generic import disk
 from ....base import octetview as ov
 from ....base import namespace as ns
 
@@ -16,6 +15,8 @@ class NameSpace(ns.NameSpace):
     ''' ... '''
 
 class C64TrackSect(ov.Struct):
+    ''' Track+Sector coordinates '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -25,12 +26,14 @@ class C64TrackSect(ov.Struct):
         )
 
     def chs(self):
+        ''' Return as (c,h,s) tuple '''
         return (self.trk.val, 0, self.sec.val)
 
     def render(self):
         yield "(%2d, 0, %2d)" % (self.trk.val, self.sec.val)
 
 class C64DirEnt(ov.Struct):
+    ''' Directory Entry '''
 
     def __init__(self, tree, lo):
         super().__init__(
@@ -48,7 +51,8 @@ class C64DirEnt(ov.Struct):
         self.namespace = None
 
     def commit(self):
-        print("CC", self)
+        ''' Commit and create child '''
+
         if not self.ftype.val & 0x80:
             return
         if self.fsize.val == 0:
@@ -56,36 +60,37 @@ class C64DirEnt(ov.Struct):
         data = []
         chs = self.data.chs()
         while chs[0] != 0:
-            print("  ", chs)
             try:
                 rec = self.this.get_rec(chs)
             except KeyError:
-                print("  Not found", chs)
+                print(self.tree.this, self, "Sector not found", chs)
                 break
             l = 256
             if rec[0] == 0:
                 l = rec[1]
 
             data.append(rec[2:l])
-            #y = ov.Opaque(self.tree, rec.lo, hi=rec.hi).insert()
-            #y.rendered = "Data sector " + self.fname.txt + " 0x%x" % len(data)
-            #y.rendered = "Data sector " + self.fname.txt
+            y = ov.Opaque(self.tree, rec.lo, hi=rec.hi).insert()
+            y.rendered = "Data sector »" + self.fname.txt.rstrip() + "«"
             chs = (rec[0], 0, rec[1])
-        print("LD", len(data), chs[1])
+
         if len(data) > 0:
             that = self.tree.this.create(records=data)
-            #that.add_note(self.fname.txt)
+            that.add_type("C64-File")
+            that.add_name(self.fname.txt.rstrip())
         else:
             that = None
 
         self.namespace = NameSpace(
-            name = self.fname.txt,
+            name = self.fname.txt.rstrip(),
             parent = self.tree.namespace,
             priv = self,
             this = that,
         )
 
 class C64DirSect(ov.Struct):
+    ''' Directory Sector '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -95,45 +100,50 @@ class C64DirSect(ov.Struct):
         )
 
 class C64BAM(ov.Struct):
+    ''' Block Allocation Map Sector (= superblock) '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
             lo,
             vertical=True,
             dir_=C64TrackSect,
-            fmt_=ov.Text(1),
+            fmt_=ov.Octet,
             flt_=ov.Octet,
             map_=140,
             dname_=ov.Text(18),
-            did_=ov.Be16,
+            did_=ov.Text(2),
             dosv_=ov.Text(13),
             unused_=79,
         )
 
-class C64Disk(disk.Disk):
+class C64Disk(ov.OctetView):
     ''' ... '''
 
     def __init__(self, this):
         if this.top not in this.parents:
             return
-        if len(this) not in (174848,):
-            return
         print(this, self.__class__.__name__, len(this))
-        super().__init__(
-            this,
-            [
-                (18, 1, 21, 256),
-                ( 7, 1, 19, 256),
-                ( 6, 1, 18, 256),
-                ( 5, 1, 17, 256),
-            ]
-        )
-        this.type_case = petscii.PetScii()
-        self.dirents = []
+
         chs = (18, 0, 0)
-        ds = self.this.get_rec(chs)
-        y = C64BAM(self, ds.lo).insert()
-        chs = y.dir.chs()
+        try:
+            ds = this.get_rec(chs)
+        except KeyError:
+            return
+
+        if this[ds.lo + 0] != 0x12:
+            return
+        if this[ds.lo + 1] != 0x01:
+            return
+
+        super().__init__(this)
+        this.type_case = petscii.PetScii()
+
+        bam = C64BAM(self, ds.lo).insert()
+
+        self.dirents = []
+
+        chs = bam.dir.chs()
         while chs[0] != 0:
             ds = self.this.get_rec(chs)
             y = C64DirSect(self, ds.lo).insert()
@@ -144,10 +154,7 @@ class C64Disk(disk.Disk):
         self.namespace = NameSpace(name = '', root = this, separator = "")
 
         for i in self.dirents:
-            print(i)
             i.commit()
 
         this.add_interpretation(self, self.namespace.ns_html_plain)
-        this.add_interpretation(self, self.disk_picture)
-        this.add_interpretation(self, self.this.html_interpretation_children)
-        self.add_interpretation(more=True)
+        self.add_interpretation(more=True, elide=0)
