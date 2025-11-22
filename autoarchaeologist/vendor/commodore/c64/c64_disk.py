@@ -14,6 +14,8 @@ from ..  import petscii
 class NameSpace(ns.NameSpace):
     ''' ... '''
 
+    KIND = "C64Disk"
+
 class C64TrackSect(ov.Struct):
     ''' Track+Sector coordinates '''
 
