@@ -33,6 +33,7 @@ class R1kDisass():
 
         if script in (
              "DFS/disass_dfs.py",
+             "UCODE/disass_ucode.py",
         ):
             tf2 = this.add_html_interpretation("Disassembly")
         else:
