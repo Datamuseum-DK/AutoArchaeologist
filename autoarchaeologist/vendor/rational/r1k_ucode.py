@@ -4,25 +4,27 @@
 #
 # See LICENSE file for full text of license
 
-from ...generic import hexdump
+''' Disassemble R1000/M200-M400 microcode '''
 
 from . import r1k_disass
 
-class R1K_Ucode_File():
+class R1kM200UcodeFile():
+
+    ''' Disassemble R1000/M200-M400 microcode '''
 
     def __init__(self, this):
 
         good = False
         for i in this.iter_types():
-            if i[-6:] == "_UCODE":
+            if i[-10:] == "M200_UCODE":
                 good = True
         if not good:
             return
 
-        print(this, "UCODE")
-        this.add_type("UCODE")
+        print(this, "M200_UCODE")
 
-        r1k_disass.R1kDisass(
-            this,
-            "UCODE/disass_ucode.py",
-        )
+        r1k_disass.R1kDisass(this, "UCODE/disass_ucode.py")
+
+ALL = [
+    R1kM200UcodeFile,
+]
