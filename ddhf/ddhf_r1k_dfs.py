@@ -59,7 +59,7 @@ class R1KDFS(ddhf.DDHFExcavation):
         self.add_examiner(dfs_tape.R1K_DFS_Tape)
         self.add_examiner(r1k_configuration.R1kM200ConfigFile)
         self.add_examiner(r1k_assy.R1kAssyFile)
-        self.add_examiner(r1k_ucode.R1K_Ucode_File)
+        self.add_examiner(*r1k_ucode.ALL)
         self.add_examiner(r1k_m200.R1kM200File)
         self.add_examiner(r1k_experiment.R1kExperiment)
         self.add_examiner(TextFile)
