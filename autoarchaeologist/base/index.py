@@ -177,7 +177,7 @@ class Page():
         i = safe_filename(self.tabs[0].hdr)
         if len(self.tabs) > 1:
             i += "__" + safe_filename(self.tabs[-1].hdr)
-        self.relpath = self.this.basename_for("_index_" + i + ".html")
+        self.relpath = self.this.basename_for("_index_" + i)
 
     def range(self):
         ''' What's in this page '''
@@ -356,7 +356,7 @@ class Index():
             if not entry.spill:
                 continue
             i = safe_filename(entry.key)
-            entry.relpath = self.this.basename_for("_index__" + i + ".html")
+            entry.relpath = self.this.basename_for("_index__" + i)
             title = self.title + ": " + html.escape(entry.key)
             with self.this.top.decorator.html_file(entry.relpath, title) as file:
                 file.write("<pre>\n")
