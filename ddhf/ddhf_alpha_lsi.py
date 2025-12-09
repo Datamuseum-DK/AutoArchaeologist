@@ -12,6 +12,9 @@
 
    Filenames are two 16 bit words, probably Radix-40 ?
    Data disks are an entirely different format.
+   Some Texts have bit7 set.
+   Some textfiles are in reverse byte order, and reversed lines:
+   	dd conv=swab | dd conv=parnone | rev
 '''
 
 from autoarchaeologist.vendor.computer_automation import alpha_lsi
