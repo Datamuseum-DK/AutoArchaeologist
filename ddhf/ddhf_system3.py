@@ -38,10 +38,6 @@ class System3(ddhf.DDHFExcavation):
 
         self.type_case = type_case.WellKnown("cp037")
 
-
-        for fn in sys.argv[1:]:
-            argv.argv_file(self, fn)
-
 if __name__ == "__main__":
     ddhf.main(
         System3,
