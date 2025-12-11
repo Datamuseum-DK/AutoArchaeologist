@@ -131,6 +131,10 @@ class Artifact(result_page.ResultPage):
             return 1
         return self.digest < other.digest
 
+    def get_frag(self, key):
+        ''' Get a fragment by key '''
+        return self._keys.get(key)
+
     def iter_bytes(self):
         ''' iterate bytes in byte-order '''
 
