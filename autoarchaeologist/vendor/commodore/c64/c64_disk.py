@@ -61,6 +61,7 @@ class C64DirEnt(ov.Struct):
             return
         data = []
         chs = self.data.chs()
+        seen = set()
         while chs[0] != 0:
             try:
                 rec = self.this.get_rec(chs)
@@ -71,15 +72,24 @@ class C64DirEnt(ov.Struct):
             if rec[0] == 0:
                 l = rec[1]
 
-            data.append(rec[2:l])
+            if len(rec[2:l]) > 0:
+                data.append(rec[2:l])
+            else:
+                break
             y = ov.Opaque(self.tree, rec.lo, hi=rec.hi).insert()
             y.rendered = "Data sector »" + self.fname.txt.rstrip() + "«"
+            seen.add(chs)
             chs = (rec[0], 0, rec[1])
+            if chs in seen:
+                print(self.tree.this, "LOOP", chs, self)
+                break
 
         if len(data) > 0:
-            that = self.tree.this.create(records=data)
+            print("DR", list(len(x) for x in data))
+            that = self.tree.this.create(records=data, define_records=False)
             that.add_type("C64-File")
-            that.add_name(self.fname.txt.rstrip())
+            if self.fname.txt.rstrip():
+                that.add_name(self.fname.txt.rstrip())
         else:
             that = None
 

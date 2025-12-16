@@ -90,6 +90,8 @@ class C64Basic(ov.OctetView):
     ''' ... '''
 
     def __init__(self, this):
+        if len(this)  < 8:
+            return
 
         if this[0] != 0x01:
             return
@@ -105,7 +107,11 @@ class C64Basic(ov.OctetView):
         fh = FileHdr(self, 0).insert()
         ptr = fh.hi
         while ptr < len(this) - 8 and (this[ptr] or this[ptr + 1]):
-            h = Statement(self, ptr).insert()
+            try:
+                h = Statement(self, ptr).insert()
+            except Exception as err:
+                print(this, "C64BANG", hex(ptr))
+                break
             if not 0x801 < h.ptr.val < 0x800 + len(this):
                 break
             ptr = h.ptr.val - 0x7ff
