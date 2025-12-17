@@ -401,7 +401,8 @@ class FatFs(ov.OctetView):
 
     def __init__(self, this):
 
-        if len(this) < 40 * 1 * 9 * 512:
+        # allow for a couple of missing sectors
+        if len(this) + 2048 < 35 * 1 * 9 * 512:
             return
         super().__init__(this)
 
