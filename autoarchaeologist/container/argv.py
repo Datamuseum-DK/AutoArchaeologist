@@ -8,17 +8,20 @@
 
 import os
 
+import ddhf_bitstore_metadata
+
 from . import plain_file
 from . import imd_file
 from . import d64_file
 from . import simh_tap_file
 from . import simh_crd_file
 from . import floppytools
+from ..collection import datamuseum_dk
 
 def argv_file(excavation, fn):
     ''' Process extra command line arguments '''
     if not os.path.isfile(fn) or not os.path.getsize(fn):
-        return None
+        return
     print("Loading", fn)
     ext = os.path.splitext(fn)
     try:
@@ -40,6 +43,13 @@ def argv_file(excavation, fn):
                 raise EOFError
         elif ext[1] in (".cache",):
             this = floppytools.FloppyToolsContainer(excavation, filename = fn)
+        elif os.path.isfile(fn + ".meta"):
+            # Get geometry from .meta file
+            this = plain_file.PlainFileArtifact(fn)
+            meta = ddhf_bitstore_metadata.internals.metadata.MetadataBase(
+                open(fn + ".meta", encoding="utf8").read()
+            )
+            datamuseum_dk.impose_bitstore_geometry(this, meta.Media.Geometry.val)
         else:
             this = plain_file.PlainFileArtifact(fn)
         that = excavation.add_top_artifact(this, description=fn, dup_ok=True)
