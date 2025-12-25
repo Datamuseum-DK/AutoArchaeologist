@@ -21,16 +21,7 @@ class C64(ddhf.DDHFExcavation):
 
     ''' All C64 artifacts '''
 
-    XBITSTORE = (
-        #"-30001762",		# Defective
-        #"RC/RC3600/COMAL",
-        #"RC/RC3600/DOMUS",
-        #"RC/RC3600/SW",
-        #"RC/RC3600/HW",
-        #"RC/RC3600/LOADER",
-        #"RC/RC3600/MUSIL",
-        #"RC/RC3600/PAPERTAPE",
-        "COMPANY/DATA_GENERAL/NOVA",
+    BITSTORE = (
     )
 
     def __init__(self, **kwargs):
@@ -44,13 +35,9 @@ class C64(ddhf.DDHFExcavation):
 
 
 if __name__ == "__main__":
-    #import sys
-    #sys.argv.append('/critter/DDHF/2025/20251120_mz80_fd/C64/50004990/_.ft.CBM64.cache')
-    #sys.argv.append('/critter/DDHF/2025/20251120_mz80_fd/C64/50004991/_.ft.CBM64.cache')
-    #sys.argv.append('/critter/DDHF/2025/20251120_mz80_fd/C64/50004992/_.ft.CBM64.cache')
     ddhf.main(
         C64,
         html_subdir="c64",
         ddhf_topic = "Commodore 64",
-        ddhf_topic_link = 'https://datamuseum.dk/wiki/RC/RC7000',
+        ddhf_topic_link = 'https://datamuseum.dk/wiki/Commodore_64',
     )
