@@ -85,7 +85,7 @@ class C64DirEnt(ov.Struct):
                 break
 
         if len(data) > 0:
-            print("DR", list(len(x) for x in data))
+            # print("DR", list(len(x) for x in data))
             that = self.tree.this.create(records=data, define_records=False)
             that.add_type("C64-File")
             if self.fname.txt.rstrip():

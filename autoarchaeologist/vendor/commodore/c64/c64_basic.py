@@ -98,7 +98,7 @@ class C64Basic(ov.OctetView):
         if this[1] != 0x08:
             return
 
-        print(this, self.__class__.__name__, len(this))
+        #print(this, self.__class__.__name__, len(this))
 
         super().__init__(this)
         this.add_note("C64-BASIC")
