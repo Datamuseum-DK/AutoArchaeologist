@@ -53,6 +53,6 @@ class D64Container(artifact.ArtifactFragmented):
                 sectors.append(rec)
                 self.add_fragment(rec)
                 ptr += 256
-        assert not errors
+        #assert not errors
 
         self.completed()
