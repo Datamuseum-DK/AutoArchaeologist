@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # See LICENSE file for full text of license
+#
+# Huge thanks to Mogens Kjær for providing a Perl5
+# script which I have merely converted to Python3
 
-''' ... '''
+''' Commodore C64= COMAL '''
 
 from ....base import octetview as ov
 from ....base import type_case
@@ -18,13 +21,22 @@ def wrap_stack(stack, pfx, sfx):
     x = stack.pop(-1)
     stack.append(pfx + x + sfx)
 
+def decode_char(tree, char, quote=True):
+    if quote and char == 0x22:
+        return '""'
+    if 0x20 <= char <= 0x7f:
+        return tree.this.type_case.decode_long([char])
+    if 0xc0 <= char <= 0xda:
+        return tree.this.type_case.decode_long([char])
+    return '"%d"' % char
+
 class LineNo(ov.Be16):
 
     def render(self):
         if self.val > 10000:
-             yield "%04d" % (self.val - 10000)
+            yield "%04d" % (self.val - 10000)
         else:
-             yield "%04d" % self.val
+            yield "%04d" % self.val
 
 class TokNo(ov.Struct):
     ''' ... '''
@@ -81,10 +93,11 @@ class StringConstant(Token):
         super().__init__(tree, lo, **kwargs)
 
     def list(self, stack):
-        if self.f00.val:
-            stack.append('"' + self.f01.txt + '"')
-        else:
+        if self.f00.val == 0:
             stack.append('""')
+        else:
+            l = list(decode_char(self.tree, x) for x in self.f01)
+            stack.append('"' + "".join(l) + '"')
 
 class IntVar(ov.Le16):
     ''' ... '''
@@ -92,7 +105,7 @@ class IntVar(ov.Le16):
     def render(self):
         v = self.tree.vars.get(self.val)
         if v:
-            yield v.name.txt + "#"
+            yield v.varname + "#"
         else:
             yield self.__class__.__name__ + "(%04x)" % self.val
 
@@ -100,9 +113,11 @@ class RealVar(ov.Le16):
     ''' ... '''
 
     def render(self):
+        if self.val == 0xffff:
+            return
         v = self.tree.vars.get(self.val)
         if v:
-            yield v.name.txt
+            yield v.varname
         else:
             yield self.__class__.__name__ + "(%04x)" % self.val
 
@@ -112,7 +127,7 @@ class StringVar(ov.Le16):
     def render(self):
         v = self.tree.vars.get(self.val)
         if v:
-            yield v.name.txt + "$"
+            yield v.varname + "$"
         else:
             yield self.__class__.__name__ + "(%04x$)" % self.val
 
@@ -131,11 +146,33 @@ class RVarComma(Token):
     def list(self, stack):
         stack.append(str(self.f00) + ",")
 
+class IVarComma(Token):
+    FLDS = [IntVar]
+    def list(self, stack):
+        stack.append(str(self.f00) + ",")
+
+class SVarComma(Token):
+    FLDS = [StringVar]
+    def list(self, stack):
+        stack.append(str(self.f00) + ",")
+
 class RefRVar(Token):
     FLDS = [RealVar]
     def list(self, stack):
         stack[-1] += "REF "
-        stack.append(str(self.f00))
+        stack.append(str(self.f00) + ",")
+
+class RefSVar(Token):
+    FLDS = [StringVar]
+    def list(self, stack):
+        stack[-1] += "REF "
+        stack.append(str(self.f00) + ",")
+
+class RefIVar(Token):
+    FLDS = [IntVar]
+    def list(self, stack):
+        stack[-1] += "REF "
+        stack.append(str(self.f00) + ",")
 
 class IVar(Token):
     FLDS = [IntVar]
@@ -192,7 +229,7 @@ class CaseWhen2(Token):
 class EndCase(Token):
     INDENT = -2
     def list(self, stack):
-        stack.append("ENDCASE")
+        stack.append("ENDCASE ") # XXX trailing space ?
 
 class Otherwise(Token):
     FLDS = [2]
@@ -200,10 +237,25 @@ class Otherwise(Token):
     def list(self, stack):
         stack.append("OTHERWISE ")
 
+class Exit(Token):
+    FLDS = [3]
+    def list(self, stack):
+        stack.append("EXIT")
+
 class ExitWhen(Token):
     FLDS = [3]
     def list(self, stack):
         join_stack(stack, "")
+
+class AndThen(Token):
+    FLDS = [1]
+    def list(self, stack):
+        ''' ... '''
+
+class OrElse(Token):
+    FLDS = [1]
+    def list(self, stack):
+        ''' ... '''
 
 class WhenEnd(Token):
     FLDS = [2]
@@ -222,7 +274,7 @@ class Then2(Token):
     INDENT = 2
     def list(self, stack):
         join_stack(stack, "")
-        stack[-1] += " THEN "
+        stack[-1] += " THEN"
 
 class At(Token):
     def list(self, stack):
@@ -244,6 +296,7 @@ class EndTrap(Token):
 class Restore(Token):
     FLDS = [RealVar]
     def list(self, stack):
+        stack.append(str(self.f00))
         stack.insert(-1, "RESTORE ")
 
 class Import(Token):
@@ -361,7 +414,7 @@ class EndWhile(Token):
 
 class Label(Token):
     FLDS = [RealVar, 3]
-    INDENT = -2
+    #INDENT = -1000
     def list(self, stack):
         stack.append(str(self.f00))
         stack[-1] += ":"
@@ -374,29 +427,26 @@ class ByteConstant(Token):
 class CharConstant(Token):
     FLDS = [ov.Octet]
     def list(self, stack):
-        if self.f00.val in (34,):
-            stack.append('""%d""' % self.f00.val)
-        elif 0x20 <= self.f00.val <= 0x7e:
-            stack.append('"%c"' % self.f00.val)
-        else:
-            stack.append('""%d""' % self.f00.val)
+        stack.append('"' + decode_char(self.tree, self.f00.val) + '"')
 
 class RealConstant(Token):
     FLDS = [ov.Octet, ov.Be32]
     def list(self, stack):
         if self.f00.val == 0:
-            stack.append("0")
+            real = 0
         elif self.f01.val & (1<<31):
             mant = self.f01.val
-            real = mant * 2 ** (self.f00.val - 128 - 32)
-            stack.append("-" + str(real))
+            real = -mant * 2 ** (self.f00.val - 128 - 32)
         else:
             mant = self.f01.val | (1<<31)
             real = mant * 2 ** (self.f00.val - 128 - 32)
-            stack.append(str(real))
+        x = "%g" % real
+        if x[:2] == "0.":
+            x = x[1:]
+        stack.append(x)
 
 class IntegerConstant(Token):
-    FLDS = [ov.Be16]
+    FLDS = [ov.Bs16]
     def list(self, stack):
         stack.append(str(self.f00.val))
 
@@ -430,6 +480,19 @@ class TrimLastChar(Token):
     def list(self, stack):
         stack[-1] = stack[-1][:-1]
 
+class CommaToSemi(Token):
+    def list(self, stack):
+        if stack[-1][-1] == ',':
+            stack[-1] = stack[-1][:-1]
+        stack[-1] += ";"
+
+class CommaToCloseParan(Token):
+    def list(self, stack):
+        if 0:
+            if stack[-1][-1] == ',':
+                stack[-1] = stack[-1][:-1]
+            stack[-1] += ")"
+
 class Param(Token):
     ''' ... '''
     def __init__(self, tree, lo):
@@ -444,98 +507,91 @@ class Param(Token):
 class RealIndicies(Token):
     FLDS = [ ov.Octet, RealVar ]
     def list(self, stack):
+        if self.tree.in_proc:
+            stack.append("REF ")
         stack.append(str(self.f01) + "(" + "," * (self.f00.val-1) + ")")
+        if self.tree.in_proc:
+            stack[-1] += ","
 
 class IntIndicies(Token):
     FLDS = [ ov.Octet, IntVar ]
     def list(self, stack):
+        if self.tree.in_proc:
+            stack.append("REF ")
         stack.append(str(self.f01) + "(" + "," * (self.f00.val-1) + ")")
+        if self.tree.in_proc:
+            stack[-1] += ","
 
 class StringIndicies(Token):
     FLDS = [ ov.Octet, StringVar ]
     def list(self, stack):
+        if self.tree.in_proc:
+            stack.append("REF ")
         stack.append(str(self.f01) + "(" + "," * (self.f00.val-1) + ")")
+        if self.tree.in_proc:
+            stack[-1] += ","
 
-class EndFuncRVar(Token):
-    FLDS = [RealVar]
+class IntIndicies2(Token):
+    FLDS = [ ov.Octet, IntVar ]
+    def list(self, stack):
+        stack[-1] += str(self.f01) + "(" + "," * (self.f00.val-1) + "),"
+
+class RealIndicies2(Token):
+    FLDS = [ ov.Octet, RealVar ]
+    def list(self, stack):
+        stack[-1] += str(self.f01) + "(" + "," * (self.f00.val-1) + "),"
+
+class StringIndicies2(Token):
+    FLDS = [ ov.Octet, StringVar ]
+    def list(self, stack):
+        stack[-1] += str(self.f01) + "(" + "," * (self.f00.val-1) + "),"
+
+class EndFunc(Token):
     INDENT = -2
+    def __init__(self, tree, lo, kind="XXX"):
+        self.FLDS = [kind]
+        super().__init__(tree, lo)
+
     def list(self, stack):
         stack.append("ENDFUNC ")
         stack.append(str(self.f00))
 
-class EndFuncSVar(Token):
-    FLDS = [StringVar]
-    INDENT = -2
-    def list(self, stack):
-        stack.append("ENDFUNC ")
-        stack.append(str(self.f00))
+    @classmethod
+    def kind(cls, kind):
+        return (cls, {"kind": kind})
 
-class FuncRVar(Token):
-    def __init__(self, tree, lo):
-        self.FLDS = [RealVar, 4, ov.Octet]
-        self.FLDS += [Param] * tree.this[lo + 7]
+class Func(Token):
+    def __init__(self, tree, lo, kind="XXX"):
+        self.FLDS = [kind, 4, ov.Octet]
         super().__init__(tree, lo)
-        self.vertical=True
 
-    def xlist(self, stack):
+    def list(self, stack):
+        self.tree.in_proc = True
         stack.append("FUNC ")
         stack.append(str(self.f00))
         if self.f02.val:
+            self.tree.param_count = self.f02.val + 1
             stack[-1] += "("
-            for n, x in enumerate(self.fields[4:]):
-                nf, f = x
-                if n:
-                    stack[-1] += ","
-                if not hasattr(f, "f00"):
-                    return False
-                stack.append(str(f.f00))
-            stack[-1] += ")"
 
-class FuncSVar(Token):
-    def __init__(self, tree, lo):
-        self.FLDS = [StringVar, 4, ov.Octet]
-        self.FLDS += [Param] * tree.this[lo + 7]
-        super().__init__(tree, lo)
-        self.vertical=True
+    @classmethod
+    def kind(cls, kind):
+        return (cls, {"kind": kind})
+
+class Proc(Token):
+    FLDS = [RealVar, 4, ov.Octet]
 
     def list(self, stack):
-        stack.append("FUNC ")
-        stack.append(str(self.f00))
-        if self.f02.val:
-            stack[-1] += "("
-            for n, x in enumerate(self.fields[4:]):
-                nf, f = x
-                if n:
-                    stack[-1] += ","
-                if not hasattr(f, "f00"):
-                    return False
-                stack.append(str(f.f00))
-            stack[-1] += ")"
-
-class ProcRVar(Token):
-    def __init__(self, tree, lo):
-        self.FLDS = [RealVar, 4, ov.Octet]
-        self.FLDS += [Param] * tree.this[lo + 7]
-        super().__init__(tree, lo)
-        self.vertical=True
-
-    def list(self, stack):
+        self.tree.in_proc = True
         stack.append("PROC ")
         stack.append(str(self.f00))
         if self.f02.val:
+            self.tree.param_count = self.f02.val + 1
             stack[-1] += "("
-            for n, x in enumerate(self.fields[4:]):
-                nf, f = x
-                if n:
-                    stack[-1] += ","
-                if not hasattr(f, "f00"):
-                    return False
-                stack.append(str(f.f00))
-            stack[-1] += ")"
 
-class EndprocRVar(Token):
+class EndProc(Token):
     FLDS = [RealVar]
     INDENT = -2
+
     def list(self, stack):
         stack.append("ENDPROC ")
         stack.append(str(self.f00))
@@ -568,13 +624,15 @@ class EndParams(Token):
     FLDS = [2]
     INDENT = 2
     def list(self, stack):
-        ''' ... '''
+        if 0 and stack[-1][-1] == ",":
+            stack[-1] = stack[-1][:-1]
+            stack.append(')')
 
 class Closed(Token):
     FLDS = [4]
     INDENT = 2
     def list(self, stack):
-        stack.append(" CLOSED")
+        stack[-1] += " CLOSED"
 
 class Dparas(Token):
     def list(self, stack):
@@ -608,6 +666,9 @@ class Push(Token):
     def __init__(self, *args, txt=None, **kwargs):
         self.txt = txt
         super().__init__(*args, **kwargs)
+
+    def render(self):
+        yield 'Push {Token=%s txt="%s"}' % (str(self.token), self.txt)
 
     def list(self, stack):
         stack.append(self.txt)
@@ -669,12 +730,12 @@ class Wrap(Token):
 class EndOfInput(Token):
     def list(self, stack):
         if stack[-1][-1] != ',':
-             stack[-1] += ","
+            stack[-1] += ","
 
 class DataJoin(Token):
     FLDS = [2]
     def list(self, stack):
-        while len(stack) > 2:
+        while len(stack) > 3:
             x = stack.pop(-1)
             y = stack.pop(-1)
             stack.append(y + "," + x)
@@ -693,7 +754,7 @@ TOKENS = {
     0x0b: CallIVar,
     0x0c: CallSVar,
     0x0d: Join.suffix(","),
-    0x0e: EndprocRVar,
+    0x0e: EndProc,
     0x0f: Join.suffix(","),
     0x10: Join.suffix(","),
     0x11: Join.suffix(","),
@@ -706,6 +767,7 @@ TOKENS = {
     0x18: Join.suffix(")"),
     0x19: Join.suffix(")"),
     0x1a: CallRVar,
+    0x1b: Join.suffix(")"),
     0x1c: Join.suffix(")"),
     0x1d: Join.suffix(")"),
     0x1f: Join.suffix(":"),
@@ -745,6 +807,7 @@ TOKENS = {
     0x42: Join.around("; "),
     0x43: Push.this("TRUE"),
     0x44: Push.this("FALSE"),
+    0x46: Wrap.inside("ZONE ", ""),
     0x47: Wrap.inside("(", ")"),
     0x48: Wrap.inside("ABS(", ")"),
     0x49: Wrap.inside("ORD(", ")"),
@@ -767,6 +830,8 @@ TOKENS = {
     0x5a: Wrap.inside("TAN(", ")"),
     0x5b: Push.this("TIME"),
     0x5c: Push.this("EOD"),
+    0x5d: Wrap.inside("EOF(", ")"),
+    0x5e: Push.this("ERRFILE"),
     0x5f: Push.this("PRINT "),
     0x61: Wrap.inside("", ","),
     0x60: NoOpToken,
@@ -780,14 +845,22 @@ TOKENS = {
     0x69: Then,
     0x6a: Wrap.inside("", " THEN "),
     0x6b: Loop,
+    0x6c: Exit,
     0x6d: Elif,
     0x6e: Else,
     0x6f: Endif,
-    0x70: ProcRVar,
+    0x70: Proc,
     0x71: Push.this("NULL"),
     0x72: RVarComma,
+    0x73: IVarComma,
+    0x74: SVarComma,
     0x75: RefRVar,
-    0x78: RealIndicies,
+    0x76: RefIVar,
+    0x77: RefSVar,
+    0x78: RealIndicies2,
+    0x79: IntIndicies2,
+    0x7a: StringIndicies2,
+    0x7b: RealIndicies,
     0x7c: IntIndicies,
     0x7d: StringIndicies,
     0x7e: EndParams,
@@ -823,6 +896,7 @@ TOKENS = {
     0x9c: Label,
     0x9e: EndLoop,
     0x9f: Push.this("END"),
+    0xa0: Push.this("STOP"),
     0xa1: Case,
     0xa2: CaseOf,
     0xa3: CaseOf,
@@ -835,6 +909,8 @@ TOKENS = {
     0xaa: Push.this("DATA "),
     0xab: DataJoin,
     0xac: CaseWhen2,
+    0xad: Wrap.inside("", ":"),
+    0xae: Wrap.inside("", ":"),
     0xaf: Push.this("READ "),
     0xb0: Wrap.inside("", ","),
     0xb1: Join.around("", sfx=","),
@@ -844,9 +920,10 @@ TOKENS = {
     0xb6: Then2,
     0xb7: InputPrompt,
     0xb8: InputRVar,
-    0xb9: Join.around(","),
+    0xb9: Join.around("", sfx=","),
     0xba: Wrap.inside("", ","),
     0xbb: TrimLastChar,
+    0xbc: CommaToSemi,
     0xbd: Push.this("SELECT "),
     0xbe: Join.around("OUTPUT "),
     0xbf: Push.this("TRAP"),
@@ -866,8 +943,10 @@ TOKENS = {
     0xcf: Push.this(""),
     0xd0: Push.this("EXIT WHEN "),
     0xd1: ExitWhen,
+    0xd2: AndThen,
     0xd3: BinConstant,
     0xd4: UseName,
+    0xd5: Wrap.inside("GET$(", ")"),
     0xd6: Join.around("", sfx=","),
     0xd7: Join.around(""),
     0xd8: Wrap.inside("PEEK(", ")"),
@@ -876,16 +955,24 @@ TOKENS = {
     0xdc: At,
     0xdf: Join.around(""),
     0xe1: Push.this("RETURN "),
-    0xe3: FuncRVar,
-    0xe5: FuncSVar,
-    0xe6: EndFuncRVar,
-    0xe8: EndFuncSVar,
+    0xe3: Func.kind(RealVar),
+    0xe5: Func.kind(StringVar),
+    0xe6: EndFunc.kind(RealVar),
+    0xe8: EndFunc.kind(StringVar),
     0xe9: Wrap.inside("VAL(", ")"),
     0xea: Wrap.inside("STR$(", ")"),
     0xeb: Import,
+    0xec: Join.around(" BITAND "),
+    0xed: Join.around(" BITOR "),
+    0xee: Join.around(" BITXOR "),
     0xef: TrimLastChar,
     0xf0: Restore,
+    0xf1: Join.around(" AND THEN "),
+    0xf2: OrElse,
     0xf3: Join.around(",", pfx="CURSOR "),
+    0xf4: Join.around(" OR ELSE "),
+    0xf5: CommaToCloseParan,
+    0xf6: Join.around(" EXTERNAL "),
     0xf8: AssignSVar,
     0xf7: Wrap.inside("", "("),
     0xf9: Trap,
@@ -893,29 +980,40 @@ TOKENS = {
     0xfb: AssignIVar,
     0xfc: Handler,
     0xfd: EndTrap,
+    0xfe: Push.this("ERR"),
     0x110: Push.this("DELD-"),
     0x113: Push.this("OPEN"),
     0x114: Push.this("PI"),
     0x115: Push.this("PAGE"),
     0x117: Push.this("ERRTEXT$"),
     0x118: Push.this("CLOSE"),
-    0x119: Push.this(" FILE "),
+    0x119: Join.around(" FILE "),
     0x11a: Push.this("CLOSE"),
+    0x11b: Join.around(","),
     0x11c: Wrap.inside("CHAIN ", ""),
     0x11d: Join.around(","),
+    0x11e: Wrap.inside("UNIT ", ""),
     0x11f: Push.this("KEY$"),
     0x120: Wrap.inside("OPEN FILE ", ""),
     0x122: Join.around(","),
+    0x123: Wrap.inside("", ",READ"),
     0x124: Wrap.inside("", ",WRITE"),
+    0x125: Wrap.inside("", ",APPEND"),
+    0x126: Join.around(",RANDOM "),
     0x12b: Join.around(",", pfx="POKE "),
+    0x12e: Push.this("UNIT$"),
     0x12f: Join.around(" UNTIL ", pfx="REPEAT "),
     0x131: Wrap.inside("TIME ", ""),
-    0x133: Push.this("REPORT"),
+    0x132: Push.this("REPORT"),
     0x134: EndOfInput,
-    0x135: Push.this("PASS"),
+    0x135: Wrap.inside("PASS ", ""),
     0x136: Push.this("MOUNT"),
     0x138: Prepend.this("END "),
+    0x139: Prepend.this("DELETE "),
     0x13b: Push.this("RANDOMIZE"),
+    0x13c: Wrap.inside("REPORT ", ""),
+    0x13d: Join.around(",", pfx="CREATE "),
+    0x13f: Join.around(",", pfx="REPORT "),
 }
 
 class Statement(ov.Struct):
@@ -930,6 +1028,7 @@ class Statement(ov.Struct):
             vertical = True,
             more = True,
         )
+        self.rem = ""
         self.indent = 0
         self.indent_this = 0
         n = 0
@@ -949,12 +1048,13 @@ class Statement(ov.Struct):
                 self.indent_this += cls.INDENT_THIS
                 n += 1
             elif t.token.val == 0:
-                y = self.add_field("end", 1)
-                if b + 1 < e:
-                    y = self.add_field("comment", ov.Text(e - (1+b)))
+                y = self.add_field("comment", ov.Text(e - b))
+                self.rem = "//" + ''.join(decode_char(tree, x, quote=False) for x in list(y)[1:])
+                n += 1
             else:
                 y = self.add_field("unknown", e - b)
             b = y.hi
+
         self.done()
         x = self.list()
         if '╬' in x or '▓' in x:
@@ -962,7 +1062,9 @@ class Statement(ov.Struct):
             tree.this.add_note("ComalIncompl")
 
     def list(self):
-        stack = []
+        self.tree.param_count = 0
+        self.tree.in_proc = False
+        stack = [""]
         good = True
         for n,f in self.fields[2:]:
             if good is False:
@@ -970,12 +1072,7 @@ class Statement(ov.Struct):
                 continue
             if isinstance(f, Token):
                 good = f.list(stack)
-            elif n == "comment":
-                if stack:
-                    stack.append(" ")
-                stack.append("//")
-                stack.append(f.txt)
-            elif n != "end":
+            elif n != "comment":
                 if f[0] == 0xff:
                     stack.append("╬" + str(f[0]))
                     stack.append("╬" + str(f[1]))
@@ -983,11 +1080,23 @@ class Statement(ov.Struct):
                     stack.append("╬" + str(f[0]))
                 stack.append(str(f))
                 good = False
-                
+            if self.tree.param_count > 0:
+                self.tree.param_count -= 1
+                if self.tree.param_count == 0:
+                    if stack[-1][-1] == ",":
+                        stack[-1] = stack[-1][:-1]
+                    stack[-1] += ')'
+
         if good is not False:
-            return "".join(stack)
+            sep = ""
         else:
-            return "▓".join(stack)
+            sep = " "
+        stk = sep.join(stack)
+        if self.rem:
+            if stk and stk[-1:] != " ":
+                stk += " "
+            stk += self.rem
+        return stk
 
     def render(self):
         yield from super().render()
@@ -1008,6 +1117,7 @@ class Variable(ov.Struct):
         )
         self.add_field("name", ov.Text(self.size.val - 4))
         self.done()
+        self.varname = "".join(decode_char(tree, x) for x in self.name)
 
 class Hdr(ov.Struct):
     ''' One COMAL variable'''
@@ -1034,12 +1144,17 @@ class C64Unicomal(ov.OctetView):
             return
         if this[1] != 0xff:
             return
+        if this[2] != 0x02:
+            return
 
         # print(this, self.__class__.__name__, len(this))
 
         super().__init__(this)
         this.add_note("C64-UNICOMAL")
         hdr = Hdr(self, 0).insert()
+
+        self.param_count = 0
+        self.in_proc = False
 
         vbase = hdr.hi + hdr.f02.val
         adr = vbase
@@ -1055,27 +1170,45 @@ class C64Unicomal(ov.OctetView):
 
         ptr = hdr.hi
         stmt = []
-        for n in range(500):
+        while ptr < hdr.hi + hdr.f02.val:
             try:
-                y = Statement(self, ptr).insert()
-                stmt.append(y)
+                y = Statement(self, ptr)
             except Exception as err:
                 print(this, "BAD STMT", hex(adr), err)
+                raise
                 break
-            #print(this, "Y", hex(ptr), y)
+            if y.size.val == 0:
+                break
+            y.insert()
+            stmt.append(y)
             ptr += y.size.val
-            if y.lineno.val == 0 or y.size.val == 0 or ptr > len(this):
-                break
 
         with self.this.add_utf8_interpretation("COMAL80") as file:
             indent = 0
             for i in stmt:
-                if i.indent < 0:
+                if i.indent < -999:
+                    indent = 0
+                elif i.indent < 0:
                     indent += i.indent
+                indent = max(indent, 0)
                 file.write(str(i.lineno) + " " * (1 + indent + i.indent_this) + i.list() + "\n")
                 if i.indent > 0:
                     indent += i.indent
+                indent = max(indent, 0)
+        with open("/tmp/C64Comal/" + this.digest + ".cml", "wb") as file:
+            file.write(bytes(this))
+        with open("/tmp/C64Comal/" + this.digest + ".lst", "w") as file:
+            indent = 0
+            for i in stmt:
+                if i.indent < -999:
+                    indent = 0
+                elif i.indent < 0:
+                    indent += i.indent
+                indent = max(indent, 0)
+                ri = max(1, 1 + indent + i.indent_this)
+                file.write(str(i.lineno) + " " * ri + i.list() + "\n")
+                if i.indent > 0:
+                    indent += i.indent
+                indent = max(indent, 0)
 
-        self.add_interpretation()
-            
-
+        self.add_interpretation(more=True)
