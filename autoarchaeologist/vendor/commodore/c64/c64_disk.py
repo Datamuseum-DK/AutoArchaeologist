@@ -70,7 +70,7 @@ class C64DirEnt(ov.Struct):
                 break
             l = 256
             if rec[0] == 0:
-                l = rec[1]
+                l = rec[1] + 1
 
             if len(rec[2:l]) > 0:
                 data.append(rec[2:l])
