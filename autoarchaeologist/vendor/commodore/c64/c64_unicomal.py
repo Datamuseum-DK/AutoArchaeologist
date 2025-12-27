@@ -35,7 +35,7 @@ def decode_char(tree, char, quote=True):
         return '""'
     if 0x20 <= char <= 0x7f:
         return tree.this.type_case.decode_long([char])
-    if 0xc0 <= char <= 0xda:
+    if 0xc0 < char <= 0xda:
         return tree.this.type_case.decode_long([char])
     return '"%d"' % char
 
@@ -421,9 +421,23 @@ class EndWhile(Token):
     def list(self, stack):
         stack.append("ENDWHILE")
 
+class Goto(Token):
+    FLDS = [RealVar, 1]
+    def list(self, stack):
+        stack.append("GOTO ")
+        stack.append(str(self.f00))
+        join_stack(stack, "")
+
+class Interrupt(Token):
+    FLDS = [RealVar]
+    def list(self, stack):
+        stack.append("INTERRUPT ")
+        stack.append(str(self.f00))
+        join_stack(stack, "")
+
 class Label(Token):
     FLDS = [RealVar, 3]
-    #INDENT = -1000
+    INDENT_THIS = -1000
     def list(self, stack):
         stack.append(str(self.f00))
         stack[-1] += ":"
@@ -779,6 +793,7 @@ TOKENS = {
     0x1b: Join.suffix(")"),
     0x1c: Join.suffix(")"),
     0x1d: Join.suffix(")"),
+    0x1e: Join.suffix(")"),
     0x1f: Join.suffix(":"),
     0x21: Wrap.inside("-", ""),
     0x22: Join.around("^"),
@@ -816,6 +831,7 @@ TOKENS = {
     0x42: Join.around("; "),
     0x43: Push.this("TRUE"),
     0x44: Push.this("FALSE"),
+    0x45: Push.this("ZONE"),
     0x46: Wrap.inside("ZONE ", ""),
     0x47: Wrap.inside("(", ")"),
     0x48: Wrap.inside("ABS(", ")"),
@@ -903,6 +919,7 @@ TOKENS = {
     0x9a: Join,
     0x9b: EndWhile,
     0x9c: Label,
+    0x9d: Goto,
     0x9e: EndLoop,
     0x9f: Push.this("END"),
     0xa0: Push.this("STOP"),
@@ -925,6 +942,7 @@ TOKENS = {
     0xb1: Join.around("", sfx=","),
     0xb2: Join.around("", sfx=","),
     0xb3: TrimLastChar,
+    0xb4: Push.this("RESTORE"),
     0xb5: Push.this("INPUT "),
     0xb6: Then2,
     0xb7: InputPrompt,
@@ -961,10 +979,15 @@ TOKENS = {
     0xd8: Wrap.inside("PEEK(", ")"),
     0xd9: HexConstant,
     0xda: Until,
+    0xdb: Interrupt,
     0xdc: At,
+    0xdd: Push.this("INTERRUPT"),
+    0xde: Push.this("STATUS$"),
     0xdf: Join.around(""),
     0xe1: Push.this("RETURN "),
+    0xe2: Push.this("RETURN"),
     0xe3: Func.kind(RealVar),
+    0xe4: Func.kind(IntVar),
     0xe5: Func.kind(StringVar),
     0xe6: EndFunc.kind(RealVar),
     0xe8: EndFunc.kind(StringVar),
@@ -1009,6 +1032,7 @@ TOKENS = {
     0x124: Wrap.inside("", ",WRITE"),
     0x125: Wrap.inside("", ",APPEND"),
     0x126: Join.around(",RANDOM "),
+    0x127: Push.this("DIR"),
     0x12b: Join.around(",", pfx="POKE "),
     0x12e: Push.this("UNIT$"),
     0x12f: Join.around(" UNTIL ", pfx="REPEAT "),
@@ -1142,6 +1166,110 @@ class Hdr(ov.Struct):
             f03_=ov.Le16,
         )
 
+class Csum(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            checksum_=ov.Le16,
+        )
+
+class ProcHead(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            magic_=ov.Octet,
+            code_=ov.Le16,
+            narg_=ov.Octet,
+            vertical=True,
+            more=True,
+        )
+        if self.narg.val > 0:
+            self.add_field("arguments", ov.Array(self.narg.val, ov.Octet, vertical=True))
+        self.add_field("term", ov.Octet)
+        self.done()
+
+class Procedure(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            name_=ov.PascalString,
+            head_=ov.Le16,
+        )
+
+class PackProcs(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            more=True,
+            vertical=True,
+        )
+    
+        ptr = lo
+        n = 0
+        while tree.this[ptr]:
+            n += 1
+            ptr = Procedure(tree, ptr).hi
+        self.add_field("procedures", ov.Array(n, Procedure, vertical=True))
+        self.add_field("term", ov.Octet)
+        self.done()
+
+class Package(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            name_=ov.PascalString,
+            tbl_=ov.Le16,
+            init_=ov.Le16,
+        )
+
+
+class Module(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            map_=ov.Octet,
+            end_=ov.Le16,
+            signal_=ov.Le16,
+            vertical=True,
+            more=True,
+        )
+        n = 0
+        ptr = self.hi
+        while tree.this[ptr] and ptr < len(tree.this) - 1:
+            n += 1
+            ptr += tree.this[ptr] + 5
+        self.add_field("packages", ov.Array(n, Package, vertical=True))
+        self.add_field("term", ov.Octet)
+        self.done()
+
+class EndOfModule(ov.Dump):
+    ''' ... '''
+
+class ModuleHeader(ov.Struct):
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            id_=ov.Octet,
+            map_=ov.Octet,
+            base_=ov.Le16,
+            mod_=Module,
+            vertical=True,
+        )
+        offset = self.mod.lo - self.base.val
+        EndOfModule(tree, self.mod.end.val + offset, width=1).insert()
+        for pkg in self.mod.packages:
+            self.tree.this.add_note("C64-UNICOMAL-PKG-" + pkg.name.txt)
+            pp = PackProcs(tree, pkg.tbl.val + offset).insert()
+            for ph in pp.procedures:
+                ProcHead(tree, ph.head.val + offset).insert()
+
 class C64Unicomal(ov.OctetView):
     ''' ... '''
 
@@ -1158,11 +1286,20 @@ class C64Unicomal(ov.OctetView):
         if this[3] != 0x00:
             return
 
-        # print(this, self.__class__.__name__, len(this))
 
         super().__init__(this)
         this.add_note("C64-UNICOMAL")
         hdr = Hdr(self, 0).insert()
+
+        if 2 + hdr.hi + hdr.f03.val <= len(this):
+            csum = Csum(self, hdr.hi + hdr.f03.val).insert()
+        else:
+            csum = None
+        if csum and csum.hi < len(this) and this[csum.hi] == 0x01:
+            ModuleHeader(self, csum.hi).insert()
+            this.add_note("C64-UNICOMAL-PKG")
+        if csum and csum.hi < len(this) and this[csum.hi] == 0x02:
+            print(this, "UNICOMAL unknown payload", hex(this[csum.hi]))
 
         self.param_count = 0
         self.in_proc = False
@@ -1186,8 +1323,8 @@ class C64Unicomal(ov.OctetView):
                 y = Statement(self, ptr)
             except Exception as err:
                 print(this, "BAD STMT", hex(adr), err)
-                raise
                 break
+                raise
             if y.size.val == 0:
                 break
             y.insert()
