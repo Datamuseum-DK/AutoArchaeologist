@@ -6,6 +6,15 @@
 #
 # Huge thanks to Mogens Kjær for providing a Perl5
 # script which I have merely converted to Python3
+#
+# TODO:
+#
+#    Det checker signaturen for SAVE filer, hex:  FF FF 02 00
+#    Den efterfølgende byte er 00 for uprotected og 01 for protected filer.
+#
+#    Dump navnetabel for indlejdrede og selvstændige binary-packages.
+#
+#    Repair missing tokens for protected programs.
 
 ''' Commodore C64= COMAL '''
 
@@ -1145,6 +1154,8 @@ class C64Unicomal(ov.OctetView):
         if this[1] != 0xff:
             return
         if this[2] != 0x02:
+            return
+        if this[3] != 0x00:
             return
 
         # print(this, self.__class__.__name__, len(this))
