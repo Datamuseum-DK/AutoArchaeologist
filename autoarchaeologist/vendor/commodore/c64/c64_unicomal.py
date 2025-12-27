@@ -235,11 +235,6 @@ class CaseWhen2(Token):
     def list(self, stack):
         join_stack(stack, "")
 
-class EndCase(Token):
-    INDENT = -2
-    def list(self, stack):
-        stack.append("ENDCASE ") # XXX trailing space ?
-
 class Otherwise(Token):
     FLDS = [2]
     INDENT_THIS = -2
@@ -297,11 +292,6 @@ class Handler(Token):
     def list(self, stack):
         stack.append("HANDLER")
 
-class EndTrap(Token):
-    INDENT = -2
-    def list(self, stack):
-        stack.append("ENDTRAP")
-
 class Restore(Token):
     FLDS = [RealVar]
     def list(self, stack):
@@ -337,11 +327,6 @@ class Else(Token):
     def list(self, stack):
         stack.append("ELSE")
 
-class Endif(Token):
-    INDENT = -2
-    def list(self, stack):
-        stack.append("ENDIF")
-
 class ForRVar(Token):
     FLDS = [RealVar, 2]
     def list(self, stack):
@@ -368,18 +353,6 @@ class EndForRVar(Token):
         stack.append(str(self.f00))
         stack.insert(-1, "ENDFOR ")
 
-class ForFrom(Token):
-    FLDS = []
-
-    def list(self, stack):
-        join_stack(stack, ":=")
-
-class ForTo(Token):
-    FLDS = []
-
-    def list(self, stack):
-        join_stack(stack, " TO ")
-
 class ForDo(Token):
     FLDS = []
     INDENT = 2
@@ -391,11 +364,6 @@ class Repeat(Token):
     INDENT = 2
     def list(self, stack):
         stack.append("REPEAT")
-
-class Until(Token):
-    INDENT = -2
-    def list(self, stack):
-        stack.append("UNTIL ")
 
 class Trap(Token):
     FLDS = [2]
@@ -686,31 +654,23 @@ class DimRVar(Token):
             stack[-1] += "("
 
 class Push(Token):
-    def __init__(self, *args, txt=None, **kwargs):
+    def __init__(self, *args, txt=None, indent=0, **kwargs):
         self.txt = txt
+        self.INDENT = indent
         super().__init__(*args, **kwargs)
 
     def render(self):
-        yield 'Push {Token=%s txt="%s"}' % (str(self.token), self.txt)
+        if self.INDENT:
+            yield 'Push {Token=%s txt="%s", indent=%d}' % (str(self.token), self.txt, self.INDENT)
+        else:
+            yield 'Push {Token=%s txt="%s"' % (str(self.token), self.txt)
 
     def list(self, stack):
         stack.append(self.txt)
 
     @classmethod
-    def this(cls, txt):
-        return (cls, {"txt": txt})
-
-class Prepend(Token):
-    def __init__(self, *args, txt=None, **kwargs):
-        self.txt = txt
-        super().__init__(*args, **kwargs)
-
-    def list(self, stack):
-        stack.insert(-1, self.txt)
-
-    @classmethod
-    def this(cls, txt):
-        return (cls, {"txt": txt})
+    def this(cls, txt, indent=0):
+        return (cls, {"txt": txt, "indent": indent})
 
 class Join(Token):
     def __init__(self, *args, pfx="", mid="", sfx="", **kwargs):
@@ -750,6 +710,11 @@ class Wrap(Token):
     def inside(cls, pfx, sfx):
         return (cls, {"pfx": pfx, "sfx": sfx})
 
+class PrefixOpen(Token):
+    def list(self, stack):
+        stack.insert(0, "OPEN ")
+        stack.insert(-1, ",")
+
 class EndOfInput(Token):
     def list(self, stack):
         if stack[-1][-1] != ',':
@@ -764,288 +729,323 @@ class DataJoin(Token):
             stack.append(y + "," + x)
 
 TOKENS = {
-    0x01: RealConstant,
-    0x02: IntegerConstant,
-    0x03: StringConstant,
-    0x04: RVar,
-    0x05: IVar,
-    0x06: SVar,
-    0x07: RVar,
-    0x08: IVar,
-    0x09: SVar,
-    0x0a: CallRVar,
-    0x0b: CallIVar,
-    0x0c: CallSVar,
-    0x0d: Join.suffix(","),
-    0x0e: EndProc,
-    0x0f: Join.suffix(","),
-    0x10: Join.suffix(","),
-    0x11: Join.suffix(","),
-    0x12: Join.suffix(","),
-    0x13: Join.suffix(")"),
-    0x14: Join.suffix(""),
-    0x15: Join.suffix(")"),
-    0x16: Join.suffix(")"),
-    0x17: Join.suffix(")"),
-    0x18: Join.suffix(")"),
-    0x19: Join.suffix(")"),
-    0x1a: CallRVar,
-    0x1b: Join.suffix(")"),
-    0x1c: Join.suffix(")"),
-    0x1d: Join.suffix(")"),
-    0x1e: Join.suffix(")"),
-    0x1f: Join.suffix(":"),
-    0x21: Wrap.inside("-", ""),
-    0x22: Join.around("^"),
-    0x23: Join.around("/"),
-    0x24: Join.around("*"),
-    0x25: Join.around(" DIV "),
-    0x26: Join.around(" MOD "),
-    0x27: Join.around("+"),
-    0x28: Join.around("+"),
-    0x29: Join.around("-"),
-    0x2a: Join.around("<"),
-    0x2b: Join.around("<"),
-    0x2c: Join.around("="),
-    0x2d: Join.around("="),
-    0x2e: Join.around("<="),
-    0x2f: Join.around("<="),
-    0x30: Join.around(">"),
-    0x31: Join.around(">"),
-    0x32: Join.around("<>"),
-    0x33: Join.around("<>"),
-    0x34: Join.around(">="),
-    0x35: Join.around(">="),
-    0x36: Join.around(" IN "),
-    0x37: Wrap.inside("NOT ", ""),
-    0x38: Join.around(" AND "),
-    0x39: Join.around(" OR "),
-    0x3a: Join.around(":="),
-    0x3b: Join.around(":="),
-    0x3c: Join.around(":="),
-    0x3d: Join.around(":+"),
-    0x3e: Join.around(":+"),
-    0x3f: Join.around(":+"),
-    0x40: Join.around(":-"),
-    0x41: Join.around(":-"),
-    0x42: Join.around("; "),
-    0x43: Push.this("TRUE"),
-    0x44: Push.this("FALSE"),
-    0x45: Push.this("ZONE"),
-    0x46: Wrap.inside("ZONE ", ""),
-    0x47: Wrap.inside("(", ")"),
-    0x48: Wrap.inside("ABS(", ")"),
-    0x49: Wrap.inside("ORD(", ")"),
-    0x4a: Wrap.inside("ATN(", ")"),
-    0x4b: Wrap.inside("CHR$(", ")"),
-    0x4c: Wrap.inside("COS(", ")"),
-    0x4d: Push.this("ESC"),
-    0x4e: Wrap.inside("EXP(", ")"),
-    0x4f: Wrap.inside("INT(", ")"),
-    0x50: Wrap.inside("LEN(", ")"),
-    0x51: Wrap.inside("LEN(", ")"),
-    0x52: Wrap.inside("LOG(", ")"),
-    0x53: Push.this("RND"),
-    0x54: Wrap.inside("RND(", ")"),
-    0x55: Join.around(","),
-    0x56: Wrap.inside("SGN(", ")"),
-    0x57: Wrap.inside("SIN(", ")"),
-    0x58: Wrap.inside("SPC$(", ")"),
-    0x59: Wrap.inside("SQR(", ")"),
-    0x5a: Wrap.inside("TAN(", ")"),
-    0x5b: Push.this("TIME"),
-    0x5c: Push.this("EOD"),
-    0x5d: Wrap.inside("EOF(", ")"),
-    0x5e: Push.this("ERRFILE"),
-    0x5f: Push.this("PRINT "),
-    0x61: Wrap.inside("", ","),
-    0x60: NoOpToken,
-    0x62: Join.around("USING ", sfx=": "),
-    0x64: NoOpToken,
-    0x65: NoOpToken,
-    0x63: Wrap.inside("TAB(", ")"),
-    0x66: Join.around("", sfx=","),
-    0x67: Wrap.inside("", ";"),
-    0x68: Push.this("IF "),
-    0x69: Then,
-    0x6a: Wrap.inside("", " THEN "),
-    0x6b: Loop,
-    0x6c: Exit,
-    0x6d: Elif,
-    0x6e: Else,
-    0x6f: Endif,
-    0x70: Proc,
-    0x71: Push.this("NULL"),
-    0x72: RVarComma,
-    0x73: IVarComma,
-    0x74: SVarComma,
-    0x75: RefRVar,
-    0x76: RefIVar,
-    0x77: RefSVar,
-    0x78: RealIndicies2,
-    0x79: IntIndicies2,
-    0x7a: StringIndicies2,
-    0x7b: RealIndicies,
-    0x7c: IntIndicies,
-    0x7d: StringIndicies,
-    0x7e: EndParams,
-    0x7f: Closed,
-    0x80: Dparas,
-    0x81: RVar,
-    0x82: ForRVar,
-    0x83: ForIVar,
-    0x84: ForFrom,
-    0x85: ForTo,
-    0x86: Join.around(" STEP "),
-    0x87: ForDo,
-    0x88: Wrap.inside("", " DO "),
-    0x89: Join.around(""),
-    0x8a: EndForRVar,
-    0x8b: EndForIVar,
-    0x8c: Wrap.inside("DIM ", ""),
-    0x8d: DimRVar,
-    0x8e: DimIVar,
-    0x8f: DimString,
-    0x90: Join.around("", sfx=":"),
-    0x91: Join.around("", sfx=","),
-    0x92: Join.suffix(")"),
-    0x93: Join.around(" OF "),
-    0x94: Join.around(", "),
-    0x95: Repeat,
-    0x96: UntilFin,
-    0x97: Push.this("WHILE "),
-    0x98: WhileDo,
-    0x99: Join.suffix(" DO "),
-    0x9a: Join,
-    0x9b: EndWhile,
-    0x9c: Label,
-    0x9d: Goto,
-    0x9e: EndLoop,
-    0x9f: Push.this("END"),
-    0xa0: Push.this("STOP"),
-    0xa1: Case,
-    0xa2: CaseOf,
-    0xa3: CaseOf,
-    0xa4: CaseWhen,
-    0xa5: Join.around("", sfx=","),
-    0xa6: WhenEnd,
-    0xa7: Join.around("", sfx=","),
-    0xa8: Otherwise,
-    0xa9: EndCase,
-    0xaa: Push.this("DATA "),
-    0xab: DataJoin,
-    0xac: CaseWhen2,
-    0xad: Wrap.inside("", ":"),
-    0xae: Wrap.inside("", ":"),
-    0xaf: Push.this("READ "),
-    0xb0: Wrap.inside("", ","),
-    0xb1: Join.around("", sfx=","),
-    0xb2: Join.around("", sfx=","),
-    0xb3: TrimLastChar,
-    0xb4: Push.this("RESTORE"),
-    0xb5: Push.this("INPUT "),
-    0xb6: Then2,
-    0xb7: InputPrompt,
-    0xb8: InputRVar,
-    0xb9: Join.around("", sfx=","),
-    0xba: Wrap.inside("", ","),
-    0xbb: TrimLastChar,
-    0xbc: CommaToSemi,
-    0xbd: Push.this("SELECT "),
-    0xbe: Join.around("OUTPUT "),
-    0xbf: Push.this("TRAP"),
-    0xc0: Wrap.inside("", " ESC"),
-    0xc1: Wrap.inside("", "+"),
-    0xc2: Wrap.inside("", "-"),
-    0xc3: Push.this("WRITE "),
-    0xc4: Join.around("", sfx=","),
-    0xc5: Join.around("", sfx=","),
-    0xc6: Join.around("", sfx=","),
-    0xc7: TrimLastChar,
-    0xc9: Join.around(",", pfx="FILE ", sfx=": "),
-    0xca: Join.around("FILE ", sfx=": "),
-    0xcb: Wrap.inside("", ";"),
-    0xcd: CharConstant,
-    0xce: ByteConstant,
-    0xcf: Push.this(""),
-    0xd0: Push.this("EXIT WHEN "),
-    0xd1: ExitWhen,
-    0xd2: AndThen,
-    0xd3: BinConstant,
-    0xd4: UseName,
-    0xd5: Wrap.inside("GET$(", ")"),
-    0xd6: Join.around("", sfx=","),
-    0xd7: Join.around(""),
-    0xd8: Wrap.inside("PEEK(", ")"),
-    0xd9: HexConstant,
-    0xda: Until,
-    0xdb: Interrupt,
-    0xdc: At,
-    0xdd: Push.this("INTERRUPT"),
-    0xde: Push.this("STATUS$"),
-    0xdf: Join.around(""),
-    0xe1: Push.this("RETURN "),
-    0xe2: Push.this("RETURN"),
-    0xe3: Func.kind(RealVar),
-    0xe4: Func.kind(IntVar),
-    0xe5: Func.kind(StringVar),
-    0xe6: EndFunc.kind(RealVar),
-    0xe8: EndFunc.kind(StringVar),
-    0xe9: Wrap.inside("VAL(", ")"),
-    0xea: Wrap.inside("STR$(", ")"),
-    0xeb: Import,
-    0xec: Join.around(" BITAND "),
-    0xed: Join.around(" BITOR "),
-    0xee: Join.around(" BITXOR "),
-    0xef: TrimLastChar,
-    0xf0: Restore,
-    0xf1: Join.around(" AND THEN "),
-    0xf2: OrElse,
-    0xf3: Join.around(",", pfx="CURSOR "),
-    0xf4: Join.around(" OR ELSE "),
-    0xf5: CommaToCloseParan,
-    0xf6: Join.around(" EXTERNAL "),
-    0xf8: AssignSVar,
-    0xf7: Wrap.inside("", "("),
-    0xf9: Trap,
-    0xfa: AssignRVar,
-    0xfb: AssignIVar,
-    0xfc: Handler,
-    0xfd: EndTrap,
-    0xfe: Push.this("ERR"),
+    0x001: RealConstant,
+    0x002: IntegerConstant,
+    0x003: StringConstant,
+    0x004: RVar,
+    0x005: IVar,
+    0x006: SVar,
+    0x007: RVar,
+    0x008: IVar,
+    0x009: SVar,
+    0x00a: CallRVar,
+    0x00b: CallIVar,
+    0x00c: CallSVar,
+    0x00d: Join.suffix(","),
+    0x00e: EndProc,
+    0x00f: Join.suffix(","),
+    0x010: Join.suffix(","),
+    0x011: Join.suffix(","),
+    0x012: Join.suffix(","),
+    0x013: Join.suffix(")"),
+    0x014: Wrap.inside("RETURN ", ""),
+    0x015: Join.suffix(")"),
+    0x016: Join.suffix(")"),
+    0x017: Join.suffix(")"),
+    0x018: Join.suffix(")"),
+    0x019: Join.suffix(")"),
+    0x01a: CallRVar,
+    0x01b: Join.suffix(")"),
+    0x01c: Join.suffix(")"),
+    0x01d: Join.suffix(")"),
+    0x01e: Join.suffix(")"),
+    0x01f: Join.suffix(":"),
+    0x020: Wrap.inside("+", ""),
+    0x021: Wrap.inside("-", ""),
+    0x022: Join.around("^"),
+    0x023: Join.around("/"),
+    0x024: Join.around("*"),
+    0x025: Join.around(" DIV "),
+    0x026: Join.around(" MOD "),
+    0x027: Join.around("+"),
+    0x028: Join.around("+"),
+    0x029: Join.around("-"),
+    0x02a: Join.around("<"),
+    0x02b: Join.around("<"),
+    0x02c: Join.around("="),
+    0x02d: Join.around("="),
+    0x02e: Join.around("<="),
+    0x02f: Join.around("<="),
+    0x030: Join.around(">"),
+    0x031: Join.around(">"),
+    0x032: Join.around("<>"),
+    0x033: Join.around("<>"),
+    0x034: Join.around(">="),
+    0x035: Join.around(">="),
+    0x036: Join.around(" IN "),
+    0x037: Wrap.inside("NOT ", ""),
+    0x038: Join.around(" AND "),
+    0x039: Join.around(" OR "),
+    0x03a: Join.around(":="),
+    0x03b: Join.around(":="),
+    0x03c: Join.around(":="),
+    0x03d: Join.around(":+"),
+    0x03e: Join.around(":+"),
+    0x03f: Join.around(":+"),
+    0x040: Join.around(":-"),
+    0x041: Join.around(":-"),
+    0x042: Join.around("; "),
+    0x043: Push.this("TRUE"),
+    0x044: Push.this("FALSE"),
+    0x045: Push.this("ZONE"),
+    0x046: Wrap.inside("ZONE ", ""),
+    0x047: Wrap.inside("(", ")"),
+    0x048: Wrap.inside("ABS(", ")"),
+    0x049: Wrap.inside("ORD(", ")"),
+    0x04a: Wrap.inside("ATN(", ")"),
+    0x04b: Wrap.inside("CHR$(", ")"),
+    0x04c: Wrap.inside("COS(", ")"),
+    0x04d: Push.this("ESC"),
+    0x04e: Wrap.inside("EXP(", ")"),
+    0x04f: Wrap.inside("INT(", ")"),
+    0x050: Wrap.inside("LEN(", ")"),
+    0x051: Wrap.inside("LEN(", ")"),
+    0x052: Wrap.inside("LOG(", ")"),
+    0x053: Push.this("RND"),
+    0x054: Wrap.inside("RND(", ")"),
+    0x055: Join.around(","),
+    0x056: Wrap.inside("SGN(", ")"),
+    0x057: Wrap.inside("SIN(", ")"),
+    0x058: Wrap.inside("SPC$(", ")"),
+    0x059: Wrap.inside("SQR(", ")"),
+    0x05a: Wrap.inside("TAN(", ")"),
+    0x05b: Push.this("TIME"),
+    0x05c: Push.this("EOD"),
+    0x05d: Wrap.inside("EOF(", ")"),
+    0x05e: Push.this("ERRFILE"),
+    0x05f: Push.this("PRINT "),
+    0x060: NoOpToken,
+    0x061: Wrap.inside("", ","),
+    0x062: Join.around("USING ", sfx=": "),
+    0x063: Wrap.inside("TAB(", ")"),
+    0x064: NoOpToken,
+    0x065: NoOpToken,
+    0x066: Wrap.inside("", ","),
+    0x067: Wrap.inside("", ";"),
+    0x068: Push.this("IF "),
+    0x069: Then,
+    0x06a: Wrap.inside("", " THEN "),
+    0x06b: Loop,
+    0x06c: Exit,
+    0x06d: Elif,
+    0x06e: Else,
+    0x06f: Push.this("ENDIF", indent=-2),
+    0x070: Proc,
+    0x071: Push.this("NULL"),
+    0x072: RVarComma,
+    0x073: IVarComma,
+    0x074: SVarComma,
+    0x075: RefRVar,
+    0x076: RefIVar,
+    0x077: RefSVar,
+    0x078: RealIndicies2,
+    0x079: IntIndicies2,
+    0x07a: StringIndicies2,
+    0x07b: RealIndicies,
+    0x07c: IntIndicies,
+    0x07d: StringIndicies,
+    0x07e: EndParams,
+    0x07f: Closed,
+    0x080: Dparas,
+    0x081: RVar,
+    0x082: ForRVar,
+    0x083: ForIVar,
+    0x084: Join.around(":="),
+    0x085: Join.around(" TO "),
+    0x086: Join.around(" STEP "),
+    0x087: ForDo,
+    0x088: Wrap.inside("", " DO "),
+    0x089: Join.around(""),
+    0x08a: EndForRVar,
+    0x08b: EndForIVar,
+    0x08c: Wrap.inside("DIM ", ""),
+    0x08d: DimRVar,
+    0x08e: DimIVar,
+    0x08f: DimString,
+    0x090: Join.suffix(":"),
+    0x091: Join.suffix(","),
+    0x092: Join.suffix(")"),
+    0x093: Join.around(" OF "),
+    0x094: Join.around(", "),
+    0x095: Repeat,
+    0x096: UntilFin,
+    0x097: Push.this("WHILE "),
+    0x098: WhileDo,
+    0x099: Join.suffix(" DO "),
+    0x09a: Join,
+    0x09b: EndWhile,
+    0x09c: Label,
+    0x09d: Goto,
+    0x09e: EndLoop,
+    0x09f: Push.this("END"),
+    0x0a0: Push.this("STOP"),
+    0x0a1: Case,
+    0x0a2: CaseOf,
+    0x0a3: CaseOf,
+    0x0a4: CaseWhen,
+    0x0a5: Join.suffix(","),
+    0x0a6: WhenEnd,
+    0x0a7: Join.suffix(","),
+    0x0a8: Otherwise,
+    0x0a9: Push.this("ENDCASE", indent=-2),
+    0x0aa: Push.this("DATA "),
+    0x0ab: DataJoin,
+    0x0ac: CaseWhen2,
+    0x0ad: Wrap.inside("", ":"),
+    0x0ae: Wrap.inside("", ":"),
+    0x0af: Push.this("READ "),
+    0x0b0: Wrap.inside("", ","),
+    0x0b1: Join.suffix(","),
+    0x0b2: Join.suffix(","),
+    0x0b3: TrimLastChar,
+    0x0b4: Push.this("RESTORE"),
+    0x0b5: Push.this("INPUT "),
+    0x0b6: Then2,
+    0x0b7: InputPrompt,
+    0x0b8: InputRVar,
+    0x0b9: Join.suffix(","),
+    0x0ba: Wrap.inside("", ","),
+    0x0bb: TrimLastChar,
+    0x0bc: CommaToSemi,
+    0x0bd: Push.this("SELECT "),
+    0x0be: Join.around("OUTPUT "),
+    0x0bf: Push.this("TRAP "),
+    0x0c0: Wrap.inside("", "ESC"),
+    0x0c1: Wrap.inside("", "+"),
+    0x0c2: Wrap.inside("", "-"),
+    0x0c3: Push.this("WRITE "),
+    0x0c4: Join.suffix(","),
+    0x0c5: Join.suffix(","),
+    0x0c6: Join.suffix(","),
+    0x0c7: TrimLastChar,
+    0x0c8: Join.around(",", pfx="FILE ", sfx=": "),
+    0x0c9: Join.around(",", pfx="FILE ", sfx=": "),
+    0x0ca: Join.around("FILE ", sfx=": "),
+    0x0cb: Wrap.inside("", ";"),
+    0x0cc: Join.around(" INPUT "),
+    0x0cd: CharConstant,
+    0x0ce: ByteConstant,
+    0x0cf: Push.this(""),
+    0x0d0: Push.this("EXIT WHEN "),
+    0x0d1: ExitWhen,
+    0x0d2: AndThen,
+    0x0d3: BinConstant,
+    0x0d4: UseName,
+    0x0d5: Wrap.inside("GET$(", ")"),
+    0x0d6: Join.suffix(","),
+    0x0d7: Join.suffix(""),
+    0x0d8: Wrap.inside("PEEK(", ")"),
+    0x0d9: HexConstant,
+    0x0da: Push.this("UNTIL ", indent=-2),
+    0x0db: Interrupt,
+    0x0dc: At,
+    0x0dd: Push.this("INTERRUPT"),
+    0x0de: Push.this("STATUS$"),
+    0x0df: Wrap.inside("RETURN ", ""),
+    0x0e0: Wrap.inside("RETURN ", ""),
+    0x0e1: NoOpToken,
+    0x0e2: Push.this("RETURN"),
+    0x0e3: Func.kind(RealVar),
+    0x0e4: Func.kind(IntVar),
+    0x0e5: Func.kind(StringVar),
+    0x0e6: EndFunc.kind(RealVar),
+    0x0e7: EndFunc.kind(IntVar),
+    0x0e8: EndFunc.kind(StringVar),
+    0x0e9: Wrap.inside("VAL(", ")"),
+    0x0ea: Wrap.inside("STR$(", ")"),
+    0x0eb: Import,
+    0x0ec: Join.around(" BITAND "),
+    0x0ed: Join.around(" BITOR "),
+    0x0ee: Join.around(" BITXOR "),
+    0x0ef: TrimLastChar,
+    0x0f0: Restore,
+    0x0f1: Join.around(" AND THEN "),
+    0x0f2: OrElse,
+    0x0f3: Join.around(",", pfx="CURSOR "),
+    0x0f4: Join.around(" OR ELSE "),
+    0x0f5: CommaToCloseParan,
+    0x0f6: Join.around(" EXTERNAL "),
+    0x0f7: Wrap.inside("", "("),
+    0x0f8: AssignSVar,
+    0x0f9: Trap,
+    0x0fa: AssignRVar,
+    0x0fb: AssignIVar,
+    0x0fc: Handler,
+    0x0fd: Push.this("ENDTRAP", indent=-2),
+    0x0fe: Push.this("ERR"),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     0x110: Push.this("DELD-"),
+
+
     0x113: Push.this("OPEN"),
     0x114: Push.this("PI"),
     0x115: Push.this("PAGE"),
+
     0x117: Push.this("ERRTEXT$"),
     0x118: Push.this("CLOSE"),
     0x119: Join.around(" FILE "),
     0x11a: Push.this("CLOSE"),
-    0x11b: Join.around(","),
+    0x11b: Join.around(",", pfx="OPEN "),
     0x11c: Wrap.inside("CHAIN ", ""),
     0x11d: Join.around(","),
     0x11e: Wrap.inside("UNIT ", ""),
     0x11f: Push.this("KEY$"),
-    0x120: Wrap.inside("OPEN FILE ", ""),
-    0x122: Join.around(","),
+    0x120: Wrap.inside("FILE ", ""),
+    0x121: Wrap.inside("MOUNT ", ""),
+    0x122: PrefixOpen,
     0x123: Wrap.inside("", ",READ"),
     0x124: Wrap.inside("", ",WRITE"),
     0x125: Wrap.inside("", ",APPEND"),
     0x126: Join.around(",RANDOM "),
     0x127: Push.this("DIR"),
+    0x128: Wrap.inside("DIR ", ""),
+    0x129: Join.around(",", pfx="COPY "),
+    0x12a: Join.suffix(","),
     0x12b: Join.around(",", pfx="POKE "),
+    0x12c: Join.suffix(","),
+    0x12d: Wrap.inside("SYS ", ""),
     0x12e: Push.this("UNIT$"),
     0x12f: Join.around(" UNTIL ", pfx="REPEAT "),
+    0x130: Wrap.inside("STOP ", ""),
     0x131: Wrap.inside("TIME ", ""),
     0x132: Push.this("REPORT"),
+
     0x134: EndOfInput,
     0x135: Wrap.inside("PASS ", ""),
     0x136: Push.this("MOUNT"),
-    0x138: Prepend.this("END "),
-    0x139: Prepend.this("DELETE "),
+    0x137: Join.around(",", pfx="PASS "),
+    0x138: Wrap.inside("END ", ""),
+    0x139: Wrap.inside("DELETE ", ""),
+    0x13a: Wrap.inside("RANDOMIZE ", ""),
     0x13b: Push.this("RANDOMIZE"),
     0x13c: Wrap.inside("REPORT ", ""),
     0x13d: Join.around(",", pfx="CREATE "),
+    0x13e: Join.around(",", pfx="RENAME "),
     0x13f: Join.around(",", pfx="REPORT "),
 }
 
@@ -1072,13 +1072,13 @@ class Statement(ov.Struct):
             cls = TOKENS.get(t.token.val)
             if isinstance(cls, tuple):
                 y = self.add_field("t%02d" % n, cls)
-                self.indent += cls[0].INDENT
-                self.indent_this += cls[0].INDENT_THIS
+                self.indent += y.INDENT
+                self.indent_this += y.INDENT_THIS
                 n += 1
             elif cls:
                 y = self.add_field("t%02d" % n, cls)
-                self.indent += cls.INDENT
-                self.indent_this += cls.INDENT_THIS
+                self.indent += y.INDENT
+                self.indent_this += y.INDENT_THIS
                 n += 1
             elif t.token.val == 0:
                 y = self.add_field("comment", ov.Text(e - b))
@@ -1207,7 +1207,7 @@ class PackProcs(ov.Struct):
             more=True,
             vertical=True,
         )
-    
+
         ptr = lo
         n = 0
         while tree.this[ptr]:
@@ -1359,4 +1359,4 @@ class C64Unicomal(ov.OctetView):
                     indent += i.indent
                 indent = max(indent, 0)
 
-        self.add_interpretation(more=True)
+        self.add_interpretation(more=False)
