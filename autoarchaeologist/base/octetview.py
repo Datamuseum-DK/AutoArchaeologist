@@ -211,6 +211,18 @@ class String(Octets):
     def render(self):
         yield "»" + self.txt + "«"
 
+class PascalString(Octets):
+
+    def __init__(self, tree, lo, **kwargs):
+        l = tree.this[lo]
+        super().__init__(tree, lo=lo, hi=lo + l + 1)
+        type_case = self.this.type_case
+        self.type_case = type_case
+        self.txt = type_case.decode(list(self.iter_bytes())[1:])
+
+    def render(self):
+        yield "»" + self.txt + "«"
+
 # Value types
 
 class Octet(Octets):
