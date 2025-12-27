@@ -1359,4 +1359,4 @@ class C64Unicomal(ov.OctetView):
                     indent += i.indent
                 indent = max(indent, 0)
 
-        self.add_interpretation(more=False)
+        self.add_interpretation(more=True)
