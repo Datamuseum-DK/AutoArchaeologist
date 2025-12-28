@@ -217,26 +217,6 @@ class UseName(Token):
         stack.append(str(self.f00))
         stack.insert(-1, "USE ")
 
-class Case(Token):
-    INDENT = 2
-    def list(self, stack):
-        stack.append("CASE ")
-
-class Exit(Token):
-    FLDS = [3]
-    def list(self, stack):
-        stack.append("EXIT")
-
-class AndThen(Token):
-    FLDS = [1]
-    def list(self, stack):
-        ''' ... '''
-
-class OrElse(Token):
-    FLDS = [1]
-    def list(self, stack):
-        ''' ... '''
-
 class At(Token):
     def list(self, stack):
         join_stack(stack, ",")
@@ -253,19 +233,6 @@ class Import(Token):
     FLDS = [2]
     def list(self, stack):
         stack.append("IMPORT ")
-
-class EndLoop(Token):
-    FLDS = [2]
-    INDENT = -2
-    def list(self, stack):
-        stack.append("ENDLOOP")
-
-class Elif(Token):
-    FLDS = [2]
-    INDENT = -2
-    INDENT_THIS = -2
-    def list(self, stack):
-        stack.append("ELIF ")
 
 class ForRVar(Token):
     FLDS = [RealVar, 2]
@@ -292,18 +259,6 @@ class EndForRVar(Token):
     def list(self, stack):
         stack.append(str(self.f00))
         stack.insert(-1, "ENDFOR ")
-
-class Trap(Token):
-    FLDS = [2]
-    INDENT = 2
-    def list(self, stack):
-        stack.append("TRAP")
-
-class EndWhile(Token):
-    FLDS = [2]
-    INDENT = -2
-    def list(self, stack):
-        stack.append("ENDWHILE")
 
 class Goto(Token):
     FLDS = [RealVar, 1]
@@ -749,13 +704,13 @@ TOKENS = {
     0x066: Wrap.inside("", ","),
     0x067: Wrap.inside("", ";"),
     0x068: Push.this("IF "),
-    0x069: Wrap.inside("", sfx=" THEN ", extra=2, indent=2),
+    0x069: Wrap.inside("", sfx=" THEN", indent=2, extra=2),
     0x06a: Wrap.inside("", " THEN "),
     0x06b: Push.this("LOOP", indent=2),
-    0x06c: Exit,
-    0x06d: Elif,
+    0x06c: Push.this("EXIT", extra=3),
+    0x06d: Push.this("ELIF ", indent=-2, indent_this=-2, extra=2),
     0x06e: Push.this("ELSE", indent_this=-2, extra=2),
-    0x06f: Push.this("ENDIF", indent=-2),
+    0x06f: Push.this("ENDIF ", indent=-2),
     0x070: Proc,
     0x071: Push.this("NULL"),
     0x072: RVarComma,
@@ -796,45 +751,45 @@ TOKENS = {
     0x095: Push.this("REPEAT", indent=2),
     0x096: Join.suffix("", extra=2),
     0x097: Push.this("WHILE "),
-    0x098: Wrap.inside("", " DO", extra=2, indent=2),
+    0x098: Wrap.inside("", sfx=" DO", indent=2, extra=2),
     0x099: Join.suffix(" DO "),
     0x09a: Join,
-    0x09b: EndWhile,
+    0x09b: Push.this("ENDWHILE ", indent=-2, extra=2),
     0x09c: Label,
     0x09d: Goto,
-    0x09e: EndLoop,
-    0x09f: Push.this("END"),
-    0x0a0: Push.this("STOP"),
-    0x0a1: Case,
-    0x0a2: Wrap.inside("", sfx=" OF", extra=2),
-    0x0a3: Wrap.inside("", sfx=" OF", extra=2),
+    0x09e: Push.this("ENDLOOP ", indent=-2, extra=2),
+    0x09f: Push.this("END "),
+    0x0a0: Push.this("STOP "),
+    0x0a1: Push.this("CASE "),
+    0x0a2: Wrap.inside("", sfx=" OF", indent=2, extra=2),
+    0x0a3: Wrap.inside("", sfx=" OF", indent=2, extra=2),
     0x0a4: Push.this("WHEN ", indent_this=-2, extra=2),
     0x0a5: Join.suffix(","),
     0x0a6: Join.suffix("", extra=2),
     0x0a7: Join.suffix(","),
     0x0a8: Push.this("OTHERWISE ", indent_this=-2, extra=2),
-    0x0a9: Push.this("ENDCASE", indent=-2),
+    0x0a9: Push.this("ENDCASE ", indent=-2),
     0x0aa: Push.this("DATA "),
     0x0ab: DataJoin,
-    0x0ac: Join.around("", extra=2),
+    0x0ac: Join.suffix("", extra=2),
     0x0ad: Wrap.inside("", ":"),
     0x0ae: Wrap.inside("", ":"),
     0x0af: Push.this("READ "),
-    0x0b0: Wrap.inside("", ","),
+    0x0b0: Join.suffix(","),
     0x0b1: Join.suffix(","),
     0x0b2: Join.suffix(","),
     0x0b3: TrimLastChar,
-    0x0b4: Push.this("RESTORE"),
+    0x0b4: Push.this("RESTORE "),
     0x0b5: Push.this("INPUT "),
-    0x0b6: Wrap.inside("", sfx=" THEN", extra=2, indent=2),
+    0x0b6: Wrap.inside("", sfx=" THEN", indent=2, extra=2),
     0x0b7: InputPrompt,
     0x0b8: InputRVar,
     0x0b9: Join.suffix(","),
     0x0ba: Join.suffix(","),
     0x0bb: TrimLastChar,
     0x0bc: CommaToSemi,
-    0x0bd: Push.this("SELECT "),
-    0x0be: Join.around("OUTPUT "),
+    0x0bd: Push.this("SELECT"),
+    0x0be: Join.around(" OUTPUT "),
     0x0bf: Push.this("TRAP "),
     0x0c0: Wrap.inside("", "ESC"),
     0x0c1: Wrap.inside("", "+"),
@@ -854,7 +809,7 @@ TOKENS = {
     0x0cf: Push.this(""),
     0x0d0: Push.this("EXIT"),
     0x0d1: Join.around(" WHEN ", extra=3),
-    0x0d2: AndThen,
+    0x0d2: Wrap.inside("", " AND", extra=1),
     0x0d3: BinConstant,
     0x0d4: UseName,
     0x0d5: Wrap.inside("GET$(", ")"),
@@ -865,7 +820,7 @@ TOKENS = {
     0x0da: Push.this("UNTIL ", indent=-2),
     0x0db: Interrupt,
     0x0dc: At,
-    0x0dd: Push.this("INTERRUPT"),
+    0x0dd: Push.this("INTERRUPT "),
     0x0de: Push.this("STATUS$"),
     0x0df: Wrap.inside("RETURN ", ""),
     0x0e0: Wrap.inside("RETURN ", ""),
@@ -885,19 +840,19 @@ TOKENS = {
     0x0ee: Join.around(" BITXOR "),
     0x0ef: TrimLastChar,
     0x0f0: Restore,
-    0x0f1: Join.around(" AND THEN "),
-    0x0f2: OrElse,
+    0x0f1: Join.around(" THEN "),
+    0x0f2: Wrap.inside("", " OR", extra=1),
     0x0f3: Join.around(",", pfx="CURSOR "),
-    0x0f4: Join.around(" OR ELSE "),
+    0x0f4: Join.around(" ELSE "),
     0x0f5: CommaToCloseParan,
     0x0f6: Join.around(" EXTERNAL "),
     0x0f7: Wrap.inside("", "("),
     0x0f8: AssignSVar,
-    0x0f9: Trap,
+    0x0f9: Push.this("TRAP", indent=2, extra=2),
     0x0fa: AssignRVar,
     0x0fb: AssignIVar,
     0x0fc: Push.this("HANDLER", indent_this=-2, extra=2),
-    0x0fd: Push.this("ENDTRAP", indent=-2),
+    0x0fd: Push.this("ENDTRAP ", indent=-2),
     0x0fe: Push.this("ERR"),
 
 
@@ -1040,7 +995,7 @@ class Statement(ov.Struct):
             sep = ""
         else:
             sep = " "
-        stk = sep.join(stack)
+        stk = sep.join(stack).rstrip()
         if self.rem:
             if stk and stk[-1:] != " ":
                 stk += " "
@@ -1270,9 +1225,9 @@ class C64Unicomal(ov.OctetView):
                     indent += i.indent
                 indent = max(indent, 0)
                 ri = max(1, 1 + indent + i.indent_this)
-                file.write(str(i.lineno) + " " * ri + i.list() + "\n")
+                file.write((str(i.lineno) + " " * ri + i.list()).rstrip() + "\n")
                 if i.indent > 0:
                     indent += i.indent
                 indent = max(indent, 0)
 
-        self.add_interpretation(more=True)
+        self.add_interpretation(more=False)
