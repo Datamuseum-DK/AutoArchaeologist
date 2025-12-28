@@ -74,13 +74,17 @@ class Token(ov.Struct):
     INDENT = 0
     INDENT_THIS = 0
 
-    def __init__(self, tree, lo):
+    def __init__(self, tree, lo, indent=0, indent_this=0, extra=0):
         super().__init__(
             tree,
             lo,
             token_ = TokNo,
             more = True,
         )
+        self.INDENT += indent
+        self.INDENT_THIS += indent_this
+        if extra > 0:
+            self.FLDS = self.FLDS + [ extra ]
         for n, fld in enumerate(self.FLDS):
             self.add_field("f%02d" % n, fld)
         self.done()
@@ -223,24 +227,6 @@ class CaseOf(Token):
     def list(self, stack):
         wrap_stack(stack, "", " OF")
 
-class CaseWhen(Token):
-    FLDS = [2]
-    INDENT_THIS = -2
-    def list(self, stack):
-        stack.append("WHEN ")
-
-class CaseWhen2(Token):
-    FLDS = [2]
-    #INDENT_THIS = -2
-    def list(self, stack):
-        join_stack(stack, "")
-
-class Otherwise(Token):
-    FLDS = [2]
-    INDENT_THIS = -2
-    def list(self, stack):
-        stack.append("OTHERWISE ")
-
 class Exit(Token):
     FLDS = [3]
     def list(self, stack):
@@ -260,11 +246,6 @@ class OrElse(Token):
     FLDS = [1]
     def list(self, stack):
         ''' ... '''
-
-class WhenEnd(Token):
-    FLDS = [2]
-    def list(self, stack):
-        join_stack(stack, "")
 
 class Then(Token):
     FLDS = [2]
@@ -286,12 +267,6 @@ class At(Token):
         join_stack(stack, "AT ")
         stack[-1] += ": "
 
-class Handler(Token):
-    FLDS = [2]
-    INDENT_THIS = -2
-    def list(self, stack):
-        stack.append("HANDLER")
-
 class Restore(Token):
     FLDS = [RealVar]
     def list(self, stack):
@@ -302,11 +277,6 @@ class Import(Token):
     FLDS = [2]
     def list(self, stack):
         stack.append("IMPORT ")
-
-class Loop(Token):
-    INDENT = 2
-    def list(self, stack):
-        stack.append("LOOP")
 
 class EndLoop(Token):
     FLDS = [2]
@@ -320,12 +290,6 @@ class Elif(Token):
     INDENT_THIS = -2
     def list(self, stack):
         stack.append("ELIF ")
-
-class Else(Token):
-    FLDS = [2]
-    INDENT_THIS = -2
-    def list(self, stack):
-        stack.append("ELSE")
 
 class ForRVar(Token):
     FLDS = [RealVar, 2]
@@ -353,13 +317,6 @@ class EndForRVar(Token):
         stack.append(str(self.f00))
         stack.insert(-1, "ENDFOR ")
 
-class ForDo(Token):
-    FLDS = []
-    INDENT = 2
-
-    def list(self, stack):
-        stack[-1] += " DO"
-
 class Repeat(Token):
     INDENT = 2
     def list(self, stack):
@@ -370,11 +327,6 @@ class Trap(Token):
     INDENT = 2
     def list(self, stack):
         stack.append("TRAP")
-
-class UntilFin(Token):
-    FLDS = [2]
-    def list(self, stack):
-        join_stack(stack, "")
 
 class WhileDo(Token):
     FLDS = [2]
@@ -654,9 +606,8 @@ class DimRVar(Token):
             stack[-1] += "("
 
 class Push(Token):
-    def __init__(self, *args, txt=None, indent=0, **kwargs):
+    def __init__(self, *args, txt=None, **kwargs):
         self.txt = txt
-        self.INDENT = indent
         super().__init__(*args, **kwargs)
 
     def render(self):
@@ -669,8 +620,8 @@ class Push(Token):
         stack.append(self.txt)
 
     @classmethod
-    def this(cls, txt, indent=0):
-        return (cls, {"txt": txt, "indent": indent})
+    def this(cls, txt, **kwargs):
+        return (cls, {"txt": txt} | kwargs)
 
 class Join(Token):
     def __init__(self, *args, pfx="", mid="", sfx="", **kwargs):
@@ -687,8 +638,8 @@ class Join(Token):
         stack[-1] = self.pfx + stack[-1] + self.sfx
 
     @classmethod
-    def around(cls, mid, pfx="", sfx=""):
-        return (cls, {"mid": mid, "pfx": pfx, "sfx": sfx})
+    def around(cls, mid, pfx="", sfx="", **kwargs):
+        return (cls, {"mid": mid, "pfx": pfx, "sfx": sfx} | kwargs)
 
     @classmethod
     def suffix(cls, sfx):
@@ -701,14 +652,15 @@ class Wrap(Token):
         super().__init__(*args, **kwargs)
 
     def render(self):
+        yield from super().render()
         yield 'Wrap {Token=%s pfx="%s", sfx="%s"}' % (str(self.token), self.pfx, self.sfx)
 
     def list(self, stack):
         stack[-1] = self.pfx + stack[-1] + self.sfx
 
     @classmethod
-    def inside(cls, pfx, sfx):
-        return (cls, {"pfx": pfx, "sfx": sfx})
+    def inside(cls, pfx, sfx, **kwargs):
+        return (cls, {"pfx": pfx, "sfx": sfx} | kwargs)
 
 class PrefixOpen(Token):
     def list(self, stack):
@@ -835,10 +787,10 @@ TOKENS = {
     0x068: Push.this("IF "),
     0x069: Then,
     0x06a: Wrap.inside("", " THEN "),
-    0x06b: Loop,
+    0x06b: Push.this("LOOP", indent=2),
     0x06c: Exit,
     0x06d: Elif,
-    0x06e: Else,
+    0x06e: Push.this("ELSE", indent_this=-2, extra=2),
     0x06f: Push.this("ENDIF", indent=-2),
     0x070: Proc,
     0x071: Push.this("NULL"),
@@ -863,7 +815,7 @@ TOKENS = {
     0x084: Join.around(":="),
     0x085: Join.around(" TO "),
     0x086: Join.around(" STEP "),
-    0x087: ForDo,
+    0x087: Wrap.inside("", " DO", indent=2),
     0x088: Wrap.inside("", " DO "),
     0x089: Join.around(""),
     0x08a: EndForRVar,
@@ -878,7 +830,7 @@ TOKENS = {
     0x093: Join.around(" OF "),
     0x094: Join.around(", "),
     0x095: Repeat,
-    0x096: UntilFin,
+    0x096: Join.around("", extra=2),
     0x097: Push.this("WHILE "),
     0x098: WhileDo,
     0x099: Join.suffix(" DO "),
@@ -892,15 +844,15 @@ TOKENS = {
     0x0a1: Case,
     0x0a2: CaseOf,
     0x0a3: CaseOf,
-    0x0a4: CaseWhen,
+    0x0a4: Push.this("WHEN ", indent_this=-2, extra=2),
     0x0a5: Join.suffix(","),
-    0x0a6: WhenEnd,
+    0x0a6: Join.around("", extra=2),
     0x0a7: Join.suffix(","),
-    0x0a8: Otherwise,
+    0x0a8: Push.this("OTHERWISE ", indent_this=-2, extra=2),
     0x0a9: Push.this("ENDCASE", indent=-2),
     0x0aa: Push.this("DATA "),
     0x0ab: DataJoin,
-    0x0ac: CaseWhen2,
+    0x0ac: Join.around("", extra=2),
     0x0ad: Wrap.inside("", ":"),
     0x0ae: Wrap.inside("", ":"),
     0x0af: Push.this("READ "),
@@ -980,7 +932,7 @@ TOKENS = {
     0x0f9: Trap,
     0x0fa: AssignRVar,
     0x0fb: AssignIVar,
-    0x0fc: Handler,
+    0x0fc: Push.this("HANDLER", indent_this=-2, extra=2),
     0x0fd: Push.this("ENDTRAP", indent=-2),
     0x0fe: Push.this("ERR"),
 
