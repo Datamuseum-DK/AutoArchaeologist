@@ -498,11 +498,6 @@ class PrefixOpen(Token):
         stack.insert(-1, ",")
         stack.append(",")
 
-class EndOfInput(Token):
-    def list(self, stack):
-        if stack[-1][-1] != ',':
-            stack[-1] += ","
-
 class DataJoin(Token):
     FLDS = [2]
     def list(self, stack):
@@ -617,7 +612,7 @@ TOKENS = {
     0x067: Wrap.inside("", ";"),
     0x068: Push.this("IF "),
     0x069: Wrap.inside("", sfx=" THEN", indent=2, extra=2),
-    0x06a: Wrap.inside("", " THEN "),
+    0x06a: Join.suffix(" THEN "),
     0x06b: Push.this("LOOP", indent=2),
     0x06c: Push.this("EXIT", extra=3),
     0x06d: Push.this("ELIF ", indent=-2, indent_this=-2, extra=2),
@@ -665,7 +660,7 @@ TOKENS = {
     0x097: Push.this("WHILE "),
     0x098: Wrap.inside("", sfx=" DO", indent=2, extra=2),
     0x099: Join.suffix(" DO "),
-    0x09a: Join,
+    0x09a: NoOpToken,
     0x09b: Push.this("ENDWHILE ", indent=-2, extra=2),
     0x09c: Label,
     0x09d: TakesName.word("GOTO ", extra=1),
@@ -818,7 +813,7 @@ TOKENS = {
     0x131: Wrap.inside("TIME ", ""),
     0x132: Push.this("REPORT"),
     0x133: NoOpToken,
-    0x134: EndOfInput,
+    0x134: NoOpToken,
     0x135: Wrap.inside("PASS ", ""),
     0x136: Push.this("MOUNT"),
     0x137: Join.around(",", pfx="PASS "),
