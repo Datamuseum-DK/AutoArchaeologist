@@ -33,7 +33,7 @@ def argv_file(excavation, fn):
             except imd_file.BadIMDFile as err:
                 print("Bad IMD file", err)
                 raise EOFError
-        elif ext[1] in (".d64", ".D64",):
+        elif ext[1] in (".d64", ".D64", ".d71", ".D71"):
             this = d64_file.D64Container(excavation, filename = fn)
         elif ext[1] in (".crd", ".CRD",):
             try:
