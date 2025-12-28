@@ -222,20 +222,10 @@ class Case(Token):
     def list(self, stack):
         stack.append("CASE ")
 
-class CaseOf(Token):
-    FLDS = [2]
-    def list(self, stack):
-        wrap_stack(stack, "", " OF")
-
 class Exit(Token):
     FLDS = [3]
     def list(self, stack):
         stack.append("EXIT")
-
-class ExitWhen(Token):
-    FLDS = [3]
-    def list(self, stack):
-        join_stack(stack, "")
 
 class AndThen(Token):
     FLDS = [1]
@@ -246,20 +236,6 @@ class OrElse(Token):
     FLDS = [1]
     def list(self, stack):
         ''' ... '''
-
-class Then(Token):
-    FLDS = [2]
-    INDENT = 2
-    def list(self, stack):
-        join_stack(stack, "")
-        stack[-1] += " THEN "
-
-class Then2(Token):
-    FLDS = [2]
-    INDENT = 2
-    def list(self, stack):
-        join_stack(stack, "")
-        stack[-1] += " THEN"
 
 class At(Token):
     def list(self, stack):
@@ -317,23 +293,11 @@ class EndForRVar(Token):
         stack.append(str(self.f00))
         stack.insert(-1, "ENDFOR ")
 
-class Repeat(Token):
-    INDENT = 2
-    def list(self, stack):
-        stack.append("REPEAT")
-
 class Trap(Token):
     FLDS = [2]
     INDENT = 2
     def list(self, stack):
         stack.append("TRAP")
-
-class WhileDo(Token):
-    FLDS = [2]
-    INDENT = 2
-    def list(self, stack):
-        join_stack(stack, "")
-        stack[-1] += " DO"
 
 class EndWhile(Token):
     FLDS = [2]
@@ -642,8 +606,8 @@ class Join(Token):
         return (cls, {"mid": mid, "pfx": pfx, "sfx": sfx} | kwargs)
 
     @classmethod
-    def suffix(cls, sfx):
-        return (cls, {"sfx": sfx})
+    def suffix(cls, sfx, **kwargs):
+        return (cls, {"sfx": sfx} | kwargs)
 
 class Wrap(Token):
     def __init__(self, *args, pfx="", sfx="", **kwargs):
@@ -652,7 +616,6 @@ class Wrap(Token):
         super().__init__(*args, **kwargs)
 
     def render(self):
-        yield from super().render()
         yield 'Wrap {Token=%s pfx="%s", sfx="%s"}' % (str(self.token), self.pfx, self.sfx)
 
     def list(self, stack):
@@ -666,6 +629,7 @@ class PrefixOpen(Token):
     def list(self, stack):
         stack.insert(0, "OPEN ")
         stack.insert(-1, ",")
+        stack.append(",")
 
 class EndOfInput(Token):
     def list(self, stack):
@@ -785,7 +749,7 @@ TOKENS = {
     0x066: Wrap.inside("", ","),
     0x067: Wrap.inside("", ";"),
     0x068: Push.this("IF "),
-    0x069: Then,
+    0x069: Wrap.inside("", sfx=" THEN ", extra=2, indent=2),
     0x06a: Wrap.inside("", " THEN "),
     0x06b: Push.this("LOOP", indent=2),
     0x06c: Exit,
@@ -829,10 +793,10 @@ TOKENS = {
     0x092: Join.suffix(")"),
     0x093: Join.around(" OF "),
     0x094: Join.around(", "),
-    0x095: Repeat,
-    0x096: Join.around("", extra=2),
+    0x095: Push.this("REPEAT", indent=2),
+    0x096: Join.suffix("", extra=2),
     0x097: Push.this("WHILE "),
-    0x098: WhileDo,
+    0x098: Wrap.inside("", " DO", extra=2, indent=2),
     0x099: Join.suffix(" DO "),
     0x09a: Join,
     0x09b: EndWhile,
@@ -842,11 +806,11 @@ TOKENS = {
     0x09f: Push.this("END"),
     0x0a0: Push.this("STOP"),
     0x0a1: Case,
-    0x0a2: CaseOf,
-    0x0a3: CaseOf,
+    0x0a2: Wrap.inside("", sfx=" OF", extra=2),
+    0x0a3: Wrap.inside("", sfx=" OF", extra=2),
     0x0a4: Push.this("WHEN ", indent_this=-2, extra=2),
     0x0a5: Join.suffix(","),
-    0x0a6: Join.around("", extra=2),
+    0x0a6: Join.suffix("", extra=2),
     0x0a7: Join.suffix(","),
     0x0a8: Push.this("OTHERWISE ", indent_this=-2, extra=2),
     0x0a9: Push.this("ENDCASE", indent=-2),
@@ -862,11 +826,11 @@ TOKENS = {
     0x0b3: TrimLastChar,
     0x0b4: Push.this("RESTORE"),
     0x0b5: Push.this("INPUT "),
-    0x0b6: Then2,
+    0x0b6: Wrap.inside("", sfx=" THEN", extra=2, indent=2),
     0x0b7: InputPrompt,
     0x0b8: InputRVar,
     0x0b9: Join.suffix(","),
-    0x0ba: Wrap.inside("", ","),
+    0x0ba: Join.suffix(","),
     0x0bb: TrimLastChar,
     0x0bc: CommaToSemi,
     0x0bd: Push.this("SELECT "),
@@ -888,8 +852,8 @@ TOKENS = {
     0x0cd: CharConstant,
     0x0ce: ByteConstant,
     0x0cf: Push.this(""),
-    0x0d0: Push.this("EXIT WHEN "),
-    0x0d1: ExitWhen,
+    0x0d0: Push.this("EXIT"),
+    0x0d1: Join.around(" WHEN ", extra=3),
     0x0d2: AndThen,
     0x0d3: BinConstant,
     0x0d4: UseName,
@@ -957,7 +921,7 @@ TOKENS = {
     0x113: Push.this("OPEN"),
     0x114: Push.this("PI"),
     0x115: Push.this("PAGE"),
-
+    0x116: NoOpToken,
     0x117: Push.this("ERRTEXT$"),
     0x118: Push.this("CLOSE"),
     0x119: Join.around(" FILE "),
@@ -970,10 +934,10 @@ TOKENS = {
     0x120: Wrap.inside("FILE ", ""),
     0x121: Wrap.inside("MOUNT ", ""),
     0x122: PrefixOpen,
-    0x123: Wrap.inside("", ",READ"),
-    0x124: Wrap.inside("", ",WRITE"),
-    0x125: Wrap.inside("", ",APPEND"),
-    0x126: Join.around(",RANDOM "),
+    0x123: Wrap.inside("", "READ"),
+    0x124: Wrap.inside("", "WRITE"),
+    0x125: Wrap.inside("", "APPEND"),
+    0x126: Join.around("RANDOM "),
     0x127: Push.this("DIR"),
     0x128: Wrap.inside("DIR ", ""),
     0x129: Join.around(",", pfx="COPY "),
@@ -986,7 +950,7 @@ TOKENS = {
     0x130: Wrap.inside("STOP ", ""),
     0x131: Wrap.inside("TIME ", ""),
     0x132: Push.this("REPORT"),
-
+    0x133: NoOpToken,
     0x134: EndOfInput,
     0x135: Wrap.inside("PASS ", ""),
     0x136: Push.this("MOUNT"),
