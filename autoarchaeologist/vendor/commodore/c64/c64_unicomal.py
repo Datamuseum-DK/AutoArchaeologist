@@ -210,12 +210,6 @@ class CallSVar(Token):
         stack.append(str(self.f00))
         stack[-1] += "("
 
-class At(Token):
-    def list(self, stack):
-        join_stack(stack, ",")
-        join_stack(stack, "AT ")
-        stack[-1] += ": "
-
 class TakesName(Token):
     FLDS = [RealVar]
     def __init__(self, *args, word, **kwargs):
@@ -229,11 +223,6 @@ class TakesName(Token):
     @classmethod
     def word(cls, word, **kwargs):
         return (cls, {"word": word} | kwargs)
-
-class Import(Token):
-    FLDS = [2]
-    def list(self, stack):
-        stack.append("IMPORT ")
 
 class ForIVar(Token):
     FLDS = [IntVar, 2]
@@ -432,29 +421,21 @@ class EndProc(Token):
         stack.append("ENDPROC ")
         stack.append(str(self.f00))
 
-class AssignIVar(Token):
-    FLDS = [IntVar]
+class AssignVar(Token):
+
+    def __init__(self, tree, lo, kind="XXX"):
+        self.FLDS = [kind]
+        super().__init__(tree, lo)
+
     def list(self, stack):
         x = stack.pop(-1)
         stack.append(str(self.f00))
         stack[-1] += ":="
         stack[-1] += x
 
-class AssignSVar(Token):
-    FLDS = [StringVar]
-    def list(self, stack):
-        x = stack.pop(-1)
-        stack.append(str(self.f00))
-        stack[-1] += ":="
-        stack[-1] += x
-
-class AssignRVar(Token):
-    FLDS = [RealVar]
-    def list(self, stack):
-        x = stack.pop(-1)
-        stack.append(str(self.f00))
-        stack[-1] += ":="
-        stack[-1] += x
+    @classmethod
+    def kind(cls, kind):
+        return (cls, {"kind": kind})
 
 class EndParams(Token):
     FLDS = [2]
@@ -793,7 +774,7 @@ TOKENS = {
     0x0d9: HexConstant,
     0x0da: Push.this("UNTIL ", indent=-2),
     0x0db: TakesName.word("INTERRUPT "),
-    0x0dc: At,
+    0x0dc: Join.around(",", pfx="AT ", sfx=": "),
     0x0dd: Push.this("INTERRUPT "),
     0x0de: Push.this("STATUS$"),
     0x0df: Wrap.inside("RETURN ", ""),
@@ -808,7 +789,7 @@ TOKENS = {
     0x0e8: EndFunc.kind(StringVar),
     0x0e9: Wrap.inside("VAL(", ")"),
     0x0ea: Wrap.inside("STR$(", ")"),
-    0x0eb: Import,
+    0x0eb: Push.this("IMPORT ", extra=2),
     0x0ec: Join.around(" BITAND "),
     0x0ed: Join.around(" BITOR "),
     0x0ee: Join.around(" BITXOR "),
@@ -821,10 +802,10 @@ TOKENS = {
     0x0f5: Wrap.inside("", " EXTERNAL "),
     0x0f6: Join.suffix(""),
     0x0f7: Wrap.inside("", "("),
-    0x0f8: AssignSVar,
+    0x0f8: AssignVar.kind(StringVar),
     0x0f9: Push.this("TRAP", indent=2, extra=2),
-    0x0fa: AssignRVar,
-    0x0fb: AssignIVar,
+    0x0fa: AssignVar.kind(RealVar),
+    0x0fb: AssignVar.kind(IntVar),
     0x0fc: Push.this("HANDLER", indent_this=-2, extra=2),
     0x0fd: Push.this("ENDTRAP ", indent=-2),
     0x0fe: Push.this("ERR"),
