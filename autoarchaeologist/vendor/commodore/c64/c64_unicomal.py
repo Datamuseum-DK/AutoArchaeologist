@@ -192,20 +192,21 @@ class IVar(Token):
     def list(self, stack):
         stack.append(str(self.f00))
 
+class VarParan(Token):
+    def __init__(self, tree, lo, kind="XXX", **kwargs):
+        self.FLDS = [kind]
+        super().__init__(tree, lo, **kwargs)
+
+    def list(self, stack):
+        stack.append(str(self.f00))
+        stack[-1] += "("
+
+    @classmethod
+    def kind(cls, kind, **kwargs):
+        return (cls, {"kind": kind} | kwargs)
+
 class CallRVar(Token):
     FLDS = [RealVar]
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack[-1] += "("
-
-class CallIVar(Token):
-    FLDS = [IntVar]
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack[-1] += "("
-
-class CallSVar(Token):
-    FLDS = [StringVar]
     def list(self, stack):
         stack.append(str(self.f00))
         stack[-1] += "("
@@ -230,19 +231,20 @@ class ForIVar(Token):
         stack.append(str(self.f00))
         stack.insert(-1, "FOR ")
 
-class EndForIVar(Token):
-    FLDS = [IntVar, 2]
+class EndVar(Token):
     INDENT = -2
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack.insert(-1, "ENDFOR ")
+    def __init__(self, tree, lo, kind="XXX", word="?", **kwargs):
+        self.FLDS = [kind]
+        super().__init__(tree, lo, **kwargs)
+        self.word = word
 
-class EndForRVar(Token):
-    FLDS = [RealVar, 2]
-    INDENT = -2
     def list(self, stack):
+        stack.append(str(self.word))
         stack.append(str(self.f00))
-        stack.insert(-1, "ENDFOR ")
+
+    @classmethod
+    def kind(cls, kind, word, **kwargs):
+        return (cls, {"kind": kind, "word": word} | kwargs)
 
 class Label(Token):
     FLDS = [RealVar, 3]
@@ -302,11 +304,6 @@ class InputPrompt(Token):
     def list(self, stack):
         join_stack(stack, "")
         stack[-1] += ": "
-
-class InputRVar(Token):
-    def list(self, stack):
-        join_stack(stack, "")
-        stack[-1] += ","
 
 class TrimLastChar(Token):
     def list(self, stack):
@@ -371,20 +368,6 @@ class StringIndicies2(Token):
     def list(self, stack):
         stack[-1] += str(self.f01) + "(" + "," * (self.f00.val-1) + "),"
 
-class EndFunc(Token):
-    INDENT = -2
-    def __init__(self, tree, lo, kind="XXX"):
-        self.FLDS = [kind]
-        super().__init__(tree, lo)
-
-    def list(self, stack):
-        stack.append("ENDFUNC ")
-        stack.append(str(self.f00))
-
-    @classmethod
-    def kind(cls, kind):
-        return (cls, {"kind": kind})
-
 class Func(Token):
     def __init__(self, tree, lo, kind="XXX"):
         self.FLDS = [kind, 4, ov.Octet]
@@ -413,14 +396,6 @@ class Proc(Token):
             self.tree.param_count = self.f02.val + 1
             stack[-1] += "("
 
-class EndProc(Token):
-    FLDS = [RealVar]
-    INDENT = -2
-
-    def list(self, stack):
-        stack.append("ENDPROC ")
-        stack.append(str(self.f00))
-
 class AssignVar(Token):
 
     def __init__(self, tree, lo, kind="XXX"):
@@ -441,9 +416,7 @@ class EndParams(Token):
     FLDS = [2]
     INDENT = 2
     def list(self, stack):
-        if 0 and stack[-1][-1] == ",":
-            stack[-1] = stack[-1][:-1]
-            stack.append(')')
+        ''' ... '''
 
 class Closed(Token):
     FLDS = [4]
@@ -454,30 +427,6 @@ class Closed(Token):
 class Dparas(Token):
     def list(self, stack):
         stack[-1] = stack[-1][:-1] + ")("
-
-class DimString(Token):
-    FLDS = [StringVar, ov.Octet]
-
-    def list(self, stack):
-        stack.append(str(self.f00))
-        if self.f01.val:
-            stack[-1] += "("
-
-class DimIVar(Token):
-    FLDS = [IntVar, ov.Octet]
-
-    def list(self, stack):
-        stack.append(str(self.f00))
-        if self.f01.val:
-            stack[-1] += "("
-
-class DimRVar(Token):
-    FLDS = [RealVar, ov.Octet]
-
-    def list(self, stack):
-        stack.append(str(self.f00))
-        if self.f01.val:
-            stack[-1] += "("
 
 class Push(Token):
     def __init__(self, *args, txt=None, **kwargs):
@@ -535,6 +484,14 @@ class Wrap(Token):
     def inside(cls, pfx, sfx, **kwargs):
         return (cls, {"pfx": pfx, "sfx": sfx} | kwargs)
 
+class DimOf(Token):
+    def list(self, stack):
+        if stack[-2][-1] == '(':
+            stack[-2] = stack[-2][:-1] + " OF " + stack[-1]
+        else:
+            stack[-2] = stack[-2] + " OF " + stack[-1]
+        stack.pop(-1)
+
 class PrefixOpen(Token):
     def list(self, stack):
         stack.insert(0, "OPEN ")
@@ -564,11 +521,11 @@ TOKENS = {
     0x007: RVar,
     0x008: IVar,
     0x009: SVar,
-    0x00a: CallRVar,
-    0x00b: CallIVar,
-    0x00c: CallSVar,
+    0x00a: VarParan.kind(RealVar),
+    0x00b: VarParan.kind(IntVar),
+    0x00c: VarParan.kind(StringVar),
     0x00d: Join.suffix(","),
-    0x00e: EndProc,
+    0x00e: EndVar.kind(RealVar, "ENDPROC "),
     0x00f: Join.suffix(","),
     0x010: Join.suffix(","),
     0x011: Join.suffix(","),
@@ -691,17 +648,17 @@ TOKENS = {
     0x086: Join.around(" STEP "),
     0x087: Wrap.inside("", " DO", indent=2),
     0x088: Wrap.inside("", " DO "),
-    0x089: Join.around(""),
-    0x08a: EndForRVar,
-    0x08b: EndForIVar,
+    0x089: NoOpToken,
+    0x08a: EndVar.kind(RealVar, "ENDFOR ", extra=2),
+    0x08b: EndVar.kind(IntVar, "ENDFOR ", extra=2),
     0x08c: Wrap.inside("DIM ", ""),
-    0x08d: DimRVar,
-    0x08e: DimIVar,
-    0x08f: DimString,
+    0x08d: VarParan.kind(RealVar, extra=1),
+    0x08e: VarParan.kind(IntVar, extra=1),
+    0x08f: VarParan.kind(StringVar, extra=1),
     0x090: Join.suffix(":"),
     0x091: Join.suffix(","),
     0x092: Join.suffix(")"),
-    0x093: Join.around(" OF "),
+    0x093: DimOf,
     0x094: Join.around(", "),
     0x095: Push.this("REPEAT", indent=2),
     0x096: Join.suffix("", extra=2),
@@ -738,7 +695,7 @@ TOKENS = {
     0x0b5: Push.this("INPUT "),
     0x0b6: Wrap.inside("", sfx=" THEN", indent=2, extra=2),
     0x0b7: InputPrompt,
-    0x0b8: InputRVar,
+    0x0b8: Join.suffix(","),
     0x0b9: Join.suffix(","),
     0x0ba: Join.suffix(","),
     0x0bb: TrimLastChar,
@@ -784,9 +741,9 @@ TOKENS = {
     0x0e3: Func.kind(RealVar),
     0x0e4: Func.kind(IntVar),
     0x0e5: Func.kind(StringVar),
-    0x0e6: EndFunc.kind(RealVar),
-    0x0e7: EndFunc.kind(IntVar),
-    0x0e8: EndFunc.kind(StringVar),
+    0x0e6: EndVar.kind(RealVar, "ENDFUNC "),
+    0x0e7: EndVar.kind(IntVar, "ENDFUNC "),
+    0x0e8: EndVar.kind(StringVar, "ENDFUNC "),
     0x0e9: Wrap.inside("VAL(", ")"),
     0x0ea: Wrap.inside("STR$(", ")"),
     0x0eb: Push.this("IMPORT ", extra=2),
