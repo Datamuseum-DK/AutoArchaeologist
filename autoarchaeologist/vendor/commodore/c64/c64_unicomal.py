@@ -19,7 +19,8 @@
 ''' Commodore C64= COMAL '''
 
 from ....base import octetview as ov
-from ....base import type_case
+
+from .c64_unicomal_tables import *
 
 def join_stack(stack, glue):
     x = stack.pop(-1)
@@ -47,785 +48,8 @@ class LineNo(ov.Be16):
         else:
             yield "%04d" % self.val
 
-class TokNo(ov.Struct):
+class Bogon(Exception):
     ''' ... '''
-
-    def __init__(self, tree, lo):
-        super().__init__(
-            tree,
-            lo,
-            more = True,
-        )
-        t = tree.this[self.lo]
-        if t == 0xff:
-            self.add_field("token", ov.Be16)
-            self.token.val -= 0xfe00
-        else:
-            self.add_field("token", ov.Octet)
-        self.done()
-
-    def render(self):
-        yield "T%03x|%d" % (self.token.val, self.token.val)
-
-class Token(ov.Struct):
-    ''' ... '''
-
-    FLDS = []
-    INDENT = 0
-    INDENT_THIS = 0
-
-    def __init__(self, tree, lo, indent=0, indent_this=0, extra=0):
-        super().__init__(
-            tree,
-            lo,
-            token_ = TokNo,
-            more = True,
-        )
-        self.INDENT += indent
-        self.INDENT_THIS += indent_this
-        if extra > 0:
-            self.FLDS = self.FLDS + [ extra ]
-        for n, fld in enumerate(self.FLDS):
-            self.add_field("f%02d" % n, fld)
-        self.done()
-
-    def list(self, stack):
-        return False
-
-class NoOpToken(Token):
-    def list(self, stack):
-        ''' ... '''
-
-class StringConstant(Token):
-
-    def __init__(self, tree, lo, **kwargs):
-        l = tree.this[lo+1]
-        self.FLDS = [ ov.Octet ]
-        if l > 0:
-            self.FLDS.append(ov.Text(l))
-        super().__init__(tree, lo, **kwargs)
-
-    def list(self, stack):
-        if self.f00.val == 0:
-            stack.append('""')
-        else:
-            l = list(decode_char(self.tree, x) for x in self.f01)
-            stack.append('"' + "".join(l) + '"')
-
-class IntVar(ov.Le16):
-    ''' ... '''
-
-    def render(self):
-        v = self.tree.vars.get(self.val)
-        if v:
-            yield v.varname + "#"
-        else:
-            yield self.__class__.__name__ + "(%04x)" % self.val
-
-class RealVar(ov.Le16):
-    ''' ... '''
-
-    def render(self):
-        if self.val == 0xffff:
-            return
-        v = self.tree.vars.get(self.val)
-        if v:
-            yield v.varname
-        else:
-            yield self.__class__.__name__ + "(%04x)" % self.val
-
-class StringVar(ov.Le16):
-    ''' ... '''
-
-    def render(self):
-        v = self.tree.vars.get(self.val)
-        if v:
-            yield v.varname + "$"
-        else:
-            yield self.__class__.__name__ + "(%04x$)" % self.val
-
-class SVar(Token):
-    FLDS = [StringVar]
-    def list(self, stack):
-        stack.append(str(self.f00))
-
-class RVar(Token):
-    FLDS = [RealVar]
-    def list(self, stack):
-        stack.append(str(self.f00))
-
-class RVarComma(Token):
-    FLDS = [RealVar]
-    def list(self, stack):
-        stack.append(str(self.f00) + ",")
-
-class IVarComma(Token):
-    FLDS = [IntVar]
-    def list(self, stack):
-        stack.append(str(self.f00) + ",")
-
-class SVarComma(Token):
-    FLDS = [StringVar]
-    def list(self, stack):
-        stack.append(str(self.f00) + ",")
-
-class RefRVar(Token):
-    FLDS = [RealVar]
-    def list(self, stack):
-        stack[-1] += "REF "
-        stack.append(str(self.f00) + ",")
-
-class RefSVar(Token):
-    FLDS = [StringVar]
-    def list(self, stack):
-        stack[-1] += "REF "
-        stack.append(str(self.f00) + ",")
-
-class RefIVar(Token):
-    FLDS = [IntVar]
-    def list(self, stack):
-        stack[-1] += "REF "
-        stack.append(str(self.f00) + ",")
-
-class IVar(Token):
-    FLDS = [IntVar]
-    def list(self, stack):
-        stack.append(str(self.f00))
-
-class VarParan(Token):
-    def __init__(self, tree, lo, kind="XXX", **kwargs):
-        self.FLDS = [kind]
-        super().__init__(tree, lo, **kwargs)
-
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack[-1] += "("
-
-    @classmethod
-    def kind(cls, kind, **kwargs):
-        return (cls, {"kind": kind} | kwargs)
-
-class CallRVar(Token):
-    FLDS = [RealVar]
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack[-1] += "("
-
-class TakesName(Token):
-    FLDS = [RealVar]
-    def __init__(self, *args, word, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.word = word
-
-    def list(self, stack):
-        stack.append(self.word)
-        stack.append(str(self.f00))
-
-    @classmethod
-    def word(cls, word, **kwargs):
-        return (cls, {"word": word} | kwargs)
-
-class ForIVar(Token):
-    FLDS = [IntVar, 2]
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack.insert(-1, "FOR ")
-
-class EndVar(Token):
-    INDENT = -2
-    def __init__(self, tree, lo, kind="XXX", word="?", **kwargs):
-        self.FLDS = [kind]
-        super().__init__(tree, lo, **kwargs)
-        self.word = word
-
-    def list(self, stack):
-        stack.append(str(self.word))
-        stack.append(str(self.f00))
-
-    @classmethod
-    def kind(cls, kind, word, **kwargs):
-        return (cls, {"kind": kind, "word": word} | kwargs)
-
-class Label(Token):
-    FLDS = [RealVar, 3]
-    INDENT_THIS = -1000
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack[-1] += ":"
-
-class ByteConstant(Token):
-    FLDS = [ov.Octet]
-    def list(self, stack):
-        stack.append(str(self.f00.val))
-
-class CharConstant(Token):
-    FLDS = [ov.Octet]
-    def list(self, stack):
-        stack.append('"' + decode_char(self.tree, self.f00.val) + '"')
-
-class RealConstant(Token):
-    FLDS = [ov.Octet, ov.Be32]
-    def list(self, stack):
-        if self.f00.val == 0:
-            real = 0
-        elif self.f01.val & (1<<31):
-            mant = self.f01.val
-            real = -mant * 2 ** (self.f00.val - 128 - 32)
-        else:
-            mant = self.f01.val | (1<<31)
-            real = mant * 2 ** (self.f00.val - 128 - 32)
-        x = "%g" % real
-        if x[:2] == "0.":
-            x = x[1:]
-        stack.append(x)
-
-class IntegerConstant(Token):
-    FLDS = [ov.Bs16]
-    def list(self, stack):
-        stack.append(str(self.f00.val))
-
-class HexConstant(Token):
-    FLDS = [ov.Be16]
-    def list(self, stack):
-        if self.f00.val < 0x100:
-            stack.append("$%02x" % self.f00.val)
-        else:
-            stack.append("$%04x" % self.f00.val) # XXX: Guessing
-
-class BinConstant(Token):
-    FLDS = [ov.Be16]
-    def list(self, stack):
-        if self.f00.val < 0x100:
-            stack.append("%" + bin((1<<8)|self.f00.val)[3:])
-        else:
-            stack.append("%" + bin((1<<16)|self.f00.val)[3:])
-
-class InputPrompt(Token):
-    def list(self, stack):
-        join_stack(stack, "")
-        stack[-1] += ": "
-
-class TrimLastChar(Token):
-    def list(self, stack):
-        stack[-1] = stack[-1][:-1]
-
-class CommaToSemi(Token):
-    def list(self, stack):
-        if stack[-1][-1] == ',':
-            stack[-1] = stack[-1][:-1]
-        stack[-1] += ";"
-
-class Param(Token):
-    ''' ... '''
-    def __init__(self, tree, lo):
-        if tree.this[lo] == 0x72:
-            self.FLDS=[RealVar]
-        elif tree.this[lo] == 0x74:
-            self.FLDS=[StringVar]
-        elif tree.this[lo] == 0x75:
-            self.FLDS=[RealVar]		# missing REF
-        super().__init__(tree, lo)
-
-class RealIndicies(Token):
-    FLDS = [ ov.Octet, RealVar ]
-    def list(self, stack):
-        if self.tree.in_proc:
-            stack.append("REF ")
-        stack.append(str(self.f01) + "(" + "," * (self.f00.val-1) + ")")
-        if self.tree.in_proc:
-            stack[-1] += ","
-
-class IntIndicies(Token):
-    FLDS = [ ov.Octet, IntVar ]
-    def list(self, stack):
-        if self.tree.in_proc:
-            stack.append("REF ")
-        stack.append(str(self.f01) + "(" + "," * (self.f00.val-1) + ")")
-        if self.tree.in_proc:
-            stack[-1] += ","
-
-class StringIndicies(Token):
-    FLDS = [ ov.Octet, StringVar ]
-    def list(self, stack):
-        if self.tree.in_proc:
-            stack.append("REF ")
-        stack.append(str(self.f01) + "(" + "," * (self.f00.val-1) + ")")
-        if self.tree.in_proc:
-            stack[-1] += ","
-
-class IntIndicies2(Token):
-    FLDS = [ ov.Octet, IntVar ]
-    def list(self, stack):
-        stack[-1] += str(self.f01) + "(" + "," * (self.f00.val-1) + "),"
-
-class RealIndicies2(Token):
-    FLDS = [ ov.Octet, RealVar ]
-    def list(self, stack):
-        stack[-1] += str(self.f01) + "(" + "," * (self.f00.val-1) + "),"
-
-class StringIndicies2(Token):
-    FLDS = [ ov.Octet, StringVar ]
-    def list(self, stack):
-        stack[-1] += str(self.f01) + "(" + "," * (self.f00.val-1) + "),"
-
-class Func(Token):
-    def __init__(self, tree, lo, kind="XXX"):
-        self.FLDS = [kind, 4, ov.Octet]
-        super().__init__(tree, lo)
-
-    def list(self, stack):
-        self.tree.in_proc = True
-        stack.append("FUNC ")
-        stack.append(str(self.f00))
-        if self.f02.val:
-            self.tree.param_count = self.f02.val + 1
-            stack[-1] += "("
-
-    @classmethod
-    def kind(cls, kind):
-        return (cls, {"kind": kind})
-
-class Proc(Token):
-    FLDS = [RealVar, 4, ov.Octet]
-
-    def list(self, stack):
-        self.tree.in_proc = True
-        stack.append("PROC ")
-        stack.append(str(self.f00))
-        if self.f02.val:
-            self.tree.param_count = self.f02.val + 1
-            stack[-1] += "("
-
-class AssignVar(Token):
-
-    def __init__(self, tree, lo, kind="XXX"):
-        self.FLDS = [kind]
-        super().__init__(tree, lo)
-
-    def list(self, stack):
-        x = stack.pop(-1)
-        stack.append(str(self.f00))
-        stack[-1] += ":="
-        stack[-1] += x
-
-    @classmethod
-    def kind(cls, kind):
-        return (cls, {"kind": kind})
-
-class EndParams(Token):
-    FLDS = [2]
-    INDENT = 2
-    def list(self, stack):
-        ''' ... '''
-
-class Closed(Token):
-    FLDS = [4]
-    INDENT = 2
-    def list(self, stack):
-        stack[-1] += " CLOSED"
-
-class Dparas(Token):
-    def list(self, stack):
-        stack[-1] = stack[-1][:-1] + ")("
-
-class Push(Token):
-    def __init__(self, *args, txt=None, **kwargs):
-        self.txt = txt
-        super().__init__(*args, **kwargs)
-
-    def render(self):
-        if self.INDENT:
-            yield 'Push {Token=%s txt="%s", indent=%d}' % (str(self.token), self.txt, self.INDENT)
-        else:
-            yield 'Push {Token=%s txt="%s"' % (str(self.token), self.txt)
-
-    def list(self, stack):
-        stack.append(self.txt)
-
-    @classmethod
-    def this(cls, txt, **kwargs):
-        return (cls, {"txt": txt} | kwargs)
-
-class Join(Token):
-    def __init__(self, *args, pfx="", mid="", sfx="", **kwargs):
-        self.pfx = pfx
-        self.mid = mid
-        self.sfx = sfx
-        super().__init__(*args, **kwargs)
-
-    def render(self):
-        yield 'Join {Token=%s pfx="%s" mid="%s", sfx="%s"}' % (str(self.token), self.pfx, self.mid, self.sfx)
-
-    def list(self, stack):
-        join_stack(stack, self.mid)
-        stack[-1] = self.pfx + stack[-1] + self.sfx
-
-    @classmethod
-    def around(cls, mid, pfx="", sfx="", **kwargs):
-        return (cls, {"mid": mid, "pfx": pfx, "sfx": sfx} | kwargs)
-
-    @classmethod
-    def suffix(cls, sfx, **kwargs):
-        return (cls, {"sfx": sfx} | kwargs)
-
-class Wrap(Token):
-    def __init__(self, *args, pfx="", sfx="", **kwargs):
-        self.pfx = pfx
-        self.sfx = sfx
-        super().__init__(*args, **kwargs)
-
-    def render(self):
-        yield 'Wrap {Token=%s pfx="%s", sfx="%s"}' % (str(self.token), self.pfx, self.sfx)
-
-    def list(self, stack):
-        stack[-1] = self.pfx + stack[-1] + self.sfx
-
-    @classmethod
-    def inside(cls, pfx, sfx, **kwargs):
-        return (cls, {"pfx": pfx, "sfx": sfx} | kwargs)
-
-class DimOf(Token):
-    def list(self, stack):
-        if stack[-2][-1] == '(':
-            stack[-2] = stack[-2][:-1] + " OF " + stack[-1]
-        else:
-            stack[-2] = stack[-2] + " OF " + stack[-1]
-        stack.pop(-1)
-
-class PrefixOpen(Token):
-    def list(self, stack):
-        stack.insert(0, "OPEN ")
-        stack.insert(-1, ",")
-        stack.append(",")
-
-class DataJoin(Token):
-    FLDS = [2]
-    def list(self, stack):
-        while len(stack) > 3:
-            x = stack.pop(-1)
-            y = stack.pop(-1)
-            stack.append(y + "," + x)
-
-TOKENS = {
-    0x001: RealConstant,
-    0x002: IntegerConstant,
-    0x003: StringConstant,
-    0x004: RVar,
-    0x005: IVar,
-    0x006: SVar,
-    0x007: RVar,
-    0x008: IVar,
-    0x009: SVar,
-    0x00a: VarParan.kind(RealVar),
-    0x00b: VarParan.kind(IntVar),
-    0x00c: VarParan.kind(StringVar),
-    0x00d: Join.suffix(","),
-    0x00e: EndVar.kind(RealVar, "ENDPROC "),
-    0x00f: Join.suffix(","),
-    0x010: Join.suffix(","),
-    0x011: Join.suffix(","),
-    0x012: Join.suffix(","),
-    0x013: Join.suffix(")"),
-    0x014: Wrap.inside("RETURN ", ""),
-    0x015: Join.suffix(")"),
-    0x016: Join.suffix(")"),
-    0x017: Join.suffix(")"),
-    0x018: Join.suffix(")"),
-    0x019: Join.suffix(")"),
-    0x01a: CallRVar,
-    0x01b: Join.suffix(")"),
-    0x01c: Join.suffix(")"),
-    0x01d: Join.suffix(")"),
-    0x01e: Join.suffix(")"),
-    0x01f: Join.suffix(":"),
-    0x020: Wrap.inside("+", ""),
-    0x021: Wrap.inside("-", ""),
-    0x022: Join.around("^"),
-    0x023: Join.around("/"),
-    0x024: Join.around("*"),
-    0x025: Join.around(" DIV "),
-    0x026: Join.around(" MOD "),
-    0x027: Join.around("+"),
-    0x028: Join.around("+"),
-    0x029: Join.around("-"),
-    0x02a: Join.around("<"),
-    0x02b: Join.around("<"),
-    0x02c: Join.around("="),
-    0x02d: Join.around("="),
-    0x02e: Join.around("<="),
-    0x02f: Join.around("<="),
-    0x030: Join.around(">"),
-    0x031: Join.around(">"),
-    0x032: Join.around("<>"),
-    0x033: Join.around("<>"),
-    0x034: Join.around(">="),
-    0x035: Join.around(">="),
-    0x036: Join.around(" IN "),
-    0x037: Wrap.inside("NOT ", ""),
-    0x038: Join.around(" AND "),
-    0x039: Join.around(" OR "),
-    0x03a: Join.around(":="),
-    0x03b: Join.around(":="),
-    0x03c: Join.around(":="),
-    0x03d: Join.around(":+"),
-    0x03e: Join.around(":+"),
-    0x03f: Join.around(":+"),
-    0x040: Join.around(":-"),
-    0x041: Join.around(":-"),
-    0x042: Join.around("; "),
-    0x043: Push.this("TRUE"),
-    0x044: Push.this("FALSE"),
-    0x045: Push.this("ZONE"),
-    0x046: Wrap.inside("ZONE ", ""),
-    0x047: Wrap.inside("(", ")"),
-    0x048: Wrap.inside("ABS(", ")"),
-    0x049: Wrap.inside("ORD(", ")"),
-    0x04a: Wrap.inside("ATN(", ")"),
-    0x04b: Wrap.inside("CHR$(", ")"),
-    0x04c: Wrap.inside("COS(", ")"),
-    0x04d: Push.this("ESC"),
-    0x04e: Wrap.inside("EXP(", ")"),
-    0x04f: Wrap.inside("INT(", ")"),
-    0x050: Wrap.inside("LEN(", ")"),
-    0x051: Wrap.inside("LEN(", ")"),
-    0x052: Wrap.inside("LOG(", ")"),
-    0x053: Push.this("RND"),
-    0x054: Wrap.inside("RND(", ")"),
-    0x055: Join.around(","),
-    0x056: Wrap.inside("SGN(", ")"),
-    0x057: Wrap.inside("SIN(", ")"),
-    0x058: Wrap.inside("SPC$(", ")"),
-    0x059: Wrap.inside("SQR(", ")"),
-    0x05a: Wrap.inside("TAN(", ")"),
-    0x05b: Push.this("TIME"),
-    0x05c: Push.this("EOD"),
-    0x05d: Wrap.inside("EOF(", ")"),
-    0x05e: Push.this("ERRFILE"),
-    0x05f: Push.this("PRINT "),
-    0x060: NoOpToken,
-    0x061: Wrap.inside("", ","),
-    0x062: Join.around("USING ", sfx=": "),
-    0x063: Wrap.inside("TAB(", ")"),
-    0x064: Join.suffix(""),
-    0x065: Join.suffix(""),
-    0x066: Wrap.inside("", ","),
-    0x067: Wrap.inside("", ";"),
-    0x068: Push.this("IF "),
-    0x069: Wrap.inside("", sfx=" THEN", indent=2, extra=2),
-    0x06a: Join.suffix(" THEN "),
-    0x06b: Push.this("LOOP", indent=2),
-    0x06c: Push.this("EXIT", extra=3),
-    0x06d: Push.this("ELIF ", indent=-2, indent_this=-2, extra=2),
-    0x06e: Push.this("ELSE", indent_this=-2, extra=2),
-    0x06f: Push.this("ENDIF ", indent=-2),
-    0x070: Proc,
-    0x071: Push.this("NULL"),
-    0x072: RVarComma,
-    0x073: IVarComma,
-    0x074: SVarComma,
-    0x075: RefRVar,
-    0x076: RefIVar,
-    0x077: RefSVar,
-    0x078: RealIndicies2,
-    0x079: IntIndicies2,
-    0x07a: StringIndicies2,
-    0x07b: RealIndicies,
-    0x07c: IntIndicies,
-    0x07d: StringIndicies,
-    0x07e: EndParams,
-    0x07f: Closed,
-    0x080: Dparas,
-    0x081: RVar,
-    0x082: TakesName.word("FOR ", extra=2),
-    0x083: ForIVar,
-    0x084: Join.around(":="),
-    0x085: Join.around(" TO "),
-    0x086: Join.around(" STEP "),
-    0x087: Wrap.inside("", " DO", indent=2),
-    0x088: Wrap.inside("", " DO "),
-    0x089: NoOpToken,
-    0x08a: EndVar.kind(RealVar, "ENDFOR ", extra=2),
-    0x08b: EndVar.kind(IntVar, "ENDFOR ", extra=2),
-    0x08c: Wrap.inside("DIM ", ""),
-    0x08d: VarParan.kind(RealVar, extra=1),
-    0x08e: VarParan.kind(IntVar, extra=1),
-    0x08f: VarParan.kind(StringVar, extra=1),
-    0x090: Join.suffix(":"),
-    0x091: Join.suffix(","),
-    0x092: Join.suffix(")"),
-    0x093: DimOf,
-    0x094: Join.around(", "),
-    0x095: Push.this("REPEAT", indent=2),
-    0x096: Join.suffix("", extra=2),
-    0x097: Push.this("WHILE "),
-    0x098: Wrap.inside("", sfx=" DO", indent=2, extra=2),
-    0x099: Join.suffix(" DO "),
-    0x09a: NoOpToken,
-    0x09b: Push.this("ENDWHILE ", indent=-2, extra=2),
-    0x09c: Label,
-    0x09d: TakesName.word("GOTO ", extra=1),
-    0x09e: Push.this("ENDLOOP ", indent=-2, extra=2),
-    0x09f: Push.this("END "),
-    0x0a0: Push.this("STOP "),
-    0x0a1: Push.this("CASE "),
-    0x0a2: Wrap.inside("", sfx=" OF", indent=2, extra=2),
-    0x0a3: Wrap.inside("", sfx=" OF", indent=2, extra=2),
-    0x0a4: Push.this("WHEN ", indent_this=-2, extra=2),
-    0x0a5: Join.suffix(","),
-    0x0a6: Join.suffix("", extra=2),
-    0x0a7: Join.suffix(","),
-    0x0a8: Push.this("OTHERWISE ", indent_this=-2, extra=2),
-    0x0a9: Push.this("ENDCASE ", indent=-2),
-    0x0aa: Push.this("DATA "),
-    0x0ab: DataJoin,
-    0x0ac: Join.suffix("", extra=2),
-    0x0ad: Wrap.inside("", ":"),
-    0x0ae: Wrap.inside("", ":"),
-    0x0af: Push.this("READ "),
-    0x0b0: Join.suffix(","),
-    0x0b1: Join.suffix(","),
-    0x0b2: Join.suffix(","),
-    0x0b3: TrimLastChar,
-    0x0b4: Push.this("RESTORE "),
-    0x0b5: Push.this("INPUT "),
-    0x0b6: Wrap.inside("", sfx=" THEN", indent=2, extra=2),
-    0x0b7: InputPrompt,
-    0x0b8: Join.suffix(","),
-    0x0b9: Join.suffix(","),
-    0x0ba: Join.suffix(","),
-    0x0bb: TrimLastChar,
-    0x0bc: CommaToSemi,
-    0x0bd: Push.this("SELECT"),
-    0x0be: Join.around(" OUTPUT "),
-    0x0bf: Push.this("TRAP "),
-    0x0c0: Wrap.inside("", "ESC"),
-    0x0c1: Wrap.inside("", "+"),
-    0x0c2: Wrap.inside("", "-"),
-    0x0c3: Push.this("WRITE "),
-    0x0c4: Join.suffix(","),
-    0x0c5: Join.suffix(","),
-    0x0c6: Join.suffix(","),
-    0x0c7: TrimLastChar,
-    0x0c8: Join.around(",", pfx="FILE ", sfx=": "),
-    0x0c9: Join.around(",", pfx="FILE ", sfx=": "),
-    0x0ca: Join.around("FILE ", sfx=": "),
-    0x0cb: Wrap.inside("", ";"),
-    0x0cc: Join.around(" INPUT "),
-    0x0cd: CharConstant,
-    0x0ce: ByteConstant,
-    0x0cf: Push.this(""),
-    0x0d0: Push.this("EXIT"),
-    0x0d1: Join.around(" WHEN ", extra=3),
-    0x0d2: Wrap.inside("", " AND", extra=1),
-    0x0d3: BinConstant,
-    0x0d4: TakesName.word("USE "),
-    0x0d5: Wrap.inside("GET$(", ")"),
-    0x0d6: Join.suffix(","),
-    0x0d7: Join.suffix(""),
-    0x0d8: Wrap.inside("PEEK(", ")"),
-    0x0d9: HexConstant,
-    0x0da: Push.this("UNTIL ", indent=-2),
-    0x0db: TakesName.word("INTERRUPT "),
-    0x0dc: Join.around(",", pfx="AT ", sfx=": "),
-    0x0dd: Push.this("INTERRUPT "),
-    0x0de: Push.this("STATUS$"),
-    0x0df: Wrap.inside("RETURN ", ""),
-    0x0e0: Wrap.inside("RETURN ", ""),
-    0x0e1: NoOpToken,
-    0x0e2: Push.this("RETURN"),
-    0x0e3: Func.kind(RealVar),
-    0x0e4: Func.kind(IntVar),
-    0x0e5: Func.kind(StringVar),
-    0x0e6: EndVar.kind(RealVar, "ENDFUNC "),
-    0x0e7: EndVar.kind(IntVar, "ENDFUNC "),
-    0x0e8: EndVar.kind(StringVar, "ENDFUNC "),
-    0x0e9: Wrap.inside("VAL(", ")"),
-    0x0ea: Wrap.inside("STR$(", ")"),
-    0x0eb: Push.this("IMPORT ", extra=2),
-    0x0ec: Join.around(" BITAND "),
-    0x0ed: Join.around(" BITOR "),
-    0x0ee: Join.around(" BITXOR "),
-    0x0ef: TrimLastChar,
-    0x0f0: TakesName.word("RESTORE "),
-    0x0f1: Join.around(" THEN "),
-    0x0f2: Wrap.inside("", " OR", extra=1),
-    0x0f3: Join.around(",", pfx="CURSOR "),
-    0x0f4: Join.around(" ELSE "),
-    0x0f5: Wrap.inside("", " EXTERNAL "),
-    0x0f6: Join.suffix(""),
-    0x0f7: Wrap.inside("", "("),
-    0x0f8: AssignVar.kind(StringVar),
-    0x0f9: Push.this("TRAP", indent=2, extra=2),
-    0x0fa: AssignVar.kind(RealVar),
-    0x0fb: AssignVar.kind(IntVar),
-    0x0fc: Push.this("HANDLER", indent_this=-2, extra=2),
-    0x0fd: Push.this("ENDTRAP ", indent=-2),
-    0x0fe: Push.this("ERR"),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    0x110: Push.this("DELD-"),
-
-
-    0x113: Push.this("OPEN"),
-    0x114: Push.this("PI"),
-    0x115: Push.this("PAGE"),
-    0x116: NoOpToken,
-    0x117: Push.this("ERRTEXT$"),
-    0x118: Push.this("CLOSE"),
-    0x119: Join.around(" FILE "),
-    0x11a: Push.this("CLOSE"),
-    0x11b: Join.around(",", pfx="OPEN "),
-    0x11c: Wrap.inside("CHAIN ", ""),
-    0x11d: Join.around(","),
-    0x11e: Wrap.inside("UNIT ", ""),
-    0x11f: Push.this("KEY$"),
-    0x120: Wrap.inside("FILE ", ""),
-    0x121: Wrap.inside("MOUNT ", ""),
-    0x122: PrefixOpen,
-    0x123: Wrap.inside("", "READ"),
-    0x124: Wrap.inside("", "WRITE"),
-    0x125: Wrap.inside("", "APPEND"),
-    0x126: Join.around("RANDOM "),
-    0x127: Push.this("DIR"),
-    0x128: Wrap.inside("DIR ", ""),
-    0x129: Join.around(",", pfx="COPY "),
-    0x12a: Join.suffix(","),
-    0x12b: Join.around(",", pfx="POKE "),
-    0x12c: Join.suffix(","),
-    0x12d: Wrap.inside("SYS ", ""),
-    0x12e: Push.this("UNIT$"),
-    0x12f: Join.around(" UNTIL ", pfx="REPEAT "),
-    0x130: Wrap.inside("STOP ", ""),
-    0x131: Wrap.inside("TIME ", ""),
-    0x132: Push.this("REPORT"),
-    0x133: NoOpToken,
-    0x134: NoOpToken,
-    0x135: Wrap.inside("PASS ", ""),
-    0x136: Push.this("MOUNT"),
-    0x137: Join.around(",", pfx="PASS "),
-    0x138: Wrap.inside("END ", ""),
-    0x139: Wrap.inside("DELETE ", ""),
-    0x13a: Wrap.inside("RANDOMIZE ", ""),
-    0x13b: Push.this("RANDOMIZE"),
-    0x13c: Wrap.inside("REPORT ", ""),
-    0x13d: Join.around(",", pfx="CREATE "),
-    0x13e: Join.around(",", pfx="RENAME "),
-    0x13f: Join.around(",", pfx="REPORT "),
-}
 
 class Statement(ov.Struct):
     ''' One COMAL statement'''
@@ -839,79 +63,595 @@ class Statement(ov.Struct):
             vertical = True,
             more = True,
         )
-        self.rem = ""
+        if self.size.val > 3:
+            self.add_field("body", self.size.val - 3)
+        self.stack = []
+        self.stream = []
+        self.listed = ""
         self.indent = 0
-        self.indent_this = 0
-        n = 0
-        b = self.hi
-        e = b + self.size.val - 3
-        while b < e:
-            t = TokNo(tree, b)
-            cls = TOKENS.get(t.token.val)
-            if isinstance(cls, tuple):
-                y = self.add_field("t%02d" % n, cls)
-                self.indent += y.INDENT
-                self.indent_this += y.INDENT_THIS
-                n += 1
-            elif cls:
-                y = self.add_field("t%02d" % n, cls)
-                self.indent += y.INDENT
-                self.indent_this += y.INDENT_THIS
-                n += 1
-            elif t.token.val == 0:
-                y = self.add_field("comment", ov.Text(e - b))
-                self.rem = "//" + ''.join(decode_char(tree, x, quote=False) for x in list(y)[1:])
-                n += 1
-            else:
-                y = self.add_field("unknown", e - b)
-            b = y.hi
-
         self.done()
-        x = self.list()
-        if '╬' in x or '▓' in x:
-            print(tree.this, "INCOMPL", self.lineno, x)
-            tree.this.add_note("ComalIncompl")
 
     def list(self):
-        self.tree.param_count = 0
-        self.tree.in_proc = False
-        stack = [""]
-        good = True
-        for n,f in self.fields[2:]:
-            if good is False:
-                stack.append(str(f))
-                continue
-            if isinstance(f, Token):
-                good = f.list(stack)
-            elif n != "comment":
-                if f[0] == 0xff:
-                    stack.append("╬" + str(f[0]))
-                    stack.append("╬" + str(f[1]))
-                else:
-                    stack.append("╬" + str(f[0]))
-                stack.append(str(f))
-                good = False
-            if self.tree.param_count > 0:
-                self.tree.param_count -= 1
-                if self.tree.param_count == 0:
-                    if stack[-1][-1] == ",":
-                        stack[-1] = stack[-1][:-1]
-                    stack[-1] += ')'
+        if not hasattr(self, "body"):
+            return
 
-        if good is not False:
-            sep = ""
-        else:
-            sep = " "
-        stk = sep.join(stack).rstrip()
-        if self.rem:
-            if stk and stk[-1:] != " ":
-                stk += " "
-            stk += self.rem
-        return stk
+        self.stream = list(x for x in self.body)
+        self.stack = [""]
+
+
+        roadblock = None
+        while self.stream:
+            roadblock = None
+            b = self.stream.pop(0)
+            if b == 0xff:
+                if not self.stream:
+                    yield "   ! missing aux token"
+                    break
+                b += 1 + self.stream.pop(0)
+            stackop, extra, tok = DISPATCH.get(b, (None, None, None))
+            if stackop is None:
+                yield "   ! unknown token 0x%03x" % b
+                break
+            yield "   * %02x (%02x, %x, %02x) # %s" % (b, stackop, extra, tok, str(TOKENS[tok]))
+            mname = "stackop_%02x" % stackop
+            method = getattr(self, mname, None)
+            if not method:
+                yield "   ! " + mname + " not implemented"
+                roadblock = mname
+                break
+            try:
+                method(tok)
+            except Exception as err:
+                yield "   ! stackop_%02x raised %s %s" % (stackop, err.__class__.__name__, str(err))
+                roadblock = mname
+                break
+
+            for _i in range(extra):
+                if self.stream:
+                    yield "   + %02x" % self.stream.pop(0)
+                else:
+                    yield "   ! missing extra"
+
+            yield "   Stack: [" + "|".join(str(x) for x in self.stack) + "]"
+            yield "   Stream = [" + bytes(self.stream).hex() + "]"
+
+        if self.stream:
+            self.stack.append("Residual=" + bytes(self.stream).hex())
+
+        if roadblock:
+            self.stack.append("Roadblock=" + roadblock)
+
+        if self.stack[:1] == [""]:
+            self.stack.pop(0)
+
+        self.listed = "".join(self.stack)
+        yield " LISTED: " + self.listed
+        if self.indent:
+            yield " INDENT: 0x%02x" % self.indent
+
+        while self.stream:
+            b = self.stream.pop(0)
+            yield "   ? %02x" % b
+            break
 
     def render(self):
         yield from super().render()
-        yield str(self.lineno) + " " + self.list()
+        yield str(self.lineno)
+        yield from self.list()
+        yield ""
+
+    def stackop_00(self, tok):
+        ''' NoOp '''
+
+    def stackop_01(self, tok):
+        ''' End of line comment '''
+        if self.stack[-1][-1:] not in ('', ' '):
+            self.stack_append(' ')
+        self.stack_append(TOKENS[tok])
+        while self.stream:
+            self.stack_append(decode_char(self.tree, self.stream.pop(0), quote=False))
+
+    def stackop_02(self, tok):
+        ''' Constant '''
+        if tok == 0:
+            e = self.stream.pop(0)
+            mant = self.stream.pop(0) << 24
+            mant |= self.stream.pop(0) << 16
+            mant |= self.stream.pop(0) << 8
+            mant |= self.stream.pop(0)
+            if e == 0:
+                real = 0
+            elif mant & (1<<31):
+                real = -mant * 2 ** (e - 128 - 32)
+            else:
+                mant |= (1<<31)
+                real = mant * 2 ** (e - 128 - 32)
+            x = "%g" % real
+            if x[:2] == "0.":
+                x = x[1:]
+            self.stack.append(x)
+        elif tok == 1:
+            v = self.stream.pop(0) << 8
+            v |= self.stream.pop(0)
+            if v & (1<<15):
+                v -= 1<<16
+            self.stack.append('%d' % v)
+        elif tok == 2:
+            l = self.stream.pop(0)
+            txt = "".join(decode_char(self.tree, self.stream.pop(0)) for x in range(l))
+            self.stack.append('"' + txt + '"')
+        elif tok == 3:
+            v = self.stream.pop(0)
+            self.stack.append('%d' % v)
+        elif tok == 4:
+            v = self.stream.pop(0) << 8
+            v |= self.stream.pop(0)
+            if v < 0x100:
+                self.stack.append('$%02x' % v)
+            else:
+                self.stack.append('$%04x' % v)
+        elif tok == 5:
+            v = self.stream.pop(0)
+            self.stack.append('"' + decode_char(self.tree, v) + '"')
+        elif tok == 6:
+            v = self.stream.pop(0) << 8
+            v |= self.stream.pop(0)
+            if v < 0x100:
+                self.stack.append('%' + bin((1<<8)|v)[3:])
+            else:
+                self.stack.append('%' + bin((1<<16)|v)[3:])
+        else:
+            raise Bogon()
+
+    def stackop_04(self, tok):
+        ''' Indent2_XXX_PushTok_AppendSpace_StringVar '''
+        self.indent |= 2
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stackop_05(2)
+        self.stack_join()
+
+    def stackop_05(self, tok):
+        ''' Name '''
+        idx = self.stream.pop(0)
+        idx |= self.stream.pop(0) << 8
+        if idx == 0xffff:
+            return
+        v = self.tree.vars.get(idx)
+        if v:
+            self.stack_push(v.varname)
+        else:
+            self.stack_push("VAR[0x%04x]" % idx)
+        if tok == 1:
+            self.stack_append("#")
+        elif tok == 2:
+            self.stack_append("$")
+
+    def stackop_07(self, _tok):
+        ''' RealName '''
+        self.stackop_05(0)
+
+    def stackop_06(self, tok):
+        ''' AppendSpace_PushTok_Join '''
+        self.stack_append(' ')
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_08(self, tok):
+        ''' VarReal_PushTok_Join '''
+        self.stackop_05(0)
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_09(self, tok):
+        ''' VarInt_PushTok_Join '''
+        self.stackop_05(1)
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_0a(self, tok):
+        ''' VarString_PushTok_Join '''
+        self.stackop_05(2)
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_0b(self, tok):
+        ''' Join_PushTok_Join '''
+        self.stack_join()
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_0c(self, tok):
+        ''' PushTok_Swap_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_swap()
+        self.stack_join()
+
+    def stackop_0d(self, tok):
+        ''' PushTok_Swap_Join_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_swap()
+        self.stack_join()
+        self.stack_join()
+
+    def stackop_0e(self, tok):
+        ''' PushTok_AppendSpace_PrependSpace_Swap_Join_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stack[-1] = " " + self.stack[-1]
+        self.stack_swap()
+        self.stack_join()
+        self.stack_join()
+
+    def stackop_0f(self, tok):
+        ''' PushTok_AppendSpace_Swap_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stack_swap()
+        self.stack_join()
+
+    def stackop_10(self, tok):
+        ''' PushTok_AppendSpace_Swap_Join_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stack_swap()
+        self.stack_join()
+        self.stack_join()
+
+    def stackop_11(self, tok):
+        ''' PushTok '''
+        self.stack_push(TOKENS[tok])
+
+    def stackop_12(self, tok):
+        ''' PushTok_Swap_Join_AppendClose '''
+        self.stack_push(TOKENS[tok])
+        self.stack_swap()
+        self.stack_join()
+        self.stack_append(')')
+
+    def stackop_13(self, tok):
+        ''' PushTok_AppendOpen_Swap_Join_AppendClose '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append('(')
+        self.stack_swap()
+        self.stack_join()
+        self.stack_append(')')
+
+    def stackop_14(self, tok):
+        ''' PushTok_AppendDollar_AppendOpen_Swap_Join_AppendClose '''
+        self.stackop_3c(tok)
+        self.stack_append('(')
+        self.stack_swap()
+        self.stack_join()
+        self.stack_append(')')
+
+    def stackop_15(self, tok):
+        ''' PushTok_AppendSpace '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+
+    def stackop_16(self, tok):
+        ''' PushTok_AppendSpace_Indent2 '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.indent |= 2
+
+    def stackop_17(self, tok):
+        ''' PushTok_AppendSpace_Indent3 '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.indent |= 3
+
+    def stackop_18(self, tok):
+        ''' PushTok_AppendSpace_Indent1 '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.indent |= 1
+
+    def stackop_19(self, _tok):
+        ''' TrimLast '''
+        self.stack[-1] = self.stack[-1][:-1]
+
+    def stackop_1a(self, tok):
+        ''' PushTok_AppendSpace_Swap_Join_Join_AppendColon_AppendSpace '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stack_swap()
+        self.stack_join()
+        self.stack_join()
+        self.stack_append(': ')
+
+    def stackop_1b(self, tok):
+        ''' PushTok_AppendOpen_Swap_Join_AppendClose_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append('(')
+        self.stack_swap()
+        self.stack_join()
+        self.stack_append(')')
+        self.stack_join()
+
+    def stackop_1c(self, tok):
+        ''' Join_Indent4_AppendSpace_PushTok_Join_AppendSpace '''
+        self.stack_join()
+        self.stackop_20(tok)
+
+    def stackop_1d(self, tok):
+        ''' TrimLast_PushTok_Join '''
+        self.stack[-1] = self.stack[-1][:-1]
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_1e(self, tok):
+        ''' PushTok_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_1f(self, tok):
+        ''' Indent1_AppendSpace_PushTok_Join '''
+        self.indent |= 1
+        self.stack_append(' ')
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_20(self, tok):
+        ''' Indent4_AppendSpace_PushTok_Join_AppendSpace '''
+        self.indent |= 4
+        self.stack_append(' ')
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+        self.stack_append(' ')
+
+    def stackop_23(self, tok):
+        ''' Indent2_XXX_PushTok_AppendSpace_RealVar '''
+        self.indent |= 2
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stackop_05(0)
+        self.stack_join()
+
+    def stackop_24(self, tok):
+        ''' Indent2_XXX_PushTok_AppendSpace_IntVar '''
+        self.indent |= 2
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stackop_05(1)
+        self.stack_join()
+
+    def stackop_25(self, _tok):
+        ''' ... '''
+        # more if 0x08 & 0xc7d8 ?
+        self.stackop_05(0)
+        self.stack_append('(')
+
+    def stackop_26(self, tok):
+        self.indent = 0x10
+        if self.stack[-1][-1] == ',':
+            self.stack[-1] = self.stack[-1][:-1] + ")"
+        else:
+            self.stack[-1] = self.stack[-1][:-1]
+        self.stack_append(' ')
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+        self.stack_append(' ')
+
+    def stackop_27(self, tok):
+        ''' PushTok_AppendSpace_VarReal_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stackop_05(0)
+        self.stack_join()
+
+    def stackop_28(self, tok):
+        ''' PushTok_AppendSpace_VarInt_Join '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stackop_05(1)
+        self.stack_join()
+
+    def stackop_29(self, tok):
+        ''' DIM-magic
+                StackOp_PushTok_AppendSpace_Swap_Join_Join_
+            or
+                StackOp_PushTok_AppendSpace_PrependSpace_Swap_Join_Join_
+        '''
+        if self.stack[-2][-1] == '(':
+            self.stack[-2] = self.stack[-2][:-1]
+
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stack_prepend(' ')
+        self.stack_swap()
+        self.stack_join()
+        self.stack_join()
+
+    def stackop_2a(self, tok):
+        ''' Join_AppendColon_PushTok '''
+        self.stack_join()
+        self.stack_append(':')
+        self.stack_push(TOKENS[tok])
+
+    def stackop_2c(self, _tok):
+        ''' DataJoin '''
+        while self.stack[-2] != "DATA ":
+            x = self.stack.pop(-1)
+            self.stack[-1] += "," + x
+        self.stack_join()
+
+    def stackop_2d(self, tok):
+        ''' VarAssign '''
+        self.stackop_05(tok)
+        self.stack_push(TOKENS[0x68])
+        self.stack_join()
+        self.stack_swap()
+        self.stack_join()
+
+    def stackop_2f(self, tok):
+        ''' Join_Indent1_AppendSpace_PushTok_Join '''
+        self.stack_join()
+        self.stackop_1f(tok)
+
+    def stackop_31(self, tok):
+        ''' PrependComma_Join_PushTok_AppendSpace_Swap_Join_Join_AppendColon_AppendSpace '''
+        self.stack_prepend(',')
+        self.stack_join()
+        self.stackop_1a(tok)
+
+    def stackop_32(self, tok):
+        ''' PrependComma_Join_PushTok_AppendSpace_Swap_Join '''
+        self.stack_prepend(',')
+        self.stack_join()
+        self.stackop_0f(tok)
+
+    def stackop_3a(self, tok):
+        ''' Indent8_VarReal_PushTok_Join '''
+        self.indent |= 8
+        self.stackop_08(tok)
+
+    def stackop_3b(self, _tok):
+        ''' Join_AppendColon_AppendSpace '''
+        self.stack_join()
+        self.stack_append(': ')
+
+    def stackop_3c(self, tok):
+        ''' PushTok_AppendDollar '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append('$')
+
+    def stackop_3e(self, tok):
+        ''' PrependComma_Join_PushTok_AppendSpace_Swap_Join_AppendComma '''
+        self.stack_prepend(',')
+        self.stack_join()
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stack_swap()
+        self.stack_join()
+        self.stack_append(',')
+
+    def stackop_39(self, tok):
+        ''' EndProcFunc '''
+        self.stream.pop(0)
+        self.stream.pop(0)
+        if self.stack[-1][-1] == ',':
+            self.stack[-1] = self.stack[-1][:-1] + ")"
+        else:
+            self.stack[-1] = self.stack[-1][:-1]
+        self.stack_append(' ')
+        self.stack_push(TOKENS[tok])
+        self.stack_join()
+
+    def stackop_21(self, tok):
+        self.procfunc(tok, 0)
+
+    def stackop_22(self, tok):
+        self.procfunc(tok, 1)
+
+    def stackop_03(self, tok):
+        self.procfunc(tok, 2)
+
+    def modtyp(self, mod, typ):
+
+        if mod == 0:
+            self.stream.pop(0)
+            self.stackop_05(typ)
+            self.stack_join()
+            self.stack_append(',')
+        elif mod == 1:
+            self.stream.pop(0)
+            self.stackop_05(typ)
+            self.stack_prepend('REF ')
+            self.stack_join()
+            self.stack_append(',')
+        elif mod == 2:
+            self.stream.pop(0)
+            d = self.stream.pop(0)
+            self.stackop_05(typ)
+            self.stack_append('(' + ',' * (d - 1) + ')')
+            self.stack_join()
+            self.stack_append(',')
+        elif mod == 3:
+            self.stream.pop(0)
+            d = self.stream.pop(0)
+            self.stackop_05(typ)
+            self.stack_prepend('REF ')
+            self.stack_append('(' + ',' * (d - 1) + ')')
+            self.stack_join()
+            self.stack_append(',')
+        else:
+            raise Bogon()
+
+    def procfunc(self, tok, ret):
+        ''' ProcFuncReal '''
+        self.indent |= 1
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stackop_05(ret)
+        self.stream.pop(0)
+        self.stream.pop(0)
+        self.stream.pop(0)
+        self.stream.pop(0)
+        self.stream.pop(0)
+        self.stack_join()
+        self.stack_append('(')
+        while True:
+            x = self.stream[0]
+            if x >= 0x7e:
+                return
+            if x < 0x72:
+                raise Bogon()
+            typ = (x - 0x72) % 3
+            mod = (x - 0x72) // 3
+            self.modtyp(mod, typ)
+
+    def stackop_2e(self, tok):
+        ''' ... '''
+        self.stackop_0e(tok)
+        self.stackop_0f(0x3d)
+
+    def stackop_33(self, tok):
+        ''' ImportMagic '''
+        self.stack_push(TOKENS[tok])
+        self.stack_append(' ')
+        self.stream.pop(0)
+        self.stream.pop(0)
+        while self.stream:
+            x = self.stream[0]
+            if x >= 0x7e:
+                return
+            if x < 0x72:
+                raise Bogon()
+            typ = (x - 0x72) % 3
+            mod = (x - 0x72) // 3
+            self.modtyp(mod, typ)
+
+    def stackop_36(self, tok):
+        ''' Exec '''
+        ndim = self.stream.pop(0)
+        self.stackop_05(tok)
+        self.stack_append('(' + ',' * (ndim - 1) + ')')
+
+    def stackop_3d(self, _tok):
+        ''' TrimLast_AppendClose_AppendOpen '''
+        self.stack[-1] = self.stack[-1][:-1]
+        self.stack_append(')(')
+
+    def stack_push(self, txt):
+        if txt is None:
+            txt = ""
+        self.stack.append(txt)
+
+    def stack_prepend(self, txt):
+        self.stack[-1] = txt + self.stack[-1]
+
+    def stack_append(self, txt):
+        self.stack[-1] += txt
+
+    def stack_swap(self):
+        self.stack.append(self.stack.pop(-2))
+
+    def stack_join(self):
+        x = self.stack.pop(-1)
+        y = self.stack.pop(-1)
+        self.stack.append(y + x)
 
 class Variable(ov.Struct):
     ''' One COMAL variable'''
@@ -1064,7 +804,6 @@ class C64Unicomal(ov.OctetView):
         if this[3] != 0x00:
             return
 
-
         super().__init__(this)
         this.add_note("C64-UNICOMAL")
         hdr = Hdr(self, 0).insert()
@@ -1095,46 +834,46 @@ class C64Unicomal(ov.OctetView):
                 break
 
         ptr = hdr.hi
-        stmt = []
+        self.stmt = []
         while ptr < hdr.hi + hdr.f02.val:
             try:
                 y = Statement(self, ptr)
             except Exception as err:
                 print(this, "BAD STMT", hex(adr), err)
                 break
-                raise
             if y.size.val == 0:
                 break
             y.insert()
-            stmt.append(y)
+            for _x in y.list():
+                # This parses the bytecode
+                continue
+            self.stmt.append(y)
             ptr += y.size.val
 
         with self.this.add_utf8_interpretation("COMAL80") as file:
-            indent = 0
-            for i in stmt:
-                if i.indent < -999:
-                    indent = 0
-                elif i.indent < 0:
-                    indent += i.indent
-                indent = max(indent, 0)
-                file.write(str(i.lineno) + " " * (1 + indent + i.indent_this) + i.list() + "\n")
-                if i.indent > 0:
-                    indent += i.indent
-                indent = max(indent, 0)
+            for j in self.list():
+                file.write(j + "\n")
+
         with open("/tmp/C64Comal/" + this.digest + ".cml", "wb") as file:
             file.write(bytes(this))
-        with open("/tmp/C64Comal/" + this.digest + ".lst", "w") as file:
-            indent = 0
-            for i in stmt:
-                if i.indent < -999:
-                    indent = 0
-                elif i.indent < 0:
-                    indent += i.indent
-                indent = max(indent, 0)
-                ri = max(1, 1 + indent + i.indent_this)
-                file.write((str(i.lineno) + " " * ri + i.list()).rstrip() + "\n")
-                if i.indent > 0:
-                    indent += i.indent
-                indent = max(indent, 0)
+
+        with open("/tmp/C64Comal/" + this.digest + ".lst", "w", encoding="utf8") as file:
+            for j in self.list():
+                file.write(j + "\n")
 
         self.add_interpretation(more=True)
+
+    def list(self):
+        ''' List the COMAL program '''
+        indent = 0
+        for i in self.stmt:
+            if i.indent & 2:
+                indent -= 2
+            if i.indent & 8:
+                xi = 1
+            else:
+                xi = 1 + indent
+            yield (str(i.lineno) + " " * xi + i.listed).rstrip()
+            if i.indent & 1:
+                indent += 2
+            indent = max(0, indent)
