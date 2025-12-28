@@ -210,35 +210,30 @@ class CallSVar(Token):
         stack.append(str(self.f00))
         stack[-1] += "("
 
-class UseName(Token):
-    FLDS = [RealVar]
-
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack.insert(-1, "USE ")
-
 class At(Token):
     def list(self, stack):
         join_stack(stack, ",")
         join_stack(stack, "AT ")
         stack[-1] += ": "
 
-class Restore(Token):
+class TakesName(Token):
     FLDS = [RealVar]
+    def __init__(self, *args, word, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.word = word
+
     def list(self, stack):
+        stack.append(self.word)
         stack.append(str(self.f00))
-        stack.insert(-1, "RESTORE ")
+
+    @classmethod
+    def word(cls, word, **kwargs):
+        return (cls, {"word": word} | kwargs)
 
 class Import(Token):
     FLDS = [2]
     def list(self, stack):
         stack.append("IMPORT ")
-
-class ForRVar(Token):
-    FLDS = [RealVar, 2]
-    def list(self, stack):
-        stack.append(str(self.f00))
-        stack.insert(-1, "FOR ")
 
 class ForIVar(Token):
     FLDS = [IntVar, 2]
@@ -259,20 +254,6 @@ class EndForRVar(Token):
     def list(self, stack):
         stack.append(str(self.f00))
         stack.insert(-1, "ENDFOR ")
-
-class Goto(Token):
-    FLDS = [RealVar, 1]
-    def list(self, stack):
-        stack.append("GOTO ")
-        stack.append(str(self.f00))
-        join_stack(stack, "")
-
-class Interrupt(Token):
-    FLDS = [RealVar]
-    def list(self, stack):
-        stack.append("INTERRUPT ")
-        stack.append(str(self.f00))
-        join_stack(stack, "")
 
 class Label(Token):
     FLDS = [RealVar, 3]
@@ -347,13 +328,6 @@ class CommaToSemi(Token):
         if stack[-1][-1] == ',':
             stack[-1] = stack[-1][:-1]
         stack[-1] += ";"
-
-class CommaToCloseParan(Token):
-    def list(self, stack):
-        if 0:
-            if stack[-1][-1] == ',':
-                stack[-1] = stack[-1][:-1]
-            stack[-1] += ")"
 
 class Param(Token):
     ''' ... '''
@@ -699,8 +673,8 @@ TOKENS = {
     0x061: Wrap.inside("", ","),
     0x062: Join.around("USING ", sfx=": "),
     0x063: Wrap.inside("TAB(", ")"),
-    0x064: NoOpToken,
-    0x065: NoOpToken,
+    0x064: Join.suffix(""),
+    0x065: Join.suffix(""),
     0x066: Wrap.inside("", ","),
     0x067: Wrap.inside("", ";"),
     0x068: Push.this("IF "),
@@ -729,7 +703,7 @@ TOKENS = {
     0x07f: Closed,
     0x080: Dparas,
     0x081: RVar,
-    0x082: ForRVar,
+    0x082: TakesName.word("FOR ", extra=2),
     0x083: ForIVar,
     0x084: Join.around(":="),
     0x085: Join.around(" TO "),
@@ -756,7 +730,7 @@ TOKENS = {
     0x09a: Join,
     0x09b: Push.this("ENDWHILE ", indent=-2, extra=2),
     0x09c: Label,
-    0x09d: Goto,
+    0x09d: TakesName.word("GOTO ", extra=1),
     0x09e: Push.this("ENDLOOP ", indent=-2, extra=2),
     0x09f: Push.this("END "),
     0x0a0: Push.this("STOP "),
@@ -811,14 +785,14 @@ TOKENS = {
     0x0d1: Join.around(" WHEN ", extra=3),
     0x0d2: Wrap.inside("", " AND", extra=1),
     0x0d3: BinConstant,
-    0x0d4: UseName,
+    0x0d4: TakesName.word("USE "),
     0x0d5: Wrap.inside("GET$(", ")"),
     0x0d6: Join.suffix(","),
     0x0d7: Join.suffix(""),
     0x0d8: Wrap.inside("PEEK(", ")"),
     0x0d9: HexConstant,
     0x0da: Push.this("UNTIL ", indent=-2),
-    0x0db: Interrupt,
+    0x0db: TakesName.word("INTERRUPT "),
     0x0dc: At,
     0x0dd: Push.this("INTERRUPT "),
     0x0de: Push.this("STATUS$"),
@@ -839,13 +813,13 @@ TOKENS = {
     0x0ed: Join.around(" BITOR "),
     0x0ee: Join.around(" BITXOR "),
     0x0ef: TrimLastChar,
-    0x0f0: Restore,
+    0x0f0: TakesName.word("RESTORE "),
     0x0f1: Join.around(" THEN "),
     0x0f2: Wrap.inside("", " OR", extra=1),
     0x0f3: Join.around(",", pfx="CURSOR "),
     0x0f4: Join.around(" ELSE "),
-    0x0f5: CommaToCloseParan,
-    0x0f6: Join.around(" EXTERNAL "),
+    0x0f5: Wrap.inside("", " EXTERNAL "),
+    0x0f6: Join.suffix(""),
     0x0f7: Wrap.inside("", "("),
     0x0f8: AssignSVar,
     0x0f9: Push.this("TRAP", indent=2, extra=2),
@@ -1230,4 +1204,4 @@ class C64Unicomal(ov.OctetView):
                     indent += i.indent
                 indent = max(indent, 0)
 
-        self.add_interpretation(more=False)
+        self.add_interpretation(more=True)
