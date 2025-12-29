@@ -810,6 +810,17 @@ class C64Unicomal(ov.OctetView):
 
         if 2 + hdr.hi + hdr.f03.val <= len(this):
             csum = Csum(self, hdr.hi + hdr.f03.val).insert()
+            fsum = (sum(this[:hdr.hi + hdr.f03.val]) & 0xffff) ^ 0xaaaa
+            if fsum != csum.checksum.val:
+                print(
+                    this,
+                    "CSUM",
+                    "%04x" % fsum,
+                    "%04x" % csum.checksum.val,
+                    "%04x" % (csum.checksum.val ^ fsum),
+                    fsum == csum.checksum.val,
+                )
+                this.add_note("C64-UNICOMAL-CSUMERR")
         else:
             csum = None
         if csum and csum.hi < len(this) and this[csum.hi] == 0x01:
