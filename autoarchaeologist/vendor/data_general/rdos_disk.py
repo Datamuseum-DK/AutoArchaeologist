@@ -189,10 +189,15 @@ class RdosDisk(ov.OctetView):
 
         print(this, self.__class__.__name__)
         pdi = PhysDiskInfo(self, 3 << 9).insert()
-        if pdi.nblock.val != 203 * 12 * 2 - 6:
+        if pdi.nblock.val not in (
+            203 * 2 * 12 - 6,
+            77 * 2 * 16 - 6,
+        ):
+            print(this, "PDI-", pdi)
             return
 
         this.taken = self
+        this.add_note("DG-FS")
 
         self.ns = RdosNameSpace(
             name="",
