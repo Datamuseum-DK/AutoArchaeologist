@@ -103,7 +103,7 @@ class AlphaLsi(ov.OctetView):
         dirents = []
         if this[1] == 0x90:
             for s in (6, 7):
-                f = this.getfrag((0,0,s))
+                f = this.get_frag((0,0,s))
                 if f:
                     y = ov.Array(32, DirEnt, vertical=True)(self, f.lo + 2).insert()
                     for de in y:
@@ -111,19 +111,19 @@ class AlphaLsi(ov.OctetView):
                             dirents.append(de)
 
             for s in (8, 9):
-                f = this.getfrag((0,0,s))
+                f = this.get_frag((0,0,s))
                 if f:
                     ov.Array(16, Bar, vertical=True)(self, f.lo + 2).insert()
 
         if this[1] == 0x00:
-            f = this.getfrag((0,0,0))
+            f = this.get_frag((0,0,0))
             if f:
                 ov.Array(32, DirEnt, vertical=True)(self, f.lo + 2).insert()
             for t in range(1, 76, 4):
-                f = this.getfrag((t,0,0))
+                f = this.get_frag((t,0,0))
                 if f:
                     ov.Array(16, Bar, vertical=True)(self, f.lo + 2).insert()
-                f = this.getfrag((t,0,1))
+                f = this.get_frag((t,0,1))
                 if f:
                     ov.Array(16, Bar, vertical=True)(self, f.lo + 2).insert()
 
@@ -133,7 +133,7 @@ class AlphaLsi(ov.OctetView):
             sec = de.w0.val & 0xfff
             n = 0
             while sec:
-                f = this.getfrag((sec >> 4,0,sec & 0xf))
+                f = this.get_frag((sec >> 4,0,sec & 0xf))
                 if not f:
                     print(this, "FRAG not found", hex(sec), de)
                     break
