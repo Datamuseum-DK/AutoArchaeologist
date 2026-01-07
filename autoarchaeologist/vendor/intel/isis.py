@@ -206,12 +206,17 @@ class IntelIsis(ov.OctetView):
 
         super().__init__(this)
 
+        de = None
         for frag in this.iter_rec():
             de = DirEnt(self, frag.lo, width=16)
             if de.name == 'ISIS.DIR':
                 break
             if frag.key[0] > 1:
                 return
+
+        if not de:
+            return
+
 
         this.add_description("Intel_ISIS_II")
 
