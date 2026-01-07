@@ -48,7 +48,7 @@ class AlphaLsi(ddhf.DDHFExcavation):
 if __name__ == "__main__":
     ddhf.main(
         AlphaLsi,
-        html_subdir="alphalsi",
+        html_subdir="alpha_lsi",
         ddhf_topic = "Alpha LIS",
         ddhf_topic_link = 'https://datamuseum.dk/wiki/',
     )
