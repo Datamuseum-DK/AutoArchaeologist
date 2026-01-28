@@ -108,7 +108,7 @@ class DirGranule(ov.Struct):
                 if frag is None:
                     print(self.tree.this, "FRAG", frag, fno, rno, dent)
                     return
-                for n, ptr in enumerate(range(frag.lo, frag.hi, 404)):
+                for n, ptr in enumerate(range(frag.lo, frag.hi, len(frag)//8)):
                     if n == 0:
                         ov.Opaque(self.tree, ptr, width=404).insert()
                     elif n == 1:
@@ -117,14 +117,13 @@ class DirGranule(ov.Struct):
                     else:
                         y = Dummy(self.tree, ptr).insert()
                         w = y.f01.val & 0x1fff
-                        if w:
-                            recs.append(
-                                artifact.Record(
-                                    low = y.lo + 4,
-                                    frag = self.tree.this[y.lo+4:y.lo+4+w],
-                                    key = (len(recs), y.f01.val >> 13, y.f01.val & 0x1fff)
-                                )
+                        recs.append(
+                            artifact.Record(
+                                low = y.lo + 4,
+                                frag = self.tree.this[y.lo+4:y.lo+4+w],
+                                key = (len(recs), y.f01.val >> 13, y.f01.val & 0x1fff)
                             )
+                        )
                 bno = list(z.gno.iter_elided())
                 nsec = len(bno)
                 if z.f01.val != 2 * nsec:
@@ -138,21 +137,24 @@ class DirGranule(ov.Struct):
                         return
 
                     rno += 1
-                    y = ov.Array(8, Dummy, vertical=True)(self.tree, frag.lo).insert()
-                    for z in y:
-                        w = z.f01.val & 0x1fff
-                        if not w:
-                            break
+                    for p in range(0, len(frag), len(frag)//8):
+                        y = Dummy(self.tree, frag.lo + p).insert()
+                        w = y.f01.val & 0x1fff
                         recs.append(
                             artifact.Record(
-                                low = z.lo + 4,
-                                frag = self.tree.this[z.lo+4:z.lo+4+w],
-                                key = (len(recs), z.f01.val >> 13, z.f01.val & 0x1fff)
+                                low = y.lo + 4,
+                                frag = self.tree.this[y.lo+4:y.lo+4+w],
+                                key = (len(recs), y.f01.val >> 13, y.f01.val & 0x1fff)
                             )
                         )
-                        #print(dent, len(recs), recs[-1])
-                if recs:
-                    that = self.tree.this.create(records=recs)
+
+                n = 0
+                for n, r in enumerate(recs):
+                    if len(r) == 0:
+                        break
+
+                if n > 0:
+                    that = self.tree.this.create(records=recs[:n])
                     that.add_note("pts_type", args=dent.typ.txt.rstrip())
 
             ns.NameSpace(
