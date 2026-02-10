@@ -225,7 +225,7 @@ class LifFileSystem(ov.OctetView):
                 )
 
         this.add_interpretation(self, pns.ns_html_plain)
-        self.add_interpretation(title="LIF HexDump", more=False)
+        self.add_interpretation(title="LIF HexDump", more=True)
 
 class LifHardDisk(ov.OctetView):
     def __init__(self, this):
