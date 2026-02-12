@@ -9,4 +9,5 @@ Examiners
    generic/index.rst
    ibm/index.rst
    intergraph/index.rst
+   hp/index.rst
    ohio_scientific/index.rst
