@@ -10,8 +10,6 @@
 
 ''' ... '''
 
-import math
-
 from ...base import octetview as ov
 from ...base import namespace as ns
 
@@ -66,6 +64,7 @@ class DirEnt(ov.Struct):
             f03_=ov.Octet,
             more=True,
         )
+        self.name = None
         self.kind = self.f00.val & 0xf
         if self.kind == 0x1:
             self.add_field("f04", ov.Be32)
@@ -78,7 +77,7 @@ class DirEnt(ov.Struct):
             self.add_field("uid", Uid)
             self.add_field("f0c", ov.Be32)
             self.add_field("f10", ov.Be32)
-            self.add_field("f14", ov.Text(10))
+            self.add_field("name", ov.Text(10))
         elif self.kind == 0x4:
             self.add_field("uid", Uid)
             if self.nlen.val:
@@ -88,6 +87,7 @@ class DirEnt(ov.Struct):
         if self.hi & 3:
             self.add_field("pad", 4 - (self.hi & 3))
         self.done()
+        self.ns = None
 
 class DirExtra(ov.Struct):
     def __init__(self, tree, lo):
@@ -127,19 +127,42 @@ class Directory(ov.Struct):
         cx = len(list(x.val for x in self.idx if x.val))
         hx = max(x.val for x in self.idx)
         # print("DX", hex(lo), hex(cx), hex(lx), hex(hx), hex(n))
-        if 0 and lx < 0x1000 and len(self) < lx:
-            self.add_field("padx_", lx - len(self))
-        if False:
-            if lx < 0x1000 and hx < 0x1000:
-                self.add_field("dents", ov.Array(cx, DirEnt, vertical=True))
-        else:
-            for i in self.idx:
-                if 0 == i.val:
-                    break
-                if i.val <= 0x1000:
-                    DirEnt(tree, self.lo + i.val).insert()
-
+        self.dirents = []
+        for i in self.idx:
+            if 0 == i.val:
+                break
+            if i.val <= 0x1000:
+                y = DirEnt(tree, self.lo + i.val).insert()
+                self.dirents.append(y)
         self.done()
+
+    def populate(self, pns):
+        for de in self.dirents:
+            if de.f00.val == 4:
+                continue
+            if de.ns:
+                print("Dirent with multiple NS", de)
+                continue
+            if not de.name:
+                print("Dirent with no name", de)
+                continue
+            vtx = self.tree.uid2vtocx.get(de.uid.val)
+            if not vtx:
+                print("Blind dirent (vtox)", de)
+                continue
+            vte = self.tree.vtocx2vtoce.get(vtx)
+            print("X", pns.ns_path(), hex(de.lo), de.name, vte)
+            if not vte:
+                print("Blind dirent (vte)", de)
+                continue
+            de.ns = ns.NameSpace(
+                name=de.name.txt.rstrip(),
+                parent=pns,
+                this=vte.that,
+            )
+            if vte.dir:
+                vte.dir.populate(de.ns)
+
 
 class VtocMapE(ov.Struct):
     '''
@@ -152,6 +175,7 @@ class VtocMapE(ov.Struct):
             lt_blk_=ov.Be16,
             blk_add_=ov.Be32,
         )
+        self.val = sum(self)
 
 class VtocHdrT(ov.Struct):
     '''
@@ -168,7 +192,7 @@ class VtocHdrT(ov.Struct):
             root_x_=VtocX,
             os_x_=VtocX,
             boot_x_=VtocX,
-            map_=ov.Array(8, VtocMapE, vertical=True),
+            map_=ov.Array(8, VtocMapE, vertical=True, elide=(0,)),
             pad_=28,
 
             vertical=True,
@@ -223,8 +247,8 @@ class VtocEntryHeader(ov.Struct):
             refcnt_=ov.Be16,
             last_use_=ov.Be32,
             f028_=ov.Be32,
-            f02c_=Uid,
-            f034_=Uid,
+            f02c_=ov.Be64,
+            f034_=ov.Be64,
             dir_=Uid,
             obj_lock_key_=ov.Be32,
             user_=Uid,
@@ -242,17 +266,8 @@ class VtocEntryHeader(ov.Struct):
         self.done(-464)
         self.val = sum(self)
         self.committed = False
-        return
-        if not self.val:
-            return
-        vtocx = self.tree.vtocx.get(self.obj.val)
-        if not vtocx:
-            # print(self.tree.this, hex(self.lo), "NO VTOCX", vtocx, self.obj, self.obj_typ)
-            return
-        try:
-            self.commit()
-        except Exception as err:
-            print(self.tree.this, "COMMIT FAILED", hex(self.lo), err)
+        self.dir = None
+        self.that = None
 
     def iter_frag(self):
         self.left = self.length.val
@@ -322,7 +337,7 @@ class VtocEntryHeader(ov.Struct):
                     print(self.tree.this, hex(self.lo), "BOGO_DIR", hex(fm), hex(to))
                     break
                 assert fm != 0
-                Directory(self.tree, fm).insert()
+                self.dir = Directory(self.tree, fm).insert()
         elif self.system_type.val in (0,):
             r = []
             for lo, hi in self.iter_frag():
@@ -334,8 +349,8 @@ class VtocEntryHeader(ov.Struct):
                 if hi < lo + self.tree.block_size:
                     Tail(self.tree, lo=hi, width=self.tree.block_size).insert()
             if r:
-                y = self.tree.this.create(records=r)
-                ns.NameSpace(name=str(self.obj), parent=self.tree.ns, this=y)
+                self.that = self.tree.this.create(records=r)
+                ns.NameSpace(name=str(self.obj), parent=self.tree.uid_ns, this=self.that)
         elif self.system_type.val == 3:
             # ACL
             pass
@@ -353,9 +368,11 @@ class VtocEntryHeader(ov.Struct):
             yield " ".join(
                 (
                 "YYY 0x%08x" % self.lo,
-                str(self.tree.vtocx.get(self.obj.val)),
+                str(self.tree.uid2vtocx.get(self.obj.val)),
                 str(self.committed),
                 "%d" % len(self),
+                str(self.that),
+                str(self.dir),
                 )
             )
             yield from super().render()
@@ -422,7 +439,7 @@ class VtocBucket(ov.Struct):
         self.val = sum(self)
         for v in self.buckets:
             if v.uid.val:
-                self.tree.vtocx[v.uid.val] = v.vtocx.val
+                self.tree.uid2vtocx[v.uid.val] = v.vtocx.val
 
     def render(self):
         if sum(self):
@@ -542,7 +559,8 @@ class ApolloDomainLogicalVolume(ov.OctetView):
         print(this, "ApolloDomainLogicalVolume", n)
         self.block_size = max(x.get('block_size', 0) for x in n)
 
-        self.ns = ns.NameSpace(name='', root=this, separator='')
+        self.uid_ns = ns.NameSpace(name='', root=this, separator='')
+        self.ns = ns.NameSpace(name='', root=this, separator='/')
         lvl1 = LvLabelT(self, 0x0).insert()
         lvl2 = LvLabelT(self, len(this) - self.block_size).insert()
 
@@ -561,7 +579,7 @@ class ApolloDomainLogicalVolume(ov.OctetView):
         else:
             Bat(self, lo=self.bat_base, width=i * self.block_size).insert()
 
-        self.vtocx = {}
+        self.uid2vtocx = {}
 
         ov.Array(
             lvl1.vtoc_hdr.map[0].lt_blk.val,
@@ -569,8 +587,9 @@ class ApolloDomainLogicalVolume(ov.OctetView):
             vertical=True,
         )(self, lvl1.vtoc_hdr.map[0].blk_add.val * self.block_size).insert()
 
+        self.vtocx2vtoce = {}
         vtocce = {}
-        for uid, vtocx in self.vtocx.items():
+        for uid, vtocx in self.uid2vtocx.items():
             if not vtocx:
                 continue
             lba = (vtocx >> 4) * self.block_size
@@ -580,37 +599,54 @@ class ApolloDomainLogicalVolume(ov.OctetView):
                 vtocce[lba] = i
             j = i.f004[vtocx & 0xf]
             j.commit()
+            self.vtocx2vtoce[vtocx] = j
 
-        if True:
-            nfree = 0
-            nused = 0
-            nwrong = 0
-            for bno in range(self.bat_add, self.bat_add + self.bat_hdr.n_blk.val):
-                l = list(self.find(bno * self.block_size, (bno+1) * self.block_size))
-                f = self.bfree(bno)
-                if f:
-                    nfree += 1
-                else:
-                    nused += 1
-                if f and len(l) == 0:
-                    FreeBlock(self, lo=bno * self.block_size, width=self.block_size).insert()
-                elif not f and len(l) > 0:
-                    pass
-                else:
-                    print(self.this, "? 0x%08x" % (self.block_size * bno), f, l)
-                    nwrong += 1
-            print(self.this, "Blocks marked free:", nfree, "marked used:", nused, "wrong:", nwrong)
+        for nm, vtx in (
+            ("NET", lvl1.vtoc_hdr.net_x.val),
+            ("ROOT", lvl1.vtoc_hdr.root_x.val),
+            ("OS", lvl1.vtoc_hdr.os_x.val),
+            ("BOOT", lvl1.vtoc_hdr.boot_x.val),
+        ):
+            vte = self.vtocx2vtoce.get(vtx)
+            if vte is None:
+                print(nm.ljust(8), vte)
+                continue
+            print(nm.ljust(8), hex(vte.lo), vte.obj)
+            if vte.dir:
+                print("  ", vte.dir)
+                for de in vte.dir.dirents:
+                    print("    ", de)
+                if nm == "NET":
+                    vte.dir.populate(self.ns)
 
-        if True:
-            for lo, hi in self.gaps():
-                lo += self.block_size - 1
-                lo -= lo % self.block_size
-                for ptr in range(lo, hi, self.block_size):
-                    if self.bfree(ptr // self.block_size):
-                        FreeBlock(self, lo=ptr, width=self.block_size).insert()
+        self.check_bat()
 
         this.add_interpretation(self, self.ns.ns_html_plain)
+        this.add_interpretation(self, self.uid_ns.ns_html_plain)
         self.add_interpretation(title="ApolloDomainLogicalVolume", more=True)
+
+    def check_bat(self):
+        ''' Check the BAT for consistency '''
+
+        nfree = 0
+        nused = 0
+        nwrong = 0
+        for bno in range(self.bat_add, self.bat_add + self.bat_hdr.n_blk.val):
+            l = list(self.find(bno * self.block_size, (bno+1) * self.block_size))
+            f = self.bfree(bno)
+            if f:
+                nfree += 1
+            else:
+                nused += 1
+            if f and len(l) == 0:
+                FreeBlock(self, lo=bno * self.block_size, width=self.block_size).insert()
+            elif not f and len(l) > 0:
+                pass
+            else:
+                print(self.this, "? 0x%08x" % (self.block_size * bno), f, l)
+                nwrong += 1
+        print(self.this, "Blocks marked free:", nfree, "marked used:", nused, "wrong:", nwrong)
+
 
     def bfree(self, bno):
         ''' Is block free ? '''
