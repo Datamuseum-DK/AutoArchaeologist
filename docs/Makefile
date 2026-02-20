@@ -19,6 +19,8 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-install: dirhtml
-	rsync -rv build/dirhtml/ --delete /usr/local/www/thttpd/docs/
+static_install: dirhtml
+	@test `hostname` = static.ddhf.dk || \
+		echo "ERROR: Dont use the static_install target" && exit 2
+	rsync -rv build/dirhtml/ --delete /usr/local/www/thttpd/aa/docs/
 
