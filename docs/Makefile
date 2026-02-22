@@ -21,7 +21,7 @@ help:
 
 static_install: 
 	@test `hostname` = static.ddhf.dk || \
-		echo "ERROR: Dont use the static_install target" && exit 2
+		(echo "ERROR: Dont use the static_install target" && exit 2)
 	$(MAKE) dirhtml || $(MAKE) dirhtml
 	rsync -rv build/dirhtml/ --delete /usr/local/www/thttpd/aa/docs/
 
