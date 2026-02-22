@@ -3,12 +3,51 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # See LICENSE file for full text of license
-#
-# ref #1: AEGIS_Internals_and_Data_Structures_Jan86.pdf
-# ref #2: 002398-04_Domain_Engineering_Handbook_Rev4_Jan87.pdf
-# ref #3: https://github.com/domainos-archeology/apollofs
 
-''' ... '''
+'''
+   Apollo Domain (SR10) FS
+   =======================
+
+   The SR10 filesystem is an evolution of the documented SR9 filesystem,
+   with UNIX support and performance improvements.
+
+   Usage
+   -----
+
+   .. code-block:: python
+
+       from autoarchaeologist.vendor.apollo import apollo_domain_fs
+       …
+       self.add_examiner(*apollo_domain_fs.ALL)
+
+   Notes
+   -----
+
+   Only block-size 4kB tested.
+
+   Support for SR9 filesystems shouldn't be too hard.
+
+   Test input
+   ----------
+
+   * Bits:30009744
+   * Bits:30009745
+   * Bits:30009746
+   * Bits:30009747
+
+   Documentation
+   -------------
+
+   SR9 is pretty well documented:
+
+   * ref #1: https://bitsavers.org/pdf/apollo/AEGIS_Internals_and_Data_Structures_Jan86.pdf
+   * ref #2: https://bitsavers.org/pdf/apollo/002398-04_Domain_Engineering_Handbook_Rev4_Jan87.pdf
+
+   Some clues about SR10 found in (Thanks!):
+
+   * ref #3: https://github.com/domainos-archeology/apollofs
+
+'''
 
 from ...base import octetview as ov
 from ...base import namespace as ns
@@ -31,6 +70,7 @@ def ranges(numbers):
 
 def make_ranges(data):
     ''' Eliminate small ranges '''
+
     for low, high in ranges(data):
         if low == high:
             yield low, low
@@ -42,6 +82,7 @@ def make_ranges(data):
 
 
 class Uid(ov.Be64):
+    ''' ... '''
 
     def render(self):
         yield "Uid{0x%09x:%02x:%05x}" % (
@@ -54,6 +95,8 @@ class VtocX(ov.Be32):
     ''' ... '''
 
 class DirEnt(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -90,6 +133,7 @@ class DirEnt(ov.Struct):
         self.ns = None
 
 class DirExtra(ov.Struct):
+    ''' ... '''
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -103,6 +147,7 @@ class DirExtra(ov.Struct):
         )
 
 class Directory(ov.Struct):
+    ''' ... '''
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -119,14 +164,9 @@ class Directory(ov.Struct):
         if self.dir_02.val == 0:
             self.add_field("dir_ex_", DirExtra)
         n = (self.dir_04.val - len(self)) // 2
-        # n = 140
         self.add_field("idx", ov.Array(n, ov.Be16, elide=(0,), vertical=False))
         if self.dir_04.val != self.dir_05.val:
             ov.Opaque(tree, lo=self.lo + self.dir_04.val, hi=self.lo + self.dir_05.val).insert()
-        lx = min(x.val for x in self.idx if x.val)
-        cx = len(list(x.val for x in self.idx if x.val))
-        hx = max(x.val for x in self.idx)
-        # print("DX", hex(lo), hex(cx), hex(lx), hex(hx), hex(n))
         self.dirents = []
         for i in self.idx:
             if 0 == i.val:
@@ -137,6 +177,8 @@ class Directory(ov.Struct):
         self.done()
 
     def populate(self, pns):
+        ''' Recursively populate directory trees '''
+
         for de in self.dirents:
             if de.f00.val == 4:
                 continue
@@ -200,8 +242,8 @@ class VtocHdrT(ov.Struct):
 
 
 class Indir(ov.Struct):
-    '''
-    '''
+    ''' An indirect block (any level) '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -211,6 +253,7 @@ class Indir(ov.Struct):
         )
 
     def render(self):
+        ''' ... '''
         l = list(x.val for x in self.bnos)
         while l and l[-1] == 0:
             l.pop(-1)
@@ -268,39 +311,48 @@ class VtocEntryHeader(ov.Struct):
         self.committed = False
         self.dir = None
         self.that = None
+        self._left = None
 
     def iter_frag(self):
-        self.left = self.length.val
+        ''' Iterate over the storage blocks which makes up this object '''
+
+        self._left = self.length.val
 
         def work_through(x):
             for bno in x:
-                if self.left == 0:
+                if self._left == 0:
                     return
                 lba = bno.val
                 if lba == 0:
-                    print(self.tree.this, hex(self.lo), "ZERO_BNO", hex(self.left))
+                    print(self.tree.this, hex(self.lo), "ZERO_BNO", hex(self._left))
                 lba &= 0x7fffffff
                 if lba >= len(self.tree.this) // self.tree.block_size:
-                    print(self.tree.this, hex(self.lo), "BOGO_BNO", hex(self.left), hex(lba))
+                    print(self.tree.this, hex(self.lo), "BOGO_BNO", hex(self._left), hex(lba))
                     return
-                if self.left == 0:
+                if self._left == 0:
                     return
-                if self.left >= self.tree.block_size:
+                if self._left >= self.tree.block_size:
                     yield lba * self.tree.block_size, (lba+1) * self.tree.block_size
-                    self.left -= self.tree.block_size
+                    self._left -= self.tree.block_size
                 else:
-                    yield lba * self.tree.block_size, lba * self.tree.block_size + self.left
-                    self.left = 0
+                    yield lba * self.tree.block_size, lba * self.tree.block_size + self._left
+                    self._left = 0
                     return
 
         yield from work_through(self.dir_blk)
-        if self.left == 0:
+        if self._left == 0:
             return
 
         def get_indir(bno):
             lba = bno * self.tree.block_size
             if lba == 0:
-                print(self.tree.this, hex(self.lo), "BOGO_INDIR", hex(self.left), self.indir_blk, bno)
+                print(
+                    self.tree.this,
+                    hex(self.lo),
+                    "BOGO_INDIR",
+                    hex(self._left),
+                    self.indir_blk, bno
+                )
                 return None
             iblk = Indir(self.tree, lba).insert()
             return iblk
@@ -309,10 +361,10 @@ class VtocEntryHeader(ov.Struct):
         if not ib:
             return
         yield from work_through(ib.bnos)
-        if self.left == 0:
+        if self._left == 0:
             return
 
-        print(self.tree.this, hex(self.lo), "Need Indir2", hex(self.left), str(self.indir_blk))
+        print(self.tree.this, hex(self.lo), "Need Indir2", hex(self._left), str(self.indir_blk))
         ib2 = get_indir(self.indir_blk[1].val)
         if not ib2:
             return
@@ -321,15 +373,25 @@ class VtocEntryHeader(ov.Struct):
             if not ib:
                 return
             yield from work_through(ib.bnos)
-            if self.left == 0:
+            if self._left == 0:
                 return
-        print(self.tree.this, hex(self.lo), "Need Indir3", hex(self.left), str(self.indir_blk))
+        print(self.tree.this, hex(self.lo), "Need Indir3", hex(self._left), str(self.indir_blk))
 
     def commit(self):
+        ''' Add to name-space, create child artifact '''
+
         self.committed = True
         #print(self.tree.this, "C", hex(self.lo), self.obj, self.system_type.val)
         if (self.length.val + 0xfff) // self.tree.block_size > self.n_blk.val:
-            print(self.tree.this, hex(self.lo), "NOT ENOUGH BLOCKS?", hex(self.length.val), hex(self.n_blk.val), self.obj, self.obj_typ)
+            print(
+                self.tree.this,
+                hex(self.lo),
+                "NOT ENOUGH BLOCKS?",
+                hex(self.length.val),
+                hex(self.n_blk.val),
+                self.obj,
+                self.obj_typ
+            )
             return
         if self.system_type.val in (1, 2,):
             for fm, to in self.iter_frag():
@@ -361,7 +423,14 @@ class VtocEntryHeader(ov.Struct):
             # DEVICE
             pass
         else:
-            print(self.tree.this, hex(self.lo), "WHAT?", hex(self.system_type.val), self.obj, self.obj_typ)
+            print(
+                self.tree.this,
+                hex(self.lo),
+                "WHAT?",
+                hex(self.system_type.val),
+                self.obj,
+                self.obj_typ
+            )
 
     def render(self):
         if self.committed:
@@ -426,6 +495,7 @@ class VtocBucket(ov.Struct):
        struct.
 
     '''
+
     SIZEOF = 8 + 20 * 12
 
     def __init__(self, tree, lo):
@@ -454,6 +524,7 @@ class VtocBucketBlock(ov.Struct):
        The magic number (0xfedca984) and blockno at the tail is
        probably there for recovery purposes.
     '''
+
     def __init__(self, tree, lo):
         n_buckets = min(16, (tree.block_size-8) // VtocBucket.SIZEOF)
         super().__init__(
@@ -562,7 +633,7 @@ class ApolloDomainLogicalVolume(ov.OctetView):
         self.uid_ns = ns.NameSpace(name='', root=this, separator='')
         self.ns = ns.NameSpace(name='', root=this, separator='/')
         lvl1 = LvLabelT(self, 0x0).insert()
-        lvl2 = LvLabelT(self, len(this) - self.block_size).insert()
+        _lvl2 = LvLabelT(self, len(this) - self.block_size).insert()
 
         self.bat_hdr = lvl1.bat_hdr
 
@@ -573,11 +644,7 @@ class ApolloDomainLogicalVolume(ov.OctetView):
             i += 1
         i = int(i)
 
-        if False:
-            for o in range(0, i * self.block_size, 0x20):
-                Bat(self, lo=self.bat_base + o, width=0x20).insert()
-        else:
-            Bat(self, lo=self.bat_base, width=i * self.block_size).insert()
+        Bat(self, lo=self.bat_base, width=i * self.block_size).insert()
 
         self.uid2vtocx = {}
 
@@ -589,7 +656,7 @@ class ApolloDomainLogicalVolume(ov.OctetView):
 
         self.vtocx2vtoce = {}
         vtocce = {}
-        for uid, vtocx in self.uid2vtocx.items():
+        for vtocx in self.uid2vtocx.values():
             if not vtocx:
                 continue
             lba = (vtocx >> 4) * self.block_size
@@ -712,6 +779,8 @@ class ApolloDomainPhysicalVolume(ov.OctetView):
     '''
        Apollo Domain disk image
        ~~~~~~~~~~~~~~~~~~~~~~~~
+
+       See module documentation
     '''
 
     def __init__(self, this):
@@ -745,6 +814,8 @@ class ApolloDomainPhysicalVolume(ov.OctetView):
 #######################################################################
 
 class ApolloCoff():
+    ''' Decorate some well known file types '''
+
     def __init__(self, this):
         if this[0] == 0x01 and this[1] == 0x97:
             this.add_type("COFF", system="Apollo", cpu="68k")
