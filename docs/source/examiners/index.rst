@@ -7,6 +7,7 @@ Examiners
    :caption: Contents
 
    generic/index.rst
+   apollo/index.rst
    ibm/index.rst
    intergraph/index.rst
    hp/index.rst

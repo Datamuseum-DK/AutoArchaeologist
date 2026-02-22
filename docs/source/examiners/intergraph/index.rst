@@ -1,6 +1,6 @@
 
-Intergraph Examiners
-====================
+Intergraph
+==========
 
 .. toctree::
    :maxdepth: 1

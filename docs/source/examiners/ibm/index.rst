@@ -1,6 +1,6 @@
 
-IBM Examiners
-=============
+IBM
+===
 
 .. toctree::
    :maxdepth: 1

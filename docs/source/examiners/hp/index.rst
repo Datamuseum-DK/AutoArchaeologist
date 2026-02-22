@@ -1,6 +1,6 @@
 
-HP Examiners
-============
+Hewlett Packard
+===============
 
 .. toctree::
    :maxdepth: 1

@@ -1,6 +1,6 @@
 
-Generic Examiners
-=================
+Generic
+=======
 
 These examiners are generic, in the sense that they dont know anything
 about specific computers or vendors, but handle artifacts almost all

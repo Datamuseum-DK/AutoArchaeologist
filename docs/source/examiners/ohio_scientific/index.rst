@@ -1,6 +1,6 @@
 
-Ohio Scientific ("OSI") Examiners
-=================================
+Ohio Scientific ("OSI")
+=======================
 
 Ohio Scientific several different computers using several
 different CPUs running several different OSs.
