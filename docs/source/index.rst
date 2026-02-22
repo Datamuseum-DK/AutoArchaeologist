@@ -18,23 +18,32 @@ Right now you wont get far if you cannot program in python, but I plan
 to add a command-line interface to AA which makes it usable for more
 normal people too.
 
-/phk (2024-09-26)
+/phk (2026-02-22)
 
-Table of content
-----------------
+Table of contents for users
+---------------------------
 
 .. toctree::
    :maxdepth: 3
-   :caption: For users
 
    examiners/index.rst
    collections/index.rst
 
+Table of contents for programmers
+---------------------------------
+
 .. toctree::
    :maxdepth: 2
-   :caption: For programmers
 
    programmers-guide/index.rst
+
+Other resources
+---------------
+
+.. toctree::
+   :maxdepth: 2
+
+   resources/index.rst
 
 Indices and tables
 ------------------

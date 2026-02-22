@@ -12,3 +12,4 @@ Examiners
    intergraph/index.rst
    hp/index.rst
    ohio_scientific/index.rst
+   philips/index.rst
