@@ -14,7 +14,7 @@
    Usage
    -----
 
-   .. code-block:: python
+   .. code-block:: none
 
        from autoarchaeologist.vendor.apollo import apollo_domain_fs
        …
