@@ -5,14 +5,38 @@
 # See LICENSE file for full text of license
 
 '''
-   Intergraph disk partitioning
-   ----------------------------
+   Intergraph diskpar(4) partitioning
+   ==================================
+
+   Disk partitioning on Intergraph computers.
+
+   Usage
+   -----
+
+   .. code-block:: none
+
+       from autoarchaeologist.vendor.intergraph.diskpar import IntergraphDiskPar
+       …
+       self.add_examiner(IntergraphDiskPar)
+
+   Notes
+   -----
+   The documentation states the magic number is 0x454e4153, we find that
+   it is 0x656e6173, or in other (ascii-)words: ``"sane"`` rather than ``"SANE"``.
+
+   Test input
+   ----------
+
+   * Bits:30008141
+   * Bits:30008142
+   * Bits:30008256
+
+   Documentation
+   -------------
 
    See pdf page 960 in :
       http://bitsavers.org/pdf/intergraph/clix/DSYS18412_Edition1_CLIX_Programmers_and_Users_Reference_Manual_199001.pdf
 
-   Note that the stated magic number is wrong, it spells "sane" in
-   lower case rather than upper case ASCII.
 '''
 
 from ...base import octetview as ov
@@ -46,7 +70,7 @@ class Hdr(ov.Struct):
             magic_=ov.Le32,
         )
 
-class DiskPar(ov.OctetView):
+class IntergraphDiskPar(ov.OctetView):
     ''' ... '''
 
     def __init__(self, this):
