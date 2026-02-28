@@ -6,7 +6,7 @@ Generic
 -------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    generic/index.rst
 
@@ -47,6 +47,3 @@ Vendor Specific
    sharp/index.rst
    wang/index.rst
    zilog/index.rst
-   cpm/index.rst
-   msdos/index.rst
-   unix/index.rst

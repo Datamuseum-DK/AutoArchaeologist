@@ -24,7 +24,7 @@ Table of contents for users
 ---------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    examiners/index.rst
    collections/index.rst
