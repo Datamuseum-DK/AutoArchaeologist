@@ -88,7 +88,7 @@ class Artifact(result_page.ResultPage):
         self.children = []
 
         self.notes = {}
-        self.types = set()
+        self.types = {}
         self.descriptions = []
         self.comments = []
         self.taken = False
@@ -271,34 +271,47 @@ class Artifact(result_page.ResultPage):
                     return ns
         return True
 
-    def add_type(self, typ):
-        ''' Add type designation '''
+    def add_description(self, *desc):
+        ''' Add a description(s) '''
+        assert len(desc) > 0
+        for i in desc:
+            if i not in self.descriptions:
+                self.descriptions.append(i)
+
+    def add_comment(self, *comments):
+        ''' Add comment(s) '''
+        assert len(comment) > 0
+        self.comments += comments
+        self.comments.append(comment)
+        self.add_note("Has Comment")
+
+    def add_type(self, typ, **kwargs):
+        ''' Add type designation with optional parameters '''
         assert len(typ) > 0
-        self.types.add(typ)
+        i = self.types.get(typ)
+        if i is None:
+            i = []
+            self.types[typ] = i
+        if kwargs not in i:
+            i.append(kwargs)
 
     def has_type(self, typ):
         ''' Check if not already exists '''
         return typ in self.types
 
-    def add_description(self, desc):
-        ''' Add a description '''
-        assert len(desc) > 0
-        self.descriptions.append(desc)
-
-    def add_comment(self, comment):
-        ''' Add a comment '''
-        assert len(comment) > 0
-        self.comments.append(comment)
-        self.add_note("Has Comment")
+    def get_type(self, typ):
+        ''' Return type parameters or None '''
+        return self.types.get(typ)
 
     def add_note(self, note, **kwargs):
-        ''' Add a note '''
+        ''' Add a note with optional parameters'''
         assert len(note) > 0
         i = self.notes.get(note)
         if i is None:
             i = []
             self.notes[note] = i
-        i.append(kwargs)
+        if kwargs not in i:
+            i.append(kwargs)
 
     def iter_note(self, note):
         ''' Get a notes payload '''
@@ -306,9 +319,13 @@ class Artifact(result_page.ResultPage):
         if t is not None:
             yield from t
 
-    def has_note(self, note):
+    def get_note(self, note):
         ''' Check if note already exists '''
         return self.notes.get(note, None)
+
+    def has_note(self, note):
+        ''' Check if note already exists '''
+        return note in self.notes
 
     def iter_all_children(self):
         ''' Recursively iterate all children once '''
