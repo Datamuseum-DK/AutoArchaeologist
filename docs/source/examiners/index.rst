@@ -2,11 +2,30 @@
 Examiners
 =========
 
+Generic
+-------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
 
    generic/index.rst
+
+OS Specific
+-----------
+
+.. toctree::
+   :maxdepth: 2
+
+   cpm/index.rst
+   msdos/index.rst
+   unix/index.rst
+
+Vendor Specific
+---------------
+
+.. toctree::
+   :maxdepth: 2
+
    apollo/index.rst
    christianrovsing/index.rst
    commodore/index.rst
@@ -18,7 +37,6 @@ Examiners
    icl/index.rst
    intel/index.rst
    intergraph/index.rst
-   microsoft/index.rst
    motorola/index.rst
    norsk_data/index.rst
    ohio_scientific/index.rst
@@ -29,3 +47,6 @@ Examiners
    sharp/index.rst
    wang/index.rst
    zilog/index.rst
+   cpm/index.rst
+   msdos/index.rst
+   unix/index.rst
