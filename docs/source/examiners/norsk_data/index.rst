@@ -7,4 +7,4 @@ Norsk Data
    :maxdepth: 1
 
    default.rst
-   norsk_data.rst
+   nord_fs.rst
