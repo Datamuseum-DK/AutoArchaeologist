@@ -1,0 +1,3 @@
+.. _regnecentralen_rc3500_fs:
+
+.. automodule:: autoarchaeologist.vendor.regnecentralen.rc3500_fs

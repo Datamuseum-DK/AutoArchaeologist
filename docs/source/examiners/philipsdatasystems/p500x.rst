@@ -1,1 +1,3 @@
+.. _philipsdatasystems_p500x:
+
 .. automodule:: autoarchaeologist.vendor.philipsdatasystems.p500x

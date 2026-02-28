@@ -1,12 +1,9 @@
-.. _zilog:
-
-Zilog default examiners
-=======================
+.. _zilog_default:
 
 .. automodule:: autoarchaeologist.vendor.zilog
 
 .. toctree::
-    :maxdepth: 1
+   :maxdepth: 1
 
-    mcz_floppy.rst
-    mcz_basic.rst
+   mcz_basic.rst
+   mcz_floppy.rst

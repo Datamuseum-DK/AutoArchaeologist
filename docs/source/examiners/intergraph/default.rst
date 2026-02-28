@@ -1,11 +1,6 @@
-.. _intergraph:
-
-Intergraph default examiners
-============================
+.. _intergraph_default:
 
 .. automodule:: autoarchaeologist.vendor.intergraph
 
 .. toctree::
    :maxdepth: 1
-
-   diskpar.rst

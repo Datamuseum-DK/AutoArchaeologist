@@ -8,3 +8,4 @@ Intergraph
 
    default.rst
    diskpar.rst
+   fonts.rst

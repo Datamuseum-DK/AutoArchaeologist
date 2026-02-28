@@ -1,3 +1,4 @@
+.. _ohio_scientific:
 
 Ohio Scientific ("OSI")
 =======================

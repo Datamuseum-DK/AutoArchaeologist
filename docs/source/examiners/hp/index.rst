@@ -1,3 +1,4 @@
+.. _Hewlett_Packard:
 
 Hewlett Packard
 ===============
