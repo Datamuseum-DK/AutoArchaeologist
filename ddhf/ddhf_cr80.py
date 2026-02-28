@@ -13,7 +13,7 @@ from autoarchaeologist.vendor.christianrovsing import cr80_sysone
 from autoarchaeologist.vendor.christianrovsing import cr80_fs2
 from autoarchaeologist.vendor.intel import isis
 from autoarchaeologist.generic import textfiles
-from autoarchaeologist.vendor.zilog import mcz
+from autoarchaeologist.vendor import zilog
 
 import ddhf
 
@@ -32,7 +32,7 @@ class Cr80Floppy(ddhf.DDHFExcavation):
         self.add_examiner(cr80_fs2.CR80_FS2Interleave)
         self.add_examiner(cr80_fs2.CR80_FS2)
         self.add_examiner(isis.IntelIsis)
-        self.add_examiner(mcz.MCZRIO)
+        zilog.mcz_defaults(self)
         self.add_examiner(textfiles.TextFile)
 
 if __name__ == "__main__":
