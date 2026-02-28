@@ -3,4 +3,9 @@
 Zilog
 =====
 
-.. automodule:: autoarchaeologist.vendor.zilog
+.. toctree::
+    :maxdepth: 1
+
+    default.rst
+    mcz_floppy.rst
+    mcz_basic.rst

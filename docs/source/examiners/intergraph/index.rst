@@ -3,4 +3,8 @@
 Intergraph
 ==========
 
-.. automodule:: autoarchaeologist.vendor.intergraph
+.. toctree::
+   :maxdepth: 1
+
+   default.rst
+   diskpar.rst
