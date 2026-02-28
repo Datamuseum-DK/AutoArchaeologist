@@ -8,6 +8,8 @@
    WANG WPS text-files
    ===================
 
+   Reverse-engineered from samples.
+
    Usage
    -----
 

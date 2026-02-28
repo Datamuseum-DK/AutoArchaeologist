@@ -32,6 +32,7 @@ from . import wang_wps
 from . import wang_text
 
 def wps_defaults(exc):
-   ''' ... '''
-   exc.add_examiner(*wang_wps.ALL)
-   exc.add_examiner(*wang_text.ALL)
+    ''' ... '''
+
+    exc.add_examiner(*wang_wps.ALL)
+    exc.add_examiner(*wang_text.ALL)

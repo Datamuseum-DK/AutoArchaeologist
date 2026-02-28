@@ -8,6 +8,8 @@
    Wang WPS floppies
    =================
 
+   Reverse-engineered from samples.
+
    Usage
    -----
 
@@ -32,7 +34,6 @@
 
 '''
 
-from ...generic import disk
 from ...base import artifact
 from ...base import octetview as ov
 from ...base import namespace
@@ -138,26 +139,6 @@ class WangSector(ov.Struct):
     def render(self):
         yield from super().render()
         yield str([self.body.tobytes()])
-
-class FillSector(disk.Sector):
-    ''' ... '''
-
-    def render(self):
-        ''' Render respecting byte ordering '''
-        if self.terse:
-            yield self.ident
-            return
-        if self.is_unread:
-            octets = self.octets()
-        else:
-            octets = self.iter_bytes()
-        yield " ".join(
-            (
-                self.ident,
-                self.this[self.lo:self.lo+7].hex(),
-                "┆" + self.this.type_case.decode(octets) + "┆",
-            )
-        )
 
 class WangChunk():
     ''' ... '''
@@ -361,7 +342,7 @@ class SpelunkSector():
     def __repr__(self):
         return "SPS " + str(self.chs) + " " + str(self.nchs)
 
-class WangWps(disk.Disk):
+class WangWps(ov.OctetView):
     ''' ... '''
 
     SECTOR_OFFSET = 0
@@ -370,11 +351,7 @@ class WangWps(disk.Disk):
         if len(this) not in (77*16*256,):
             return
 
-        super().__init__(
-            this,
-            [ [ 77, 1, 16, 256 ], ],
-            physsect = 256,
-        )
+        super().__init__(this)
         print(this, "WangWps")
 
         self.namespace = NameSpace(
@@ -407,10 +384,8 @@ class WangWps(disk.Disk):
             document.commit()
 
         self.spelunk()
-        self.fill_gaps(FillSector)
         this.add_interpretation(self, self.namespace.ns_html_plain)
         self.add_interpretation(more=True)
-        #self.make_bitstore_metadata()
 
     def spelunk(self):
         ''' ... '''
@@ -478,9 +453,9 @@ class WangWps(disk.Disk):
         ''' ... '''
 
         bits = self.this.bits(0x200<<3, 77*16)
-        for i, j in enumerate(bits):
-            if j == '0' and 0:
-                self.set_picture('F', lo=i << 8, legend='Marked Free')
+        for _i, j in enumerate(bits):
+            if j == '0':
+                pass
 
 ALL = [
     WangWps,
