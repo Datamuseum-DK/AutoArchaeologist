@@ -514,6 +514,9 @@ class Vector(Struct):
     def __iter__(self):
         yield from (y[1] for y in self.fields)
 
+    def __getitem__(self, idx):
+        return self.fields[idx][1]
+
     def render(self):
         fmt = "  [0x%%0%dx]: " % len("%x" % (len(self.fields) - 1))
         yield self.__class__.__name__ + " {"
