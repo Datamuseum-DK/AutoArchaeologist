@@ -9,8 +9,7 @@
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.vendor.zilog import mcz
-from autoarchaeologist.vendor.zilog import zdos_basic
+from autoarchaeologist.vendor import zilog
 from autoarchaeologist.generic import textfiles
 
 import ddhf
@@ -26,8 +25,7 @@ class ZilogMCZ(ddhf.DDHFExcavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(mcz.MCZRIO)
-        self.add_examiner(zdos_basic.ZdosBasic)
+        zilog.mcz_defaults(self)
         self.add_examiner(textfiles.TextFile)
 
 if __name__ == "__main__":

@@ -4,6 +4,39 @@
 #
 # See LICENSE file for full text of license
 
+'''
+   MCZ BASIC files
+   ===============
+
+   Usage
+   -----
+
+   .. code-block:: none
+ 
+       from autoarchaeologist.vendor.zilog.zdos_basic import MczBasic
+       …
+       self.add_examiner(MczBasic)
+
+   Notes
+   -----
+
+   Reverse engineered from samples.
+
+   Test input
+   ----------
+
+   * COMPANY/ZILOG
+
+   Documentation
+   -------------
+
+   https://datamuseum.dk/wiki/Bits:30001638
+
+   * BASIC Interpreter, Preliminary User's Manual
+   * Contains no information about the file format.
+
+'''
+
 from ...base import octetview as ov
 
 class BasicHead(ov.Struct):
@@ -347,10 +380,12 @@ class StmtPtr(ov.Struct):
         self.stmt = Statement(self.nbr.val, self.tree, adr, width).insert()
 
     def render(self):
-        yield "Statement %05d @0x%x" % (self.nbr.val, self.stmt.lo)
+        if self.stmt:
+            yield "Statement %05d @0x%x" % (self.nbr.val, self.stmt.lo)
 
-class ZdosBasic(ov.OctetView):
-    ''' Zilog ZDOS BASIC'''
+class MczBasic(ov.OctetView):
+    ''' Zilog MCZ BASIC'''
+
     def __init__(self, this):
         if len(this) < 24:
             return
@@ -369,12 +404,17 @@ class ZdosBasic(ov.OctetView):
             return
         self.head = head
 
-        print(this, "ZILOG_BASIC", len(this))
-        this.add_note("ZILOG_BASIC")
+        print(this, self.__class__.__name__, len(this))
+        this.add_note("MCZ_BASIC")
 
         vbase = self.head.hi
-        acls = ov.Array(self.head.variables.val//4, VarDef, vertical=True)
-        variables = acls(self, vbase).insert()
+        variables = ov.Vector(
+            self,
+            vbase,
+            count=self.head.variables.val//4,
+            target=VarDef,
+            vertical=True,
+        ).insert()
         self.variables = {}
         for n, i in enumerate(reversed(list(x for x in variables))):
             i.idx = n
@@ -390,6 +430,9 @@ class ZdosBasic(ov.OctetView):
         prev = len(this)
         for stmt in self.stmts:
             adr = nbase + stmt.offset.val
+            if prev < adr:
+                self.this.add_note("Mangled BASIC Statement")
+                break
             stmt.commit(adr, prev-adr)
             prev = adr
 

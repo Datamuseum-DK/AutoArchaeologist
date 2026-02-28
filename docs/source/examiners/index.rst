@@ -13,3 +13,4 @@ Examiners
    hp/index.rst
    ohio_scientific/index.rst
    philips/index.rst
+   zilog/index.rst
