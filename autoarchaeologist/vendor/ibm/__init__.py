@@ -5,7 +5,9 @@
 # See LICENSE file for full text of license
 
 '''
-   IBM mainframe and midrange
+   IBM default examiniers
+   ======================
+
 '''
 
 from .ga21_9128 import Ga21_9182

@@ -5,17 +5,17 @@
 # See LICENSE file for full text of license
 
 '''
-   Data General default examiners
-   ==============================
+   Dansk Data Elektronik default examiners
+   =======================================
 
    Usage
    -----
 
    .. code-block:: none
 
-      from autoarchaeologist.vendir import data_general
+      from autoarchaeologist.vendir import dansk_data_elektronik
 
-      data_general.defaults(self)
+      dansk_data_elektronik.defaults(self)
 
    Contents
    --------
@@ -25,5 +25,5 @@
 
 '''
 
-def data_general_defaults(exc):
+def dansk_data_elektronik_defaults(exc):
    ''' ... '''

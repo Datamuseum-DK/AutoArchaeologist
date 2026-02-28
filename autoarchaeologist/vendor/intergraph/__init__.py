@@ -11,7 +11,7 @@
 
        from autoarchaeologist.vendor import intergraph
        …
-       intergraph.default_examiners(self)
+       intergraph.defaults(self)
 
    Contents
    --------
@@ -25,9 +25,5 @@
 
 from . import diskpar
 
-def default_examiners(exc):
+def defaults(exc):
     exc.add_examiner(diskpar.IntergraphDiskPar)
-
-default = [
-	diskpar.IntergraphDiskPar,
-]

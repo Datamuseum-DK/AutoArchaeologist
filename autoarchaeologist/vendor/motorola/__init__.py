@@ -5,17 +5,17 @@
 # See LICENSE file for full text of license
 
 '''
-   Data General default examiners
-   ==============================
+   Motorola default examiners
+   ==========================
 
    Usage
    -----
 
    .. code-block:: none
 
-      from autoarchaeologist.vendir import data_general
+      from autoarchaeologist.vendir import motorola
 
-      data_general.defaults(self)
+      motorola.defaults(self)
 
    Contents
    --------
@@ -25,5 +25,5 @@
 
 '''
 
-def data_general_defaults(exc):
+def motorola_defaults(exc):
    ''' ... '''

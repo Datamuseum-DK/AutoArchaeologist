@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   Default MCZ examiners
-   =====================
+   Zilog MCZ default examiners
+   ===========================
 
    Usage
    -----

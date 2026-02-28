@@ -5,17 +5,17 @@
 # See LICENSE file for full text of license
 
 '''
-   Data General default examiners
-   ==============================
+   Christian Rovsing default examiners
+   ===================================
 
    Usage
    -----
 
    .. code-block:: none
 
-      from autoarchaeologist.vendir import data_general
+      from autoarchaeologist.vendir import christianrovsing
 
-      data_general.defaults(self)
+      christianrovsing.defaults(self)
 
    Contents
    --------
@@ -25,5 +25,5 @@
 
 '''
 
-def data_general_defaults(exc):
+def christianrovsing_defaults(exc):
    ''' ... '''

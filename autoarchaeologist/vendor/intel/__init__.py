@@ -5,17 +5,17 @@
 # See LICENSE file for full text of license
 
 '''
-   Data General default examiners
-   ==============================
+   Intel default examiners
+   =======================
 
    Usage
    -----
 
    .. code-block:: none
 
-      from autoarchaeologist.vendir import data_general
+      from autoarchaeologist.vendir import intel
 
-      data_general.defaults(self)
+      intel.defaults(self)
 
    Contents
    --------
@@ -25,5 +25,5 @@
 
 '''
 
-def data_general_defaults(exc):
+def intel_defaults(exc):
    ''' ... '''
