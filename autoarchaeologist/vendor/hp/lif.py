@@ -6,11 +6,52 @@
 
 '''
    HP LIF filesystems
-   ~~~~~~~~~~~~~~~~~~
+   ==================
 
-   Sources:
-      https://www.hp9845.net/9845/projects/hpdir/
-      https://bitsavers.org/test_equipment/hp/64000/software/64941-90906_Jan-1984.pdf
+   LIF is a filesystem used on both HP computers and HP test-equipment,
+   and it exists in a number of minor variations.
+
+   LIF filesystems always start with the first sector on the disk
+   media, as seen by the HP product, and the ``LifFileSystem`` class
+   makes that assumption.
+
+   Harddisks such as HP9134 can implement various partition schemes
+   in hardware, typically configured with DIP switches and with no
+   on-disk partition-table.
+
+   The ``LifHardDisk`` examiner searches for LIF filesystems at all
+   256 byte boundaries, and if candidates are found at non-zero
+   offsets, will partition the artifact accordingly, and hint
+   ``LifFileSystem`` on the created children.
+
+   Usage
+   -----
+
+   .. code-block:: none
+
+       from autoarchaeologist.vendor.hp import lif
+       …
+       self.add_examiner(*lif.ALL)
+
+   Notes
+   -----
+
+   Files are identified by filename and have a 16 bit type number,
+   for which no authoritative directory seem to exist.
+
+   Test input
+   ----------
+
+   * Bits:30009726
+
+   Documentation
+   -------------
+
+   * https://www.hp9845.net/9845/projects/hpdir/
+
+   * https://bitsavers.org/test_equipment/hp/64000/software/64941-90906_Jan-1984.pdf
+
+
 '''
 
 from ...base import octetview as ov
@@ -183,12 +224,14 @@ class LifFileSystem(ov.OctetView):
 
         this.add_note("LIF")
 
-        directory = ov.Array(
-            sb.dirlen.val * 8,
-            Directory,
+        directory = ov.Vector(
+            self,
+            sb.dirstart.val << 8,
+            count=sb.dirlen.val * 8,
+            target=Directory,
             vertical=True,
-            elide=(False,),
-        )(self, sb.dirstart.val << 8).insert()
+            # elide=(False,),
+        ).insert()
 
         pns = NameSpace(name="", root=this, separator="")
 
@@ -228,6 +271,8 @@ class LifFileSystem(ov.OctetView):
         self.add_interpretation(title="LIF HexDump", more=True)
 
 class LifHardDisk(ov.OctetView):
+    ''' Brute force search for LIF filesystems '''
+
     def __init__(self, this):
         if this.top not in this.parents:
             return
