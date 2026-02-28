@@ -25,3 +25,9 @@ static_install:
 	$(MAKE) dirhtml || $(MAKE) dirhtml
 	rsync -rv build/dirhtml/ --delete /usr/local/www/thttpd/aa/docs/
 
+aaci_install:
+	@test `hostname` = aaci.freebsd.dk || \
+		(echo "ERROR: Dont use the aaci_install target" && exit 2)
+	$(MAKE) dirhtml || $(MAKE) dirhtml
+	rsync -rv build/dirhtml/ --delete /usr/local/www/thttpd/aa/docs/
+
