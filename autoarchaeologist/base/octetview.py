@@ -75,6 +75,8 @@ class Octets(bintree.BinTreeLeaf):
         ''' Render hexdumped + text-column '''
         ll = self.line_length
         if ll is None:
+            ll = self.tree.line_length
+        if ll is None:
             ll = self.tree.this.top.LINE_LENGTH
         hd = self.this.hexdump(lo=self.lo, hi=self.hi, line_length=ll)
         hd = list(hd)
@@ -478,6 +480,52 @@ class Struct(datastruct.Struct, Octets):
 
 def Array(count, what, **kwargs):
     return datastruct.Array(Struct, count, what, **kwargs)
+
+class Vector(Struct):
+    ''' A prototy Vector class '''
+
+    def __init__(
+        self,
+        tree,
+        lo,
+        target=None,
+        count=999999,
+        terminate=None,
+        # TODO: elision
+        **kwargs
+    ):
+        super().__init__(tree, lo, more=True, **kwargs)
+        for _n in range(count):
+            y = None
+            try:
+                y = target(tree, self.hi)
+            except StopIteration:
+                print(tree.this, "STOP", y)
+                break
+            except:
+                print(tree.this, "RAISE", y)
+                raise
+            self.fields.append(("f%03x" % len(self.fields), y))
+            self.hi = y.hi
+            if terminate and terminate(y):
+                break
+        self.done()
+
+    def __iter__(self):
+        yield from (y[1] for y in self.fields)
+
+    def render(self):
+        fmt = "  [0x%%0%dx]: " % len("%x" % (len(self.fields) - 1))
+        yield self.__class__.__name__ + " {"
+        for n, i in enumerate(self.fields):
+            yield fmt % n + " ".join(i[1].render())
+        yield "}"
+
+    @classmethod
+    def how(cls, **kwargs):
+        ''' ... '''
+        return (cls, kwargs)
+
 
 # The tree itself
 
