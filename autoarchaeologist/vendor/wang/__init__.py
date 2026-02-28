@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   Wang Laboratories default examiners
-   ===================================
+   Wang WPS default examiners
+   ==========================
 
    Usage
    -----
@@ -15,7 +15,7 @@
 
       from autoarchaeologist.vendir import wang
 
-      wang.defaults(self)
+      wang.wps_defaults(self)
 
    Contents
    --------
@@ -23,7 +23,15 @@
    .. toctree::
       :maxdepth: 1
 
+      wang_wps.rst
+      wang_text.rst
+
 '''
 
-def wang_defaults(exc):
+from . import wang_wps
+from . import wang_text
+
+def wps_defaults(exc):
    ''' ... '''
+   exc.add_examiner(*wang_wps.ALL)
+   exc.add_examiner(*wang_text.ALL)

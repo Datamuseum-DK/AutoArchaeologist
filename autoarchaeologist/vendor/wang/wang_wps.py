@@ -7,6 +7,29 @@
 '''
    Wang WPS floppies
    =================
+
+   Usage
+   -----
+
+   .. code-block:: none
+
+       from autoarchaeologist.vendor.wang import wang_wps
+       …
+       self.add_examiner(*wang_wps.ALL)
+
+   Notes
+   -----
+
+   Test input
+   ----------
+
+   * CR/CR80/DOCS
+
+   Documentation
+   -------------
+
+   None found.
+
 '''
 
 from ...generic import disk
@@ -39,10 +62,7 @@ class NameSpace(namespace.NameSpace):
     )
 
     def ns_render(self):
-        '''
-           See:
-              03-0072-01A-Z80_RIO Operating System Users Manual Sep78, pg 116
-        '''
+        ''' ...  '''
         head = self.ns_priv
         if head is None:
             return [ "" ] * 23 + super().ns_render()
@@ -74,6 +94,8 @@ class NameSpace(namespace.NameSpace):
 
 
 class WangPtr(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -87,6 +109,8 @@ class WangPtr(ov.Struct):
         yield "(%2d,0,%2d)" % (self.cyl.val, self.sect.val)
 
 class WangSectHead(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -97,6 +121,8 @@ class WangSectHead(ov.Struct):
         )
 
 class WangSector(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -114,6 +140,8 @@ class WangSector(ov.Struct):
         yield str([self.body.tobytes()])
 
 class FillSector(disk.Sector):
+    ''' ... '''
+
     def render(self):
         ''' Render respecting byte ordering '''
         if self.terse:
@@ -123,9 +151,17 @@ class FillSector(disk.Sector):
             octets = self.octets()
         else:
             octets = self.iter_bytes()
-        yield self.ident + " " + self.this[self.lo:self.lo+7].hex() + " ┆" + self.this.type_case.decode(octets) + "┆"
+        yield " ".join(
+            (
+                self.ident,
+                self.this[self.lo:self.lo+7].hex(),
+                "┆" + self.this.type_case.decode(octets) + "┆",
+            )
+        )
 
 class WangChunk():
+    ''' ... '''
+
     def __init__(self, tree, chs):
         self.sectors = []
         while True:
@@ -133,7 +169,6 @@ class WangChunk():
             if sect is None:
                 print(tree.this, "No sector", chs)
                 break
-            tree.set_picture('CH', lo=sect.lo, legend="Chunk")
             self.sectors.append(sect)
             sect.insert()
             if sect.hdr.len.val == 0:
@@ -146,9 +181,9 @@ class WangChunk():
         yield from self.sectors
 
 class WangChunkList(ov.Struct):
+    ''' ... '''
 
     def __init__(self, tree, lo):
-        tree.set_picture('CL', lo=lo, legend="Chunk List")
         super().__init__(
             tree,
             lo,
@@ -163,15 +198,20 @@ class WangChunkList(ov.Struct):
         self.chunks = []
         print("WCL", self.hdr, self.hdr.len.val)
         if self.hdr.len.val:
-            self.add_field("chunks", ov.Array(min(self.hdr.len.val, 100), WangPtr))
+            self.add_field(
+                "chunks",
+                ov.Vector.how(count=min(self.hdr.len.val, 100), target=WangPtr)
+            )
         self.done(256)
 
 class WangTimeStamp(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
             lo,
-            parts_=ov.Array(5, ov.Text(3)),
+            parts_=ov.Vector.how(count=5, target=ov.Text(3)),
         )
         self.txt = "%s-%s-%s %s:%s" % (
             self.parts[0].txt[:2],
@@ -185,8 +225,9 @@ class WangTimeStamp(ov.Struct):
         yield self.txt
 
 class WangDocumentHead(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
-        tree.set_picture('DH', lo=lo, legend="Document Head")
         super().__init__(
             tree,
             lo,
@@ -222,8 +263,9 @@ class WangDocumentHead(ov.Struct):
         self.done(256)
 
 class WangDocumentBody(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
-        tree.set_picture('DB', lo=lo, legend="Document Body")
         super().__init__(
             tree,
             lo,
@@ -245,6 +287,7 @@ class WangDocumentBody(ov.Struct):
         yield self.__class__.__name__
 
 class WangDocument(ov.Struct):
+    ''' ... '''
 
     def __init__(self, tree, lo):
         super().__init__(
@@ -261,6 +304,8 @@ class WangDocument(ov.Struct):
         self.namespace = None
 
     def commit(self):
+        ''' ... '''
+
         try:
             sect = self.tree.this.get_rec(self.ptr.chs)
         except KeyError:
@@ -317,6 +362,7 @@ class SpelunkSector():
         return "SPS " + str(self.chs) + " " + str(self.nchs)
 
 class WangWps(disk.Disk):
+    ''' ... '''
 
     SECTOR_OFFSET = 0
 
@@ -348,12 +394,10 @@ class WangWps(disk.Disk):
                     artifact.Record(low = ptr, frag = frag, key = (cyl, 0, sect))
                 )
                 if b'_UNREAD_' in frag.tobytes():
-                    self.set_picture('U', lo=ptr)
                     rec.undefined = True
 
         self.free_list()
 
-        self.set_picture('SB', lo=0x300, legend="Content List")
         documents = []
         for adr in range(0x300, 0x300 + this[0x3ff], 6):
             y = WangDocument(self, adr).insert()
@@ -365,11 +409,12 @@ class WangWps(disk.Disk):
         self.spelunk()
         self.fill_gaps(FillSector)
         this.add_interpretation(self, self.namespace.ns_html_plain)
-        this.add_interpretation(self, self.disk_picture)
         self.add_interpretation(more=True)
         #self.make_bitstore_metadata()
 
     def spelunk(self):
+        ''' ... '''
+
         by_lo = {}
         for i, j in self.gaps():
             i = (i + 0xff) & ~0xff
@@ -418,108 +463,25 @@ class WangWps(disk.Disk):
             that = self.this.create(records=parts)
             that.add_type("Wang Wps File")
             that.add_note("Spelunked")
-            namespace = NameSpace(
+            NameSpace(
                 name = "~ORPHAN%02d.%02d" % (j.chs[0], j.chs[2]),
                 parent = self.namespace,
                 priv = head,
                 this = that,
             )
 
-        print("DD", len(done), len(by_chs), len(by_lo))
         for j in by_chs.values():
             if j.chs not in done:
                 print("  d", j)
 
-    def make_bitstore_metadata(self):
-
-        date = "20240222"
-
-        filename = self.this.descriptions[0]
-        if "/critter/DDHF/2024/Wang" not in filename:
-            return
-        fnparts = filename.split('/')
-        basename = fnparts[-1].replace(".flp","")
-        book = fnparts[-2].lower()
-        genstand = {
-            "bog1": "11002393",
-            "bog2": "11002394",
-            "bog3": "11002398",
-            "bog3b": "11002399",
-            "bog4": "11002401",
-            "bog5": "11002402",
-            "bogx": "11002404",
-            "bog7": "11002405",
-            "bog8": "11002406",
-            "ils1": "11002408",
-            "ils2": "11002409",
-            "bog12": "11002411",
-            "bog11": "11002412",
-            "ils3": "11002413",
-            "ktldils": "11002410",
-            "en": "11002414",
-            "pc": "11002468",
-            "aircan": "11002469",
-        }[book]
-        papers = {
-            "bog1": "30005801",
-            "bog2": "30005800",
-            "bog3": "30005997",
-            "bog3b": "30005998",
-            "bog4": "30006033",
-            "bog5": "30006050",
-            "bogx": "30006065",
-            "bog7": "30006078",
-            "bog8": "30006096",
-            "ils1": "30006128",
-            "ils2": "30006129",
-            "bog12": "30006152",
-            "bog11": "30006150",
-            "ils3": "30006151",
-            "ktldils": "30006153",
-            "en": "30006154",
-            "pc": "30006235",
-            "aircan": "30006234",
-        }[book]
-        diskid = set()
-        for i in sorted(self.namespace):
-            j = [x for x in i.ns_render()]
-            did = j[15].strip()
-            if did:
-                diskid.add(did)
-        diskid = list(diskid)[:1]
-        print(diskid)
-        assert len(diskid) == 1
-        diskid = list(diskid)[0].strip()
-        filename = "/tmp/" + book + "/" + basename + ".flp.meta"
-        print("FN", filename, book, genstand, diskid)
-        with open(filename, "w") as fo:
-            fo.write("BitStore.Metadata_version:\n\t1.0\n\n")
-            fo.write("BitStore.Access:\n\tpublic\n\n")
-            fo.write("BitStore.Filename:\n\tCR_WCS_%s.bin\n\n" % diskid)
-            fo.write("BitStore.Format:\n\tBINARY\n\n")
-            fo.write("BitStore.Last_edit:\n\t%s phk\n\n" % date)
-            fo.write("DDHF.Keyword:\n")
-            fo.write("\tARTIFACTS\n")
-            fo.write("\tCR/CR80/DOCS\n")
-            fo.write("\n")
-            fo.write("DDHF.Genstand:\n\t%s\n\n" % genstand)
-            fo.write('Media.Summary:\n\t8" Wang WCS floppy, CR %s\n\n' % diskid)
-            fo.write('Media.Geometry:\n\t77c 1h 16s 256b\n\n')
-            fo.write('Media.Type:\n\t8" Floppy Disk\n\n')
-            fo.write("Media.Description:\n")
-            fo.write("\tIndhold:\n")
-            for i in sorted(self.namespace):
-                j = [x for x in i.ns_render()]
-                txt = "".join(j[:4]).rstrip()
-                if txt:
-                    fo.write("\t\t" + txt + "\n")
-            fo.write("\t\n")
-            fo.write("\tSe også papirer fra samme ringbind: [[Bits:%s]]\n" % papers)
-            fo.write("\n")
-            fo.write("*END*\n")
-
     def free_list(self):
+        ''' ... '''
+
         bits = self.this.bits(0x200<<3, 77*16)
         for i, j in enumerate(bits):
-            if j == '0':
+            if j == '0' and 0:
                 self.set_picture('F', lo=i << 8, legend='Marked Free')
+
+ALL = [
+    WangWps,
+]

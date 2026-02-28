@@ -6,11 +6,36 @@
 
 '''
    WANG WPS text-files
+   ===================
+
+   Usage
+   -----
+
+   .. code-block:: none
+
+       from autoarchaeologist.vendor.wang import wang_text
+       …
+       self.add_examiner(*wang_text.ALL)
+
+   Notes
+   -----
+
+   Test input
+   ----------
+
+   * CR/CR80/DOCS
+
+   Documentation
+   -------------
+
+   None found.
+
 '''
 
 from ...base import type_case
 
 class WangTypeCase(type_case.WellKnown):
+    ''' ... '''
 
     def __init__(self, encoding):
         super().__init__(encoding)
@@ -22,6 +47,7 @@ class WangTypeCase(type_case.WellKnown):
             )
 
 class WangText():
+    ''' ... '''
 
     def __init__(self, this):
         if not this.has_type("Wang Wps File"):
@@ -96,6 +122,8 @@ class WangText():
                 file.write("<br/>\n")
 
     def iter_lines(self):
+        ''' ... '''
+
         b = bytes()
         for chunk in self.this.iter_chunks():
             lines = chunk.tobytes().split(b'\x03')
@@ -107,3 +135,7 @@ class WangText():
                     yield from lines[1:-1]
                 b = lines[-1]
         yield b
+
+ALL = [
+    WangText,
+]
