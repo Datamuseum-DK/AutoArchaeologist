@@ -164,7 +164,7 @@ class Directory(ov.Struct):
         if self.dir_02.val == 0:
             self.add_field("dir_ex_", DirExtra)
         n = (self.dir_04.val - len(self)) // 2
-        self.add_field("idx", ov.Array(n, ov.Be16, elide=(0,), vertical=False))
+        self.add_field("idx", ov.Vector.how(count=n, target=ov.Be16, elide=0, vertical=False))
         if self.dir_04.val != self.dir_05.val:
             ov.Opaque(tree, lo=self.lo + self.dir_04.val, hi=self.lo + self.dir_05.val).insert()
         self.dirents = []
@@ -234,7 +234,7 @@ class VtocHdrT(ov.Struct):
             root_x_=VtocX,
             os_x_=VtocX,
             boot_x_=VtocX,
-            map_=ov.Array(8, VtocMapE, vertical=True, elide=(0,)),
+            map_=ov.Vector.how(count=8, target=VtocMapE, vertical=True, elide=0),
             pad_=28,
 
             vertical=True,
@@ -248,7 +248,7 @@ class Indir(ov.Struct):
         super().__init__(
             tree,
             lo,
-            bnos_=ov.Array(4096//4, ov.Be32, vertical=True, elide=(0,)),
+            bnos_=ov.Vector.how(count=4096//4, target=ov.Be32, vertical=True, elide=0),
             vertical=True,
         )
 
@@ -300,8 +300,8 @@ class VtocEntryHeader(ov.Struct):
             f064_=40,
             acl_=Uid,
             f094__=52,
-            indir_blk_=ov.Array(3, ov.Be32, elide=(0,), vertical=True),
-            dir_blk_=ov.Array(64, ov.Be32, elide=(0,), vertical=True),
+            indir_blk_=ov.Vector.how(count=3, target=ov.Be32, elide=0, vertical=True),
+            dir_blk_=ov.Vector.how(count=64, target=ov.Be32, elide=0, vertical=True),
 
             vertical=True,
             more=True
@@ -461,7 +461,7 @@ class VtocCeHdrT(ov.Struct):
             lo,
             f000_=ov.Be32,
             f001_=ov.Be32,
-            f004_=ov.Array(n, VtocEntryHeader, vertical=True, elide=(0,)),
+            f004_=ov.Vector.how(count=n, target=VtocEntryHeader, vertical=True, elide=0),
             vertical=True,
             more=True,
         )
@@ -503,7 +503,7 @@ class VtocBucket(ov.Struct):
             tree,
             lo,
             vtb_f00_=ov.Be64,
-            buckets_=ov.Array(20, VtocBucketEntry, vertical=True, elide=(0,)),
+            buckets_=ov.Vector.how(count=20, target=VtocBucketEntry, vertical=True, elide=0),
             vertical=True,
         )
         self.val = sum(self)
@@ -530,7 +530,7 @@ class VtocBucketBlock(ov.Struct):
         super().__init__(
             tree,
             lo,
-            buckets_=ov.Array(n_buckets, VtocBucket, vertical=True, elide=(0,)),
+            buckets_=ov.Vector.how(count=n_buckets, target=VtocBucket, vertical=True, elide=0),
             vertical=True,
             more=True,
         )
@@ -607,7 +607,7 @@ class LvLabelT(ov.Struct):
             last_valid_time_=ov.Be32,
             fea_=ov.Be16,
             bad_spot_barrier_=ov.Be32,
-            bad_spot_list_=ov.Array(256-60, ov.Be32, vertical=True, elide=(0,)),
+            bad_spot_list_=ov.Vector.how(count=256-60, target=ov.Be32, vertical=True, elide=0),
 
             vertical=True,
         )
@@ -648,11 +648,13 @@ class ApolloDomainLogicalVolume(ov.OctetView):
 
         self.uid2vtocx = {}
 
-        ov.Array(
-            lvl1.vtoc_hdr.map[0].lt_blk.val,
-            VtocBucketBlock,
+        ov.Vector(
+            self,
+            lvl1.vtoc_hdr.map[0].blk_add.val * self.block_size,
+            count=lvl1.vtoc_hdr.map[0].lt_blk.val,
+            target=VtocBucketBlock,
             vertical=True,
-        )(self, lvl1.vtoc_hdr.map[0].blk_add.val * self.block_size).insert()
+        ).insert()
 
         self.vtocx2vtoce = {}
         vtocce = {}
@@ -762,8 +764,8 @@ class PvLabelT(ov.Struct):
             blocks_per_pvol_=ov.Be32,
             blocks_per_track_=ov.Be16,
             track_per_cyl_=ov.Be16,
-            lv_list_=ov.Array(10, ov.Be32, vertical=True),
-            alt_lv_list_=ov.Array(10, ov.Be32, vertical=True),
+            lv_list_=ov.Vector.how(count=10, target=ov.Be32, vertical=True),
+            alt_lv_list_=ov.Vector.how(count=10, target=ov.Be32, vertical=True),
             phys_badspot_daddr_=ov.Be32,
             phys_diag_daddr_=ov.Be32,
             phys_sector_start_=ov.Be16,
