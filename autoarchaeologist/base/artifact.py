@@ -282,7 +282,6 @@ class Artifact(result_page.ResultPage):
         ''' Add comment(s) '''
         assert len(comments) > 0
         self.comments += comments
-        self.comments.append(comment)
         self.add_note("Has Comment")
 
     def add_type(self, typ, **kwargs):
