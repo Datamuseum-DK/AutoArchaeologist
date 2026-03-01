@@ -623,7 +623,7 @@ class ApolloDomainLogicalVolume(ov.OctetView):
     '''
 
     def __init__(self, this):
-        n = this.has_type("ApolloDomainLogicalVolume")
+        n = this.get_type("ApolloDomainLogicalVolume")
         if n is None:
             return
         super().__init__(this)
