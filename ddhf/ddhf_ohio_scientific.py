@@ -14,7 +14,7 @@ from autoarchaeologist.base import type_case
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.generic import samesame
 
-from autoarchaeologist.vendor.ohio_scientific import ohio_scientific
+from autoarchaeologist.vendor import ohio_scientific
 
 import ddhf
 
@@ -43,7 +43,7 @@ class OhioScientific(ddhf.DDHFExcavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(*ohio_scientific.examiners)
+        ohio_scientific.defaults(self)
         self.add_examiner(TextFile)
         self.add_examiner(samesame.SameSame)
 

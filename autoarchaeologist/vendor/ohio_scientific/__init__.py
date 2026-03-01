@@ -21,9 +21,18 @@
    --------
 
    .. toctree::
-      :maxdepth: 1
+       :maxdepth: 1
+
+       os65u_fs.rst
+       os65u_basic.rst
+
 
 '''
 
-def ohio_scientific_defaults(exc):
-   ''' ... '''
+from . import os65u_basic, os65u_fs
+
+def defaults(exc):
+    ''' ... '''
+
+    exc.add_examiner(*os65u_fs.ALL)
+    exc.add_examiner(*os65u_basic.ALL)
