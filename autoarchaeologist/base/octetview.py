@@ -491,10 +491,11 @@ class Vector(Struct):
         target=None,
         count=999999,
         terminate=None,
-        # TODO: elision
+        elide=None,
         **kwargs
     ):
         super().__init__(tree, lo, more=True, **kwargs)
+        self.elide = elide
         for _n in range(count):
             y = None
             try:
@@ -520,8 +521,17 @@ class Vector(Struct):
     def render(self):
         fmt = "  [0x%%0%dx]: " % len("%x" % (len(self.fields) - 1))
         yield self.__class__.__name__ + " {"
+        if self.elide is None:
+            filter = lambda x: True
+        elif isinstance(self.elide, int):
+            filter = lambda x: x.val != self.elide
+        elif isinstance(self.elide, (tuple, set, dict)):
+            filter = lambda x: x.val not in self.elide
+        else:
+            filter = self.elide
         for n, i in enumerate(self.fields):
-            yield fmt % n + " ".join(i[1].render())
+            if filter(i[1]):
+                yield fmt % n + " ".join(i[1].render())
         yield "}"
 
     @classmethod
