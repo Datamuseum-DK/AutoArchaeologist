@@ -6,7 +6,7 @@
 
 '''
    RC7000/RC3600 AUTOLOADER file
-   -----------------------------
+   =============================
 
    Typically paper tapes.
 

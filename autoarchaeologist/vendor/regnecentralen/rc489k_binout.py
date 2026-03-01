@@ -1,6 +1,12 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
+
 '''
    RC4000/RC8000/RC9000 binout format
-   ----------------------------------
+   ==================================
 
 '''
 

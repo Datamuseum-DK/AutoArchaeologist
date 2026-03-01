@@ -5,6 +5,9 @@
 # See LICENSE file for full text of license
 
 '''
+   Rc "BUST" backup tapes
+   ======================
+
    We think "bust" is a backup program written by RC, but this is
    not certain.  This module is based on just three samples, one
    from a RC900 system and two (almost identical) from a RC39 system.

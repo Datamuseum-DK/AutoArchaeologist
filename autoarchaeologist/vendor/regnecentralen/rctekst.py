@@ -1,5 +1,15 @@
+#!/usr/bin/env python3
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# See LICENSE file for full text of license
 
 # See: file:///critter/aa/rc850/49/49c35d3c3.html
+
+'''
+   RcTekst files
+   =============
+'''
 
 from ...base import octetview as ov
 

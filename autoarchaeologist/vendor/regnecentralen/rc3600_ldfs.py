@@ -6,7 +6,7 @@
 
 '''
    Logical Disk filesystem
-   -----------------------
+   =======================
 
    See chapter 7 & 8 in: https://datamuseum.dk/wiki/Bits:30000044
 '''

@@ -6,7 +6,7 @@
 
 '''
    RC4000/RC8000/RC9000 Save & Dump Tapes
-   --------------------------------------
+   ======================================
 
    This format is documented in 30007497:
 	SW8010 System Utility - Save, Incsave; Load, Incload

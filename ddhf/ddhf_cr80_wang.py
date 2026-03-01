@@ -10,8 +10,7 @@
 '''
 
 from autoarchaeologist.generic import samesame
-from autoarchaeologist.vendor.wang import wang_wps
-from autoarchaeologist.vendor.wang import wang_text
+from autoarchaeologist.vendor import wang
 
 import ddhf
 
@@ -26,8 +25,7 @@ class Wang(ddhf.DDHFExcavation):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.add_examiner(wang_wps.WangWps)
-        self.add_examiner(wang_text.WangText)
+        wang.wps_defaults(self)
         self.add_examiner(samesame.SameSame)
 
 if __name__ == "__main__":
