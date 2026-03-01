@@ -481,7 +481,7 @@ class Struct(datastruct.Struct, Octets):
 def Array(count, what, **kwargs):
     return datastruct.Array(Struct, count, what, **kwargs)
 
-class Vector(Struct):
+class Vector(Octets):
     ''' A prototy Vector class '''
 
     def __init__(
@@ -492,46 +492,54 @@ class Vector(Struct):
         count=999999,
         terminate=None,
         elide=None,
-        **kwargs
+        vertical=True,  # presently ignored
     ):
-        super().__init__(tree, lo, more=True, **kwargs)
         self.elide = elide
+        self.fields = []
+        hi = lo
         for _n in range(count):
             y = None
             try:
-                y = target(tree, self.hi)
+                y = target(tree, hi)
             except StopIteration:
                 print(tree.this, "STOP", y)
                 break
             except:
                 print(tree.this, "RAISE", y)
                 raise
-            self.fields.append(("f%03x" % len(self.fields), y))
-            self.hi = y.hi
+            self.fields.append(y)
+            hi = y.hi
             if terminate and terminate(y):
                 break
-        self.done()
+        Octets.__init__(self, tree, lo, hi=hi)
+
+    # XXX Need to decide if it is inconsistent to override the
+    # __iter__ and __getitem__ of Octets or if it those which
+    # should be named something different to begin with.
 
     def __iter__(self):
-        yield from (y[1] for y in self.fields)
+        yield from self.fields
 
     def __getitem__(self, idx):
-        return self.fields[idx][1]
+        return self.fields[idx]
 
     def render(self):
         fmt = "  [0x%%0%dx]: " % len("%x" % (len(self.fields) - 1))
         yield self.__class__.__name__ + " {"
         if self.elide is None:
-            filter = lambda x: True
+            def ok(_x):
+                return True
         elif isinstance(self.elide, int):
-            filter = lambda x: x.val != self.elide
-        elif isinstance(self.elide, (tuple, set, dict)):
-            filter = lambda x: x.val not in self.elide
+            def ok(x):
+                return x.val != self.elide
+        elif callable(self.elide):
+            ok = self.elide
         else:
-            filter = self.elide
+            def ok(x):
+                return x.val not in self.elide
         for n, i in enumerate(self.fields):
-            if filter(i[1]):
-                yield fmt % n + " ".join(i[1].render())
+            if ok(i):
+                yield fmt % n + " ".join(i.render())
         yield "}"
 
     @classmethod
