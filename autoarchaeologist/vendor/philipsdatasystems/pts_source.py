@@ -7,12 +7,41 @@
 '''
    PtsSource
    =========
+
+   Source (.SC) files, rendered as text
+
+   Usage
+   -----
+
+   .. code-block:: none
+
+       from autoarchaeologist.vendor.philipsdatasystems import pts_source
+       …
+       self.add_examiner(*pts_source.ALL)
+
+   Notes
+   -----
+
+   Reverse engineered from samples.
+
+   Test input
+   ----------
+
+   * COMPANY/PHILIPS/TAPE
+
+   Documentation
+   -------------
+
+   None identified.
+
 '''
 
 from ...base import octetview as ov
 
 
 class Head(ov.Struct):
+    ''' ... '''
+
     def __init__(self, tree, lo):
         super().__init__(
             tree,
@@ -37,9 +66,10 @@ class Head(ov.Struct):
         self.done()
 
 class PtsSource(ov.OctetView):
+    ''' ... '''
 
     def __init__(self, this):
-        i = this.has_note("pts_type")
+        i = this.get_note("pts_type")
         if not i or i[0]['args'] not in ("SC", "UF",):
             return
 
@@ -62,3 +92,7 @@ class PtsSource(ov.OctetView):
                     break
 
         self.add_interpretation(title="HexDump", more=True)
+
+ALL= [
+    PtsSource
+]
