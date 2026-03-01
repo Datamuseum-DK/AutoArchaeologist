@@ -6,7 +6,7 @@
 
 '''
    RC4000/RC8000/RC9000 "flxcat"
-   -----------------------------
+   =============================
 
 '''
 
@@ -303,7 +303,7 @@ class FlxCat(ov.OctetView):
         if this[6:12] != b'flxcat':
             return
 
-        self.ga21f = this.has_note("GA21-9182-File")
+        self.ga21f = this.get_note("GA21-9182-File")
         if not self.ga21f:
             return
 
