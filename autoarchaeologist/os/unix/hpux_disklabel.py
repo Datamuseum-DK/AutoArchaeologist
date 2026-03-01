@@ -4,6 +4,11 @@
 #
 # See LICENSE file for full text of license
 
+'''
+   HP-UX disklabels
+   ================
+'''
+
 import struct
 
 class HPUXDiskLabel():

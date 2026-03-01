@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   Rational R1000 .M200_CONFIG Configuration files
-   -----------------------------------------------
+   R1000 .M200_CONFIG Configuration files
+   ======================================
 
 '''
 

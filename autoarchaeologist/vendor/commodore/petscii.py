@@ -4,7 +4,10 @@
 #
 # See LICENSE file for full text of license
 
-''' ... '''
+'''
+   Commodore "PETSCII" Type-case
+   =============================
+'''
 
 from ...base import type_case as tc
 

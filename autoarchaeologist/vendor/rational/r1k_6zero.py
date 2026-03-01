@@ -5,8 +5,11 @@
 # See LICENSE file for full text of license
 
 '''
-Segments which start with six zero-bits after the header are
-very often ascii files.
+   R1000 6-Zero segments
+   =====================
+
+   Segments which start with six zero-bits after the header are
+   very often ascii files.
 '''
 
 class R1k6ZeroSegment():

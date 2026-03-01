@@ -4,6 +4,11 @@
 #
 # See LICENSE file for full text of license
 
+'''
+   R1000 Archive Pair
+   ==================
+'''
+
 from ...base import namespace
 from ...base import octetview as ov
 

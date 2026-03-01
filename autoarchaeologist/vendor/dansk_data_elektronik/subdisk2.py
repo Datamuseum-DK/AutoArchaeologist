@@ -4,6 +4,11 @@
 #
 # See LICENSE file for full text of license
 
+'''
+   DDE Supermax "subdisk2" partitioning
+   ====================================
+'''
+
 from ...base import octetview as ov
 
 SIGNATURE = bytes.fromhex('73 75 62 64 69 73 6b 32 20 70 72 65 73 65 6e 74')

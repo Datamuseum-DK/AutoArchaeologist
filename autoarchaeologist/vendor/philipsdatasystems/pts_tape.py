@@ -4,7 +4,10 @@
 #
 # See LICENSE file for full text of license
 
-''' ... '''
+'''
+   PTS Tape
+   ========
+'''
 
 from ...base import artifact
 from ...base import octetview as ov

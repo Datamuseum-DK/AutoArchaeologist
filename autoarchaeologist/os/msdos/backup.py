@@ -2,7 +2,7 @@
 
 '''
    MS-DOS BACKUP
-   ~~~~~~~~~~~~~
+   =============
 
    XXX: Add proper multivolume support
 '''

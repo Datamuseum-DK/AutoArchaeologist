@@ -4,6 +4,11 @@
 #
 # See LICENSE file for full text of license
 
+'''
+    R1000 'E3' objects
+    ==================
+'''
+
 
 import html
 from ...generic import hexdump

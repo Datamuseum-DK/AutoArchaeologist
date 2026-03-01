@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   Rational R1000 M200 68K20 Binary Files
-   --------------------------------------
+   R1000 M200 68K20 Binary Files
+   =============================
 
    Call out to PyReveng3 for disassembling assistance
 

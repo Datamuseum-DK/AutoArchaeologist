@@ -4,7 +4,10 @@
 #
 # See LICENSE file for full text of license
 
-''' ... '''
+'''
+   Computer Automation Alpha/LSI filesystem
+   ========================================
+'''
 
 from ...base import octetview as ov
 

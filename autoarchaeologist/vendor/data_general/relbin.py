@@ -20,7 +20,7 @@
 
 '''
    Data General Relocatable Binary objects and libraries
-   -----------------------------------------------------
+   =====================================================
 '''
 
 from ...base import octetview as ov

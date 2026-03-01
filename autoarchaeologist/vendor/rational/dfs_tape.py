@@ -6,7 +6,7 @@
 
 '''
    Rational 1000 DFS tapes
-   -----------------------
+   =======================
 '''
 
 from ...base import octetview as ov

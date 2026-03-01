@@ -6,6 +6,9 @@
 
 # pylint: disable=E1101
 '''
+   R1000 'A2' "Link Pack" segments
+   ===============================
+
    'a2' type 'This is a Link Pack.' segments
 '''
 

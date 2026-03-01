@@ -4,7 +4,10 @@
 #
 # See LICENSE file for full text of license
 
-''' ... '''
+'''
+   PtsSource
+   =========
+'''
 
 from ...base import octetview as ov
 

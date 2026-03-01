@@ -5,6 +5,9 @@
 # See LICENSE file for full text of license
 
 '''
+   Tolerant Systems Inc
+   ====================
+
    Precursor to Veritas LVM/FS from Tolerant Systems Inc
    as implemented on Regnecentralen RC9000
 '''

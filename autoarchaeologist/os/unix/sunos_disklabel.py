@@ -4,6 +4,11 @@
 #
 # See LICENSE file for full text of license
 
+'''
+   SUN-OS Disklabels
+   =================
+'''
+
 import struct
 
 class SunOsDiskLabel():

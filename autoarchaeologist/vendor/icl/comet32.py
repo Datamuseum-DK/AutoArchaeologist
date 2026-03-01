@@ -4,7 +4,10 @@
 #
 # See LICENSE file for full text of license
 
-''' HH Electronic Comet32 disk partitioning '''
+'''
+   ICL Comet32 disk partitioning
+   =============================
+'''
 
 from ...base import octetview as ov
 from ...base import namespace

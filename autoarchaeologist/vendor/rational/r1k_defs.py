@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   Global R1K definitions
-   ======================
+   R1000 Global definitions
+   ========================
 '''
 
 # See also: ⟦5d3bfb73b⟧

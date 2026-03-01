@@ -6,6 +6,7 @@
 
 '''
    TAR(1) format
+   =============
 '''
 
 from ...base import namespace

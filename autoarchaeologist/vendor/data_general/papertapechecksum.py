@@ -6,7 +6,7 @@
 
 '''
    Data General Papertape checksum
-   -------------------------------
+   ===============================
 
    At the end of original (and some copies of) Data General
    papertapes, an identifier is punched in ASCII with even

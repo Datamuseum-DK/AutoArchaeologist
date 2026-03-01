@@ -4,7 +4,10 @@
 #
 # See LICENSE file for full text of license
 
-''' Disassemble R1000/M200-M400 microcode '''
+'''
+   R1000 Microcode
+   ===============
+'''
 
 from . import r1k_disass
 

@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   Rational R1000 Ada Assembly Files
-   ---------------------------------
+   R1000 Ada Assembly Files
+   ========================
 
    Call out to PyReveng3 for disassembling assistance
 

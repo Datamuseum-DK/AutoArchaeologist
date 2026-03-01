@@ -4,6 +4,11 @@
 #
 # See LICENSE file for full text of license
 
+'''
+   (DDE) GKS file
+   ==============
+'''
+
 import struct
 
 from ...generic import iso8632_gcm as gcm

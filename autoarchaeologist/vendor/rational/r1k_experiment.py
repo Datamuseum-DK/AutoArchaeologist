@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   Rational R1000 Diagnostic Experiment Files
-   ------------------------------------------
+   R1000 Diagnostic Experiment Files
+   =================================
 
    Call out to R1000.Disassembly for disassembling assistance
 

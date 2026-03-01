@@ -5,12 +5,11 @@
 # See LICENSE file for full text of license
 
 '''
-   R1000 '79' segments
+   R1000 "89" segments
    ===================
 
    Based on number of blocks in different snapshots, this is probably the "Ada"
    daemon's metadata.
-
 '''
 
 from ...generic import bitview as bv

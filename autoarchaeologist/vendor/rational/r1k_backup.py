@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   R1K Backup Tapes
-   ----------------
+   R1000 Backup Tapes
+   ==================
 
    This file contains the "tape-aspects" of taking a backup tape apart.
    The companion 'r1k_backup_objects' handles the "object-aspects"

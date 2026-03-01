@@ -5,7 +5,7 @@
 # See LICENSE file for full text of license
 
 '''
-   R1000 '97' segments
+   R1000 '81' segments
    ===================
 
    Diana-trees, at least that's the current working theory.

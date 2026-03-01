@@ -7,7 +7,7 @@
 '''
 
    DOMUS filesystem
-   ----------------
+   ================
 
    As described in RCSL-43-GL-7915
 '''

@@ -5,8 +5,8 @@
 # See LICENSE file for full text of license
 
 '''
-   R1K Backup Tapes
-   ----------------
+   R1000 Backup Objects
+   ====================
 
    This file contains the "object-aspects" of taking a backup apart.
    The "tape-aspects" are handled in `r1k_backup.py`

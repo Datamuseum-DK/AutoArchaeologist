@@ -10,7 +10,8 @@
 
    Very rudimentary.
    Based on info about 'REPAIR' pdf pg 236ff in
-	https://bitsavers.org/pdf/motorola/versados/M68KVSF_D7_VERSAdosSysFacilities_Oct85.pdf
+
+   https://bitsavers.org/pdf/motorola/versados/M68KVSF_D7_VERSAdosSysFacilities_Oct85.pdf
 '''
 
 from ...base import namespace as ns

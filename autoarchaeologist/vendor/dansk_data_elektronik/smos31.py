@@ -6,6 +6,7 @@
 
 '''
    SMOS new style boot images
+   ==========================
 '''
 
 import time
