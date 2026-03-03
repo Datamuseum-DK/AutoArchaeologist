@@ -16,10 +16,15 @@ class Mz80BFloppies():
     def __init__(self, this):
         if this.top not in this.parents:
             return
+
         keys = set(x.key for x in this.iter_rec())
+        if sum(x[1] for x in keys) == 0:
+            # single sided
+            return
+
         key2 = set((x[0],0, x[2]) for x in keys)
         if len(keys) != len(key2):
-            print(this, "MZ80-B K1", len(keys), "K2", len(key2))
+            # Same sector# on different head#
             return
 
         if len(keys) == len(key2):
