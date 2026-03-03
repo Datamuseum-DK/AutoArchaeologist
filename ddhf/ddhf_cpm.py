@@ -12,9 +12,15 @@
 import ddhf
 from ddhf import cpm_exc
 
+from autoarchaeologist.vendor.sharp import mz80b
+
 class Cpm(cpm_exc.DdhfExcavationCpm):
 
     ''' All Cpm artifacts '''
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_examiner(mz80b.Mz80BFloppies)
 
     BITSTORE = (
         "-30002875", # PASCAL
@@ -33,6 +39,7 @@ class Cpm(cpm_exc.DdhfExcavationCpm):
         "JET80",
         "COMPANY/ICL/COMET",
         "COMPANY/BOGIKA",
+        "COMPANY/SHARP",
     )
 
     MEDIA_TYPES = (
