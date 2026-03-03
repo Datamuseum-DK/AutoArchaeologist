@@ -6,7 +6,7 @@
 
 '''
    CP/M filesystems - Abstract Base Class
-   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ======================================
 
    With big hat-tip to CPMTOOLS
 
@@ -118,7 +118,7 @@ class CpmFile():
         self.tree = tree
         self.dirents = [dirent]
         self.file_id = dirent.file_id
-        self.frags = []
+        self.frags = None
         self.sames = []
         self.eofs = []
         self.unreads = 0
@@ -142,6 +142,7 @@ class CpmFile():
                     if sec is None:
                         self.unreads += 1
                         self.tree.debits += 1
+                        self.tree.debits_why.append("NoSector(0x%x)" % bno)
                         self.sames.append(False)
                         if ds:
                             self.frags.append(b'_UNREAD_' * (ds // 8))
@@ -175,28 +176,51 @@ class CpmFile():
            we come here to see if the files can do so.
         '''
 
-        if not self.frags:
+        if self.frags is None:
             self.make_frags()
 
+        if not self.frags:
+            return
+
         # 0xe5 sectors inside the file are suspect
-        self.tree.debits += self.sames.count((0xe5, 0xe5))
+        j = self.sames.count((0xe5, 0xe5))
+        if j:
+            self.tree.debits_why.append("sames(%d)" % j)
+            self.tree.debits += j
 
         # Catch when the entire file was 0xe5
         if len(self.sames) == 0:
+            self.tree.debits_why.append("empty_sec")
             self.tree.debits += 1
 
         # Files consisting of all zeros are suspect too
         if self.sames.count((0x0, 0x0)) == len(self.sames):
+            self.tree.debits_why.append("zero_sec")
             self.tree.debits += 1
 
-        # Does EOF only appears in the last block,
+        # Does EOF only appear in the last block,
         if len(self.eofs) > 1 and self.eofs[-1] > 0 and max(self.eofs[:-1]) == 0:
             self.tree.credits += 1
+
+        ext = self.dirents[0].name.split(".")[-1]
+        if ext in ("COM",):
+            for b in self.frags[0]:
+                if b == 0:
+                    continue
+                if b == 0xc3:
+                    self.tree.credits += 1
+                break
+        elif ext in ("CMD",):
+            if self.frags[0][0] == 0x01:
+                self.tree.credits += 1
+        elif ext in ("EXE",):
+            if self.frags[0][0] == 0x4d and self.frags[0][1] == 0x5a:
+                self.tree.credits += 1
 
     def commit(self):
         ''' ... '''
 
-        if not self.frags:
+        if self.frags is None:
             self.make_frags()
 
         if self.frags:
@@ -235,6 +259,8 @@ class CpmFileSystem(ov.OctetView):
             tracksize = len(self.SECTORS) * self.SECTOR_SIZE
             track = off // tracksize
             if track >= len(self.TRACKS):
+                print("GB1", hex(bno), hex(off), hex(_nsec), track, len(self.TRACKS))
+                #self.tree.debits_why.append("big_track")
                 self.debits += 1
                 yield None
                 off += self.SECTOR_SIZE
@@ -253,6 +279,10 @@ class CpmFileSystem(ov.OctetView):
         self.this = this
         self.credits = 0
         self.debits = 0
+        self.debits_why = []
+        self.lo = -1
+        self.mid = -1
+        self.hi = -1
 
         if name is not None:
             self.name = name
@@ -308,6 +338,7 @@ class CpmFileSystem(ov.OctetView):
                     if bno == 0:
                         continue
                     if bno in bnos:
+                        self.debits_why.append("bno_reuse")
                         self.debits += 1
                     else:
                         bnos.add(bno)
@@ -333,8 +364,10 @@ class CpmFileSystem(ov.OctetView):
                 try:
                     file.investigate()
                 except KeyError:
+                    self.tree.debits_why.append("key_error")
                     self.debits += 1
                 except IndexError:
+                    self.tree.debits_why.append("index_error")
                     self.debits += 1
 
     def __lt__(self, other):
@@ -378,10 +411,10 @@ class CpmFileSystem(ov.OctetView):
             str(self.SECTOR_SIZE),
             str(self.BLOCK_SIZE),
             "0x%x" % self.EXTENT_MASK,
-            str(self.N_DIRENT),
             "*%d+" % (self.SECTORS[1] - self.SECTORS[0]) + "+".join(str(x) for x in ils),
             "%d:%d" % self.TRACKS[0],
             "%d:%d" % self.TRACKS[-1],
+            str(self.N_DIRENT),
             ]
         )
 
@@ -409,7 +442,8 @@ class CpmFileSystem(ov.OctetView):
         file.write(" " + str(self.this._reclens))
         file.write("\n")
         file.write("Signature:         " + self.signature + "\n")
-        file.write("Confidence score:  +" + str(self.credits) + "/-" + str(self.debits) + "\n")
+        file.write("Confidence score:  +" + str(self.credits) + "/-" + str(self.debits) + " ")
+        file.write(", ".join(sorted(set(self.debits_why))) + "\n")
         file.write("Sector size:       " + str(self.SECTOR_SIZE) + "\n")
         file.write("Block size:        " + str(self.BLOCK_SIZE) + "\n")
         file.write("Directory entries: " + str(self.N_DIRENT) + "\n")

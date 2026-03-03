@@ -61,8 +61,9 @@ class ProbeDirEnt(ov.Struct):
         if self.status < 0x21:  # XXX: <= 0xf ?
 
             ns = set(i & 0x7f for i in self.name)
+            ns.discard(0)
 
-            if min(ns) < 0x20:
+            if ns and 0x00 < min(ns) < 0x20:
                 # Control characters are never allowed
                 return False
 
@@ -86,7 +87,11 @@ class ProbeDirSec(ov.Struct):
         self.attribs = 0
         for adr in range(rec.lo, rec.hi, 32):
             # Quick check for impossibility
-            if tree.this[adr] not in common.VALID_DIRENT_STATUS:
+            try:
+                if tree.this[adr] not in common.VALID_DIRENT_STATUS:
+                    self.done(len(rec))
+                    return
+            except AttributeError:
                 self.done(len(rec))
                 return
         self.credible = 0
@@ -114,11 +119,8 @@ class ProbeDirSec(ov.Struct):
                     return
                 self.attribs += 1
             elif not de.looks_sane():
-                #print("CR2", self.rec, self.credible, de)
                 self.credible = -1
                 return
-                #if self.rec.key != (0,3,10):
-                #    return
             elif max(de.al) > 0:
                 self.credible += 1
         if self.attribs == 0:
@@ -126,7 +128,7 @@ class ProbeDirSec(ov.Struct):
         if self.attribs != len(self) // 128:
             self.credible = -1
             return
-        self.credible += 1
+        #self.credible += 1
 
 class ProbeBlockSize():
     '''
@@ -222,7 +224,7 @@ class ProbeCpmFileSystem(ov.OctetView):
 
     def __init__(self, this):
 
-        if this.top not in this.parents:
+        if this.top not in this.parents and not this.has_note("Probe-CPM"):
             return
         if not hasattr(this, "iter_rec"):
             # We can only do this if we have CHS geometry
@@ -238,6 +240,7 @@ class ProbeCpmFileSystem(ov.OctetView):
 
         if not self.first_good:
             # This does not look like a CP/M filesystem
+            # print(this, "Probe-CPM no first_good")
             return
 
         tfn = this.tmpfile_for()
@@ -255,20 +258,28 @@ class ProbeCpmFileSystem(ov.OctetView):
             top_credits = None
             top_debits = None
             top = None
-            for cand in sorted(self.candidates, reverse=True):
-                self.log.write("+%4d -%4d " % (cand.credits, cand.debits) + str(cand) + "\n")
+            ncommit = 0
+            for cand in sorted(self.candidates, key=lambda x: x.credits - x.debits, reverse=True):
                 score = cand.credits - cand.debits
                 if top is not None and top > score:
-                    break
+                    self.log.write("+%4d -%4d " % (cand.credits, cand.debits) + str(cand.SECTORS) + "\n")
+                    continue
                 if top_credits is not None and top_credits > cand.credits:
-                    break
+                    self.log.write("+%4d -%4d " % (cand.credits, cand.debits) + str(cand.SECTORS) + "\n")
+                    continue
                 if top_debits is not None and top_debits < cand.debits:
-                    break
+                    self.log.write("+%4d -%4d " % (cand.credits, cand.debits) + str(cand.SECTORS) + "\n")
+                    continue
                 cand.commit()
+                ncommit += 1
+                self.log.write("*%4d -%4d " % (cand.credits, cand.debits) + str(cand.SECTORS) + "\n")
                 if top_credits is None:
                     top = score
                     top_credits = cand.credits
                     top_debits = cand.debits
+
+        if ncommit > 1:
+            this.add_type("@@_%d" % ncommit)
 
         with self.this.add_utf8_interpretation(
             "CP/M filesystem probe",
@@ -345,7 +356,6 @@ class ProbeCpmFileSystem(ov.OctetView):
         coll16 = 0
         hole16 = 0
         for dent in self.iter_dirents():
-            #print("D", dent)
 
             l = list(dent.al)
             while l and l[-1] == 0:
@@ -482,6 +492,7 @@ class ProbeCpmFileSystem(ov.OctetView):
                 ]
             while trks[0] < self.first_good.rec.key[:2]:
                 trks.pop(0)
+
             class CpmFSAuto(fs_abc.CpmFileSystem):
                 SECTOR_SIZE = len(self.first_good)
                 SECTORS = ileave
@@ -493,10 +504,16 @@ class ProbeCpmFileSystem(ov.OctetView):
 
             try:
                 x = CpmFSAuto(self.this, commit=False)
-            except fs_abc.Nonsense:
+            except fs_abc.Nonsense as err:
+                print(self.this, CpmFSAuto, "Nonsense", err)
                 continue
+            except Exception as err:
+                print(self.this, CpmFSAuto, "Other Trouble", err)
+                raise
             if x.credits:
                 self.candidates.append(x)
+            else:
+                print(self.this, "NO CREDITS", x.credits, x.debits)
             file.write("   +%d/-%d" % (x.credits, x.debits))
             file.write("\n")
 
@@ -619,6 +636,8 @@ class ProbeCpmFileSystem(ov.OctetView):
             for dirsect in dirtrk:
                 dirsects[dirsect.rec.key[2]] = dirsect
             for n in interleave:
+                if n not in dirsects:
+                    return
                 yield dirsects[n]
 
     def find_candidate_directory_tracks(self):
