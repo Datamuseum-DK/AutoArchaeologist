@@ -119,8 +119,6 @@ class ImdContainer(artifact.ArtifactFragmented):
                     ptr += 1
                 if mode >= 5:
                     continue
-                if not sum(chs):
-                    continue
                 recs.append((chs, data, mode > 2))
 
         if not recs:
