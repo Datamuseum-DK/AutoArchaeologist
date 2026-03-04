@@ -95,7 +95,7 @@ class ProbeDirSec(ov.Struct):
                 self.done(len(rec))
                 return
         self.credible = 0
-        self.add_field("dirents", ov.Array(len(rec)//32, ProbeDirEnt))
+        self.add_field("dirents", ov.Vector.how(count=len(rec)//32, target=ProbeDirEnt))
         self.done()
         self.score()
 
