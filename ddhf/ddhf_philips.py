@@ -14,6 +14,7 @@ from autoarchaeologist.generic import textfiles
 
 from autoarchaeologist.vendor.philipsdatasystems import pts_tape
 from autoarchaeologist.vendor.philipsdatasystems import pts_source
+from autoarchaeologist.vendor.philipsdatasystems import p500x
 
 import ddhf
 
@@ -21,6 +22,7 @@ class Philips(ddhf.DDHFExcavation):
     ''' '''
 
     BITSTORE = (
+        "COMPANY/PHILIPS",
         "COMPANY/PHILIPS/TAPE",
     )
 
@@ -29,6 +31,7 @@ class Philips(ddhf.DDHFExcavation):
 
         self.add_examiner(pts_tape.PtsTape)
         self.add_examiner(pts_source.PtsSource)
+        self.add_examiner(*p500x.ALL)
         self.add_examiner(textfiles.TextFile)
         self.add_examiner(samesame.SameSame)
 

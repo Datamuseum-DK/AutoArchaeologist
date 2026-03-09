@@ -404,7 +404,7 @@ class P500x(ov.OctetView):
         ''' Piece together a file '''
         frag = self.this.get_frag((trk, 0, sec))
         if not frag:
-            return []
+            return None
         fil = File(self, frag.lo).insert()
         if fil.here.c == 21 and trk == 20 and sec == 0:
             pass

@@ -200,6 +200,8 @@ class PtsTape(ov.OctetView):
         self.ns = ns.NameSpace(name="", root=this, separator="")
 
         for i in this.iter_rec():
+            if len(i.key) != 2:
+                return
             if i.key[1] == 0:
                 dg = DirGranule(self, i)
                 dg.insert()
