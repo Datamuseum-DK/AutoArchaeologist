@@ -6,6 +6,7 @@
 
 '''
    Data General "Absolute Binary" object file format
+   =================================================
 '''
 
 import struct
@@ -28,6 +29,7 @@ class AbsBinRec():
         while i < len(this) and not this[i]:
             self.padlen += 1
             i += 1
+        self.at = i
         if len(this[i:]) < 6:
             raise Invalid("Too short (%d)" % len(this[i:]))
         words = struct.unpack("<h", this[i:i + 2])
@@ -40,11 +42,12 @@ class AbsBinRec():
         else:
             raise Invalid("Bad Count (%d @0x%x)" % (words[0], i))
         if len(this[i:]) < n_words * 2:
-            raise Invalid("Insufficient bytes")
+            raise Invalid("Insufficient bytes (0x%x)" % (n_words * 2 - len(this[i:])))
         self.words = struct.unpack("<%dH" % n_words, this[i:i + n_words*2])
+        # print(this, "%04x" % i, "-".join("%04x" % x for x in self.words))
         s = sum(self.words) & 0xffff
         if s:
-            #print("" + " ".join(["%04x" % x for x in self.words]))
+            # print(this, hex(i), Invalid("Checksum error (0x%04x @0x%x)" % (s, i)))
             raise Invalid("Checksum error (0x%04x @0x%x)" % (s, i))
 
     def __repr__(self):
@@ -78,6 +81,7 @@ class AbsBinRec():
             t += "(%3d) " % self.padlen
         else:
             t += "      "
+        #t += " @%04x " % self.at
         t += (" ".join(["%04x" % j for j in self.words])).ljust(5*19)
         def big_endian(i):
             yield i >> 8
@@ -107,17 +111,36 @@ class AbsBin():
         while idx < len(this) and not this[idx]:
             idx += 1
 
+        if this.top in this.parents and not this.children:
+            j = None
+            while idx < len(this) and idx < 1000:
+                if not this[idx]:
+                    idx += 1
+                    continue
+                try:
+                    j = AbsBinRec(this, idx)
+                    break
+                except:
+                    j = None
+                    idx += 1
+
+            if j is None:
+                return
+
         pfx = idx
         records = []
         while idx < len(this):
             try:
                 j = AbsBinRec(this, idx)
             except Invalid as error:
-                if records:
-                    txt = "AbsBin matched %d records," % len(records)
+                if len(records) > 1:
+                    txt = "AbsBin matched 0x%x bytes" % idx
+                    txt += " in %d records," % len(records)
                     txt += " but then ran into %s" % str(error)
+                    txt += " [0x%04x" % records[0].words[1]
+                    txt += "…0x%04x]" % records[-1].words[1]
                     this.add_comment(txt)
-                return
+                break
             records.append(j)
             idx += j.length()
             if j.words[0] == 1:
