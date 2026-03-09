@@ -135,13 +135,15 @@ class C64Disk(ov.OctetView):
     def __init__(self, this):
         if this.top not in this.parents:
             return
-        print(this, self.__class__.__name__, len(this))
 
         chs = (18, 0, 0)
         try:
             ds = this.get_rec(chs)
         except KeyError:
             return
+
+        print(this, self.__class__.__name__, len(this), bytes(ds[:2]).hex())
+        # print(" ".join(str(x) for x in this._keys.keys()))
 
         if this[ds.lo + 0] != 0x12:
             return

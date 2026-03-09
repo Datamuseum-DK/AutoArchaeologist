@@ -95,7 +95,7 @@ class C64Basic(ov.OctetView):
 
         if this[0] != 0x01:
             return
-        if this[1] != 0x08:
+        if this[1] not in (0x08,):
             return
 
         #print(this, self.__class__.__name__, len(this))

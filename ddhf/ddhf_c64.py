@@ -9,8 +9,6 @@
    ~~~~~~~~~~~~~
 '''
 
-from autoarchaeologist.base import type_case
-
 from autoarchaeologist.generic import samesame
 from autoarchaeologist.generic import textfiles
 from autoarchaeologist.vendor.commodore import c64
@@ -26,8 +24,6 @@ class C64(ddhf.DDHFExcavation):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-        # self.type_case = DomusDS2089()
 
         self.add_examiner(*c64.EXAMINERS)
         self.add_examiner(textfiles.TextFile)
