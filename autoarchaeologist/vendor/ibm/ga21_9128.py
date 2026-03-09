@@ -98,6 +98,9 @@ class DataSet():
     def add_component(self, vol, data_set, recs):
         seq = data_set.volume_sequence_number.txt
         ind = data_set.multi_volume_indicator.txt
+        if seq in self.parts:
+            print("Seq", seq, "already in parts", self.parts)
+            return
         assert seq not in self.parts
         self.parts[seq] = recs
         if ind == "L":
@@ -263,7 +266,8 @@ class Ga21_9182(disk.Disk):
 
         volid = self.volhead.volid
         print(this, "Ga21_9182", "VOLID", volid)
-        this.add_name(volid)
+        if volid:
+            this.add_name(volid)
 
         this.add_note("GA21-9182-Volume", args=volid, vol=self.volhead)
 
