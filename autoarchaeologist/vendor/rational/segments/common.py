@@ -317,7 +317,7 @@ class Segment(bv.BitView):
     POINTER_WIDTH = 32
 
     def __init__(self, this):
-        if self.TAG is not None and not this.has_note("tag_%02x" % self.TAG):
+        if self.TAG is not None and not this.has_note("tag_%03x" % self.TAG):
             return
         if self.VPID is not None and not this.has_note("vpid_%04d" % self.VPID):
             return

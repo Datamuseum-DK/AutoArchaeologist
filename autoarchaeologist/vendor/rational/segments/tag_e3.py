@@ -102,7 +102,7 @@ class TE3(ov.OctetView):
     TAG = 0xe3
 
     def __init__(self, this):
-        if not this.has_note("tag_%02x" % self.TAG):
+        if not this.has_note("tag_%03x" % self.TAG):
             return
 
         super().__init__(this)

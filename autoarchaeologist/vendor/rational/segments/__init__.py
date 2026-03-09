@@ -23,6 +23,7 @@ from .vpid_1015_tag_87 import V1015T87
 from .vpid_1016_tag_88 import V1016T88
 from .vpid_1017_tag_89 import V1017T89
 from .tag_e3 import TE3
+from .tag_75 import T75
 from .eedb_text import EEDBText
 
 examiners = [
@@ -44,6 +45,7 @@ examiners = [
     V1015T87,
     V1016T88,
     V1017T89,
+    T75,
     TE3,
     EEDBText,
 ]
