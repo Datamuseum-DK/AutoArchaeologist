@@ -83,7 +83,7 @@ class Struct():
         self.lo = lo
         self.hi = lo
         self.tree = tree
-        self.args = {}
+        self.args = {} # XXX: rename
         self.naked = naked
         self.pseudofields = []
         for name, width in kwargs.items():
@@ -156,6 +156,7 @@ class Struct():
         return "\t// 0x%x @0x%x " % (adr, adr - self.lo)
 
     def render(self):
+        ''' Render as  a sequence of UTF-8 lines '''
         assert not hasattr(self, "args")
         if not self.vertical:
             i = []
@@ -222,7 +223,7 @@ def Array(struct_class, count, what, vertical=None, naked=False, elide=None):
 
             def iter_elided(self):
                 for n, x in enumerate(self.items):
-                    if self.ELIDE and x.val in self.ELIDE:
+                    if self.ELIDE is not None and x.val in self.ELIDE:
                         continue
                     yield n, x
 
