@@ -6,10 +6,99 @@
 
 '''
    Xenix 286 UFS fileystem with cylinder groups
-   --------------------------------------------
+   ============================================
 '''
 
 from . import unix_fs as ufs
+from ...base import octetview as ov
+
+class FilSys(ov.Struct):
+
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            fs_fname_=ov.Text(6),	# file system name
+            fs_fpack_=ov.Text(6),	# pack name
+            fs_fsize_=ov.Le32,		# number of data blocks in fs
+            fs_cgblocks_=ov.Le16,	# number of blocks per cg
+            fs_maxblock_=ov.Le32,	# max disk block in fs
+            fs_cginodes_=ov.Le16,	# number of inodes per cg
+            fs_maxino_=ov.Le16,		# max inumber in fs
+            fs_time_=ov.Le32,		# time last modified
+            fs_fmod_=ov.Octet,		# modified flag
+            fs_ronly_=ov.Octet,		# read-only fs
+            fs_clean_=ov.Octet,		# fs was cleanly unmounted
+            fs_type_=ov.Octet,		# fs type and version
+            fs_fnewcg_=ov.Le16,		# contains FNEWCG
+            fs_snewcg_=ov.Le16,		# contains SNEWCG
+            fs_ffree_=ov.Le32,		# number of free data blocks in fs
+            fs_ifree_=ov.Le16,		# number of free inodes in fs
+            fs_dirs_=ov.Le16,		# number of directories in fs
+            fs_extentsize_=ov.Octet,	# native extent size
+            fs_cgnum_=ov.Octet,		# number of cg's in fs
+            fs_cgrotor_=ov.Octet,	# next cg to be searched
+            vertical=True,
+            more = True,
+        )
+        if not self.fs_fmod.val & 0x80:
+            self.add_field("fs_reserved", 15)
+        self.done()
+        self.credible = False
+        if max(self.fs_fname):
+            return
+        if max(self.fs_fpack):
+            return
+        if not self.fs_fsize.val:
+            return
+        if not self.fs_cgblocks.val:
+            return
+        if not self.fs_cginodes.val:
+            return
+        if not self.fs_maxblock.val:
+            return
+        if not self.fs_maxino.val:
+            return
+        if self.fs_time.val == self.fs_maxblock.val:
+            return
+        #if self.fs_maxino.val % self.fs_cginodes.val:
+        #    return
+        self.credible = True
+
+class CgInfo(ov.Struct):
+
+    def __init__(self, tree, lo):
+        super().__init__(
+            tree,
+            lo,
+            fs_cgincore_=ov.Le16,	# points to buf structure in core
+            fs_cgblk_=ov.Le32,		# disk address of cg header
+            fs_cgffree_=ov.Le16,	# number of free data blocks in cg
+            fs_cgifree_=ov.Le16,	# number of free inodes in cg
+            fs_cgdirs_=ov.Le16,		# number of directories in cg
+        )
+
+class CylGrp(ov.Struct):
+
+    def __init__(self, tree, lo, bmapsize):
+        super().__init__(
+            tree,
+            lo,
+            cg_doffset_=ov.Le32,
+            cg_ioffset_=ov.Le32,
+            cg_dblocks_=ov.Le16,
+            cg_ifirst_=ov.Le16,
+            cg_number_=ov.Octet,
+            cg_currextent_=ov.Octet,
+            cg_lowat_=ov.Le16,
+            cg_hiwat_=ov.Le16,
+            cg_erotor_=ov.Le16,
+            cg_ilock_=ov.Octet,
+            cg_reserved_=9,
+            cg_bits_=bmapsize,
+            vertical=True,
+        )
+
 
 class SysVInode(ufs.Inode):
     ''' System V inode '''
@@ -31,6 +120,8 @@ class SysVInode(ufs.Inode):
 class Xenix_FileSystem(ufs.UnixFileSystem):
     ''' System V Filesystem '''
 
+    LOWEST_INODE = 1
+
     FS_TYPE = "SysV Filesystem"
     NICFREE = 50
     NICINOD = 100
@@ -40,69 +131,27 @@ class Xenix_FileSystem(ufs.UnixFileSystem):
     BMAPSIZE = 994
     MAXCGS = 80
 
-    CYLGRP_LAYOUT = (
-        ("cg_doffset", "1L"),
-        ("cg_ioffset", "1L"),
-        ("cg_dblocks", "1H"),
-        ("cg_ifirst", "1H"),
-        ("cg_number", "1B"),
-        ("cg_currextent", "1B"),
-        ("cg_lowat", "1H"),
-        ("cg_hiwat", "1H"),
-        ("cg_erotor", "1H"),
-        ("cg_ilock", "1B"),
-        ("cg_reserved", "9B"),
-        ("cg_bits", "%dB" % BMAPSIZE),
-    )
-
-    FILSYS_LAYOUT = (
-        ("fs_fname", "6B",),		# file system name
-        ("fs_fpack", "6B",),		# pack name
-        ("fs_fsize", "1L",),		# number of data blocks in fs
-        ("fs_cgblocks", "1H",),		# number of blocks per cg
-        ("fs_maxblock", "1L",),		# max disk block in fs
-        ("fs_cginodes", "1H",),		# number of inodes per cg
-        ("fs_maxino", "1H",),		# max inumber in fs
-        ("fs_time", "1L",),		# time last modified
-        ("fs_fmod", "1B",),		# modified flag
-        ("fs_ronly", "1B",),		# read-only fs
-        ("fs_clean", "1B",),		# fs was cleanly unmounted
-        ("fs_type", "1B",),		# fs type and version
-        ("fs_fnewcg", "1H",),		# contains FNEWCG
-        ("fs_snewcg", "1H",),		# contains SNEWCG
-        ("fs_ffree", "1L",),		# number of free data blocks in fs
-        ("fs_ifree", "1H",),		# number of free inodes in fs
-        ("fs_dirs", "1H",),		# number of directories in fs
-        ("fs_extentsize", "1B",),	# native extent size
-        ("fs_cgnum", "1B",),		# number of cg's in fs
-        ("fs_cgrotor", "1B",),		# next cg to be searched
-        ("fs_reserved", "15B",),	# reserved.
-    )
-
-    CGINFO_LAYOUT = (
-        ("fs_cgincore", "1H",),		# points to buf structure in core
-        ("fs_cgblk", "1L",),		# disk address of cg header
-        ("fs_cgffree", "1H",),		# number of free data blocks in cg
-        ("fs_cgifree", "1H",),		# number of free inodes in cg
-        ("fs_cgdirs", "1H",),		# number of directories in cg
-    )
-
-    INODE_LAYOUT = (
-        ("di_mode", "1H"),
-        ("di_nlink", "1H"),
-        ("di_uid", "1H"),
-        ("di_gid", "1H"),
-        ("di_size", "1L"),
-        ("di_addr", "40B"),
-        ("di_atime", "1L"),
-        ("di_mtime", "1L"),
-        ("di_ctime", "1L"),
-    )
-
     MAGIC = {
         bytes.fromhex("fd187e20"): ">",
         bytes.fromhex("207e18fd"): "<",
     }
+
+    nindir = 1024 // 4
+
+    def __init__(self, this):
+        if not this.has_type("XENIX Partition"):
+            return
+        self.good = False
+        self.rootdir = False
+        super().__init__(this)
+        print(this, "XFS?", self.good)
+        if not self.good:
+            self.add_interpretation()
+            return
+        print(this, "XFSRD", self.rootdir)
+        if self.rootdir:
+            super().commit()
+        self.add_interpretation()
 
     def get_superblock(self):
         ''' Read the superblock '''
@@ -112,64 +161,72 @@ class Xenix_FileSystem(ufs.UnixFileSystem):
         self.SECTOR_SIZE = 1024
         self.ENDIAN = "<"
 
-        sblock = self.this.record(
-            self.FILSYS_LAYOUT,
-            endian=self.ENDIAN,
-            name="filsys",
-        )
-        if max(sblock.fs_fname):
+        sblock = FilSys(self, 0).insert()
+        print(self.this, "XFS", "\n".join(sblock.render()))
+        if not sblock.credible:
             return
-        if max(sblock.fs_fpack):
+
+        print(self.this, "XFSa")
+
+        if sblock.fs_fmod.val:
             return
-        if max(sblock.fs_reserved):
-            return
-        if not sblock.fs_maxino:
-            return
+
+        ncg = sblock.fs_maxino.val // sblock.fs_cginodes.val
+        if sblock.fs_maxino.val % sblock.fs_cginodes.val:
+            ncg += 1
+        cgs = ov.Array(
+            sblock.fs_maxino.val // sblock.fs_cginodes.val,
+            CgInfo,
+            vertical=True,
+        )(self, sblock.hi).insert()
 
         sblock.cylinders = []
-        off = sblock._size
-        for i in range(0, self.MAXCGS):
-            cginfo = self.this.record(
-                self.CGINFO_LAYOUT,
-                offset=off,
-                endian=self.ENDIAN,
-                name="cginfo",
-            )
-            if not cginfo.fs_cgblk:
+
+        for cginfo in cgs:
+            print(self.this, "CGI", "\n".join(cginfo.render()))
+            if not cginfo.fs_cgblk.val:
+                print(self.this, "BAD CGI")
                 break
-            cylgrp = self.this.record(
-                self.CYLGRP_LAYOUT,
-                offset=(cginfo.fs_cgblk - 1) * self.SECTOR_SIZE,
-                cgoffset=cginfo.fs_cgblk * self.SECTOR_SIZE,
-                endian=self.ENDIAN,
-                name="cylgrp",
-            )
+            cylgrp = CylGrp(self, (cginfo.fs_cgblk.val - 1) * self.SECTOR_SIZE, self.BMAPSIZE).insert()
+            cylgrp.offset=(cginfo.fs_cgblk.val - 1) * self.SECTOR_SIZE
+            cylgrp.cgoffset=cginfo.fs_cgblk.val * self.SECTOR_SIZE
             sblock.cylinders.append(cylgrp)
-            off += cginfo._size
+
+        if not sblock.cylinders:
+            return
 
         sblock.fs_nindir = self.SECTOR_SIZE // 4
-        sblock.fs_imax = sblock.fs_maxino - 1
+        sblock.fs_imax = sblock.fs_maxino.val - 1
         self.sblock = sblock
 
     def get_inode(self, inum):
         ''' Return an Inode '''
-        cgn = inum // self.sblock.fs_cginodes
-        irem = inum % self.sblock.fs_cginodes
+        cgn = inum // self.sblock.fs_cginodes.val
+        irem = inum % self.sblock.fs_cginodes.val
         inoa = self.sblock.cylinders[cgn].cgoffset
         inoa += (irem - 1) * self.INODE_SIZE
         if inoa > len(self.this) - 64:
             return None
-        return self.this.record(
-            self.INODE_LAYOUT,
-            offset=inoa,
-            endian=self.ENDIAN,
-            use_type=SysVInode,
-            ufs=self,
-            name="sysv",
-            di_inum=inum,
-        )
+        retval = ufs.Inode64(self, inoa, ov.Le16, ov.Le32, (2, 1, 0)).insert()
+        retval.di_inum = inum
+        print(self.this, "XIN", hex(inum), retval, retval.di_inum, retval.di_db)
+        return retval
 
     def get_block(self, blockno):
         ''' Return a block '''
         offset = (blockno-1) * self.SECTOR_SIZE
-        return self.this[offset:offset + self.SECTOR_SIZE]
+        if offset >= len(self.this) - self.SECTOR_SIZE:
+            return None
+        retval = ov.Opaque(self, lo=offset, width=self.SECTOR_SIZE)
+        print(self.this, "XGB", hex(blockno), hex(offset))
+        return retval
+
+    def parse_directory(self, inode):
+        ''' Parse classical unix directory: 16bit inode + 14 char name '''
+        print(self.this, "XPD", inode, inode.di_db)
+        for b in inode:
+            b.insert()
+            print(self.this, "XPDD", b, b.octets()[:32].hex())
+            if b.octets()[:8] == b'_UNREAD_':
+                continue
+            yield from ufs.DirBlock(self, b.lo, b.hi, ov.Le16).insert()
