@@ -80,6 +80,6 @@ class CBM900Ar(ov.OctetView):
                 break
             z = ov.This(self, lo=offset, width=y.size.val).insert()
             offset = z.hi
-            NameSpace(y.name.txt, self.namespace, this=z.that, priv=y)
+            NameSpace(name = y.name.txt, parent = self.namespace, this=z.that, priv=y)
         this.add_interpretation(self, self.namespace.ns_html_plain)
         self.add_interpretation()
