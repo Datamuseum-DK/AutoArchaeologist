@@ -20,6 +20,22 @@ from itertools import zip_longest
 from . import octetview as ov
 from . import result_page
 
+class Unread():
+    ''' A helper class to recoginize unread data in base artifacts '''
+
+    def __init__(self):
+        self.p = b'_UNREAD_' * (512 // 8)
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        l = len(other)
+        if len(self.p) < l:
+            self.p = b'_UNREAD_' * (1 + l // 8)
+        return self.p[:l] == other
+
+unread = Unread()
+
 class Record():
     '''
        A piece of an artifact
@@ -133,7 +149,10 @@ class Artifact(result_page.ResultPage):
 
     def get_frag(self, key):
         ''' Get a fragment by key '''
-        return self._keys.get(key)
+        retval = self._keys.get(key)
+        if retval is None or retval.undefined:
+            return None
+        return retval
 
     def iter_bytes(self):
         ''' iterate bytes in byte-order '''
@@ -211,6 +230,8 @@ class Artifact(result_page.ResultPage):
             for i in range(self._key_len):
                 self._key_min[i] = min(self._key_min[i], rec.key[i])
                 self._key_max[i] = max(self._key_min[i], rec.key[i])
+        if unread == rec.frag:
+            rec.undefined = True
         self._keys[rec.key] = rec
         self._reclens[len(rec)] = self._reclens.get(len(rec), 0) + 1
         rec.artifact = self
@@ -253,7 +274,7 @@ class Artifact(result_page.ResultPage):
     def add_namespace(self, namespace):
         ''' Add a namespace reference '''
         self.namespaces.setdefault(namespace.ns_parent, []).append(namespace)
-        if namespace.ns_name not in self.names:
+        if namespace.ns_name not in self.names and namespace.ns_name:
             self.names.add(namespace.ns_name)
 
     def add_name(self, name):
@@ -319,11 +340,11 @@ class Artifact(result_page.ResultPage):
             yield from t
 
     def get_note(self, note):
-        ''' Check if note already exists '''
+        ''' Return note contents '''
         return self.notes.get(note, None)
 
     def has_note(self, note):
-        ''' Check if note already exists '''
+        ''' Check if note exists '''
         return note in self.notes
 
     def iter_all_children(self):
