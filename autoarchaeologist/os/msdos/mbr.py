@@ -13,6 +13,8 @@
 from ...base import namespace
 from ...base import octetview as ov
 
+from . import biosparamblock
+
 MBR_TYPES = {
     0x00: "unused",
     0x01: "Primary DOS with 12 bit FAT",
@@ -118,7 +120,7 @@ class NameSpace(namespace.NameSpace):
         ("r", "start chs"),
         ("r", "stop chs"),
         ("r", "start lba"),
-        ("r", "stop lba"),
+        ("r", "size"),
         ("l", "name"),
         ("l", "artifact"),
     )
@@ -131,7 +133,7 @@ class NameSpace(namespace.NameSpace):
             part.chs_first,
             part.chs_last,
             part.lba_first.val,
-            part.lba_last.val,
+            part.size.val,
         ] + super().ns_render()
 
 class BootCode(ov.Dump):
@@ -165,8 +167,9 @@ class Partition(ov.Struct):
             type_=ov.Octet,
             chs_last_=CHS,
             lba_first_=ov.Le32,
-            lba_last_=ov.Le32,
-    )
+            size_=ov.Le32,
+        )
+        self.start_adr = (self.lba_first.val + (self.lo >> 9)) << 9
 
 class Mbr(ov.OctetView):
     ''' ... '''
@@ -180,23 +183,59 @@ class Mbr(ov.OctetView):
         super().__init__(this)
         print(this, "MBR")
 
-        # Blank out the rest of the disk (until we implement "extended" partitions)
-        ov.Opaque(self, 512, len(this)).insert()
+        bpb = biosparamblock.BiosParamBlock(self, 0)
+        if bpb.is_sane():
+            bpb.insert()
+        else:
+            BootCode(self, 0, 0x1be).insert()
 
-        BootCode(self, 0, 0x1be).insert()
-        self.partitions = ov.Array(4, Partition, vertical=True)(self, 0x1be).insert()
         ov.Le16(self, 0x1fe).insert()
+
+        prim = ov.Array(4, Partition, vertical=True)(self, 0x1be).insert()
+
+        self.partitions = list(x for x in prim if x.size.val > 0 and x.type.val > 0)
 
         ns = NameSpace(name="", root=this, separator="")
 
+        max_cyl = max(x.chs_last.c for x in self.partitions)
+        n_head = max(x.chs_last.h for x in self.partitions) + 1
+        n_sect = max(x.chs_last.s for x in self.partitions)
+        print(this, "MBR %d/%d/%d" % (max_cyl, n_head, n_sect))
+
+        def chs_to_lba(chs):
+            lba = chs.c * n_head * n_sect
+            lba += chs.h * n_sect
+            lba += chs.s - 1
+            return lba
+
         for n, part in enumerate(self.partitions):
-            print(n, part)
-            if part.type.val and part.lba_last.val > part.lba_first.val:
-                that = this.create(start = part.lba_first.val<<9, stop=part.lba_last.val<<9)
+            if part.type.val != 5:
+                continue
+            if part.size.val == 0:
+                continue
+
+            BootCode(self, part.start_adr, width = 0x1be).insert()
+            ext = ov.Array(4, Partition, vertical=True)(self, part.start_adr + 0x1be).insert()
+            ov.Le16(self, part.start_adr + 0x1fe).insert()
+            self.partitions.append(ext[0])
+
+        for n, part in enumerate(self.partitions):
+            #lba_first = chs_to_lba(part.chs_first)
+            #lba_last = chs_to_lba(part.chs_last)
+            #print(this, "MBR", n, part, lba_first, lba_last, 1 + lba_last - lba_first)
+            if part.type.val == 0 or part.size.val == 0:
+                continue
+            if part.type.val != 5:
+                y = ov.This(self, lo = part.start_adr, width = part.size.val << 9).insert()
+                that = y.that
                 that.add_type("MBR partition")
-            else:
-                that = None
-            NameSpace(name="%d" % (1+n), parent=ns, priv=part, this=that)
+                that.add_note(
+                    "MBR",
+                    args="nbr 0x%x, type 0x%x" % (n, part.type.val),
+                    nr=n,
+                    type=part.type.val
+                )
+                NameSpace(name="%d" % (1+n), parent=ns, priv=part, this=that)
 
         this.add_interpretation(self, ns.ns_html_plain)
         self.add_interpretation(more=False)

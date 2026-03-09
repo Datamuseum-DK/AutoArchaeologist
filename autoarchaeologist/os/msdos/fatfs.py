@@ -6,18 +6,13 @@
 
 '''
    Microsoft FATFS
-
+   ===============
 '''
-
-import collections
 
 from ...base import namespace
 from ...base import octetview as ov
 
-Geometry = collections.namedtuple(
-    "Geometry",
-    "cyl hd sect bps rsv nfat spcl rdir nfsc tsect",
-)
+from .biosparamblock import *
 
 # See for instance:
 #    https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system
@@ -85,90 +80,6 @@ def match_geometry(this, fat0):
         print(this, "NoGeom?", hex(fat0), geometry, len(this), size)
     return None
 
-class BiosParamBlock(ov.Struct):
-    ''' ... '''
-
-    # Field names mirro FreeBSD's msdosfs
-    def __init__(self, tree, lo):
-        super().__init__(
-            tree,
-            lo,
-            vertical=True,
-            bsJmp_=3,
-            bsOem_=ov.Text(8),
-            # From DOS2.0
-            bsBytesPerSec_=ov.Le16,
-            bsSectPerClust_=ov.Octet,
-            bsResSectors_=ov.Le16,
-            bsFATS_=ov.Octet,
-            bsRootDirEnts_=ov.Le16,
-            bsSectors_=ov.Le16,
-            bsMedia_=ov.Octet,
-            bsFATsecs_=ov.Le16,
-            # From DOS3.0
-            bsSectPerTrack_=ov.Le16,
-            bsHeads_=ov.Le16,
-            bsHiddenSecs_=ov.Le32,
-            # From DOS3.2
-            bpbHugeSectors_=ov.Le32, # DOS3.2: Le16, DOS3.31: Le32
-            more=True,
-        )
-        if tree.this[lo + 0x26] in (0x28, 0x29):
-            # From OS/2 1.0, DOS 4.0
-            self.add_field("bsPhysDrive", ov.Octet)
-            self.add_field("bsReserved", ov.Octet)
-            self.add_field("bsExtBootSig", ov.Octet)
-            self.add_field("bsVolId", ov.Le32)
-            self.add_field("bsVolName", ov.Text(11))
-            self.add_field("bsFsType", ov.Text(8))
-        elif ov.Le32(tree, 0x24).val > 0x200000:
-            # Seen om Concurrent DOS hard disk
-            self.add_field("bsPhysDrive", ov.Octet)
-            self.add_field("bsReserved", ov.Octet)
-            self.add_field("bsExtBootSig", ov.Octet)
-            self.add_field("bsUnknown", 11)
-            self.add_field("bsVolName", ov.Text(12))
-        else:
-            self.add_field("bsBigFATsecs", ov.Le32)
-            self.add_field("bsExtFlags", ov.Le16)
-            self.add_field("bsFsInfo", ov.Le16)
-            self.add_field("bsRootClust", ov.Le32)
-            self.add_field("bsFSVers", ov.Le16)
-            self.add_field("bsBackup", ov.Le16)
-            self.add_field("bsReserved", ov.Text(12))
-
-        self.done()
-        if self.is_sane():
-            if self.bsSectors.val:
-                tsect = self.bsSectors.val
-            else:
-                tsect = self.bpbHugeSectors.val
-            self.geom = Geometry(
-                tsect // (self.bsHeads.val * self.bsSectPerTrack.val),
-                self.bsHeads.val,
-                self.bsSectPerTrack.val,
-                self.bsBytesPerSec.val,
-                self.bsResSectors.val,
-                self.bsFATS.val,
-                self.bsSectPerClust.val,
-                self.bsRootDirEnts.val,
-                self.bsFATsecs.val,
-                tsect,
-            )
-        else:
-            self.geom = None
-
-    def is_sane(self):
-        ''' Sanity check '''
-
-        if not self.bsBytesPerSec.val in (128, 256, 512, 1024, 2048, 4096):
-            # Improbable sector size
-            return False
-        if self.bsResSectors.val == 0:
-            # BPB and FAT cannot overlap
-            return False
-        return True
-
 class DirEnt(ov.Struct):
     '''
        Directory Entry
@@ -198,13 +109,14 @@ class DirEnt(ov.Struct):
             self.valid = False
         self.subdir = None
         self.committed = False
-        i = self.name.txt[:8].rstrip()
+        self.that = None
+        self.fname = self.name.txt[:8].rstrip()
         j = self.name.txt[8:].rstrip()
         if j:
-            i += '.' + j
+            self.fname += '.' + j
         if self.valid:
             self.namespace = NameSpace(
-                name=i,
+                name=self.fname,
                 parent=pns,
                 separator='\\',
                 priv=self,
@@ -238,15 +150,19 @@ class DirEnt(ov.Struct):
                     print(self.this, "Missing Chunk", size, hex(_lo), i, self.name)
                 size -= want
             if j:
-                that = self.tree.this.create(records=j, define_records=False)
-                self.namespace.ns_set_this(that)
-        if self.attr.val & 0x10:
+                self.that = self.tree.this.create(records=j, define_records=False)
+                self.namespace.ns_set_this(self.that)
+        if self.attr.val & 0x10 and self.fname not in (".", ".."):
             self.subdir = Directory(self.tree, self.namespace)
-            for low, cluster in self.tree.get_chain(self, self.cluster.val):
+            for low, cluster in self.tree.get_chain(self, self.cluster.val, insert=False):
                 for adr in range(low, low + len(cluster), 0x20):
                     j = DirEnt(self.tree, adr, self.namespace).insert()
                     self.subdir.add_dirent(j)
             self.subdir.commit()
+
+    def x_render(self):
+        for i in super().render():
+            yield i + " " + str(self.committed) + " " + str(self.that) + " " + str(self.valid)
 
 
 class FAT12(ov.Octets):
@@ -284,7 +200,7 @@ class FAT16(ov.Struct):
             tree,
             lo,
             vertical=True,
-            fat_=ov.Array(width // 2, ov.Le16, vertical=True)
+            fat_=ov.Vector.how(count=width // 2, target=ov.Le16, vertical=True, elide=(0,0xffff,))
         )
         self.owner = [None] * (width//2)
 
@@ -407,7 +323,7 @@ class FatFs(ov.OctetView):
         super().__init__(this)
 
         fat0 = ov.Le24(self, 0x200)
-        if not 0xfffff0 <= fat0.val < 0xffffff:
+        if not 0xfffff0 <= fat0.val <= 0xffffff:
             return
 
         bpb = BiosParamBlock(self, 0)
@@ -442,7 +358,7 @@ class FatFs(ov.OctetView):
         else:
             fatsect = (fatsize + geometry.bps - 1) // geometry.bps
         dirstart = geometry.rsv * geometry.bps
-        if geometry.tsect < 65536:
+        if geometry.tsect / geometry.spcl < 4096:
             fatcl = FAT12
         else:
             fatcl = FAT16
@@ -469,7 +385,7 @@ class FatFs(ov.OctetView):
             adr = j.hi
             root.add_dirent(j)
         self.cluster2 = adr
-        #print("CSZ", self.clustersize, hex(self.cluster2))
+        print("CSZ", self.clustersize, hex(self.cluster2))
 
         root.commit()
 
@@ -477,9 +393,11 @@ class FatFs(ov.OctetView):
 
         self.add_interpretation(more=True, title="FatFS")
 
-    def get_chain(self, owner, cluster):
+    def get_chain(self, owner, cluster, insert=True):
         ''' Get contents of a chain '''
         for clno in self.fat1.chain(owner, cluster):
             i = self.cluster2 + (clno-2) * self.clustersize
-            Cluster(self, i, self.clustersize, owner).insert()
+            y = Cluster(self, i, self.clustersize, owner)
+            if insert:
+                y.insert()
             yield i, self.this[i:i+self.clustersize]
