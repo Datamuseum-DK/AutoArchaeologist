@@ -1,3 +1,6 @@
+# AutoArchaeologist has moved to https://codeberg.org/Datamuseum-dk/AutoArchaeologist
+
+
 # AutoArchaeologist
 
 A Python Toolchest to excavate data media into static HTML pages.
